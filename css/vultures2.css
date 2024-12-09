@@ -166,7 +166,7 @@ body {
 .track-name-list {
     font-size: 14px;
     font-weight: 700;
-    text-align: left !important; /* Replace 'start' with 'left' */
+    text-align: left !important;
 }
 
 .track-artist-list {
