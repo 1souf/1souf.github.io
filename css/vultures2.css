@@ -167,6 +167,7 @@ body {
 .track-name-list {
     font-size: 14px;
     font-weight: 700;
+    text-align: left !important; /* Replace 'start' with 'left' */
 }
 
 .track-artist-list {
@@ -175,6 +176,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: left !important; /* Replace 'start' with 'left' */
 }
 
 .loading {
