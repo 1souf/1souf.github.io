@@ -4,7 +4,7 @@ if (typeof trackList === 'undefined') {
 }
 
 const tickerText = document.getElementById('ticker-text');
-const tickerMessage = 'shoutout to u/ace-28 for the cover';
+const tickerMessage = 'youtube.com/@1souf reddit.com/u/2souf';
 tickerText.innerText = tickerMessage;
 
 const albumCover = document.getElementById('album-cover');
