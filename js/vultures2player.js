@@ -4,7 +4,7 @@ if (typeof trackList === 'undefined') {
 }
 
 const tickerText = document.getElementById('ticker-text');
-const tickerMessage = 'youtube.com/@1souf     reddit.com/u/2souf';
+const tickerMessage = 'youtube.com/@1souf ㅤ ㅤ ㅤ ㅤ ㅤ ㅤ ㅤ ㅤreddit.com/u/2souf';
 tickerText.innerText = tickerMessage;
 
 const albumCover = document.getElementById('album-cover');
