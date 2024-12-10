@@ -16,7 +16,7 @@ const trackList = [
     { name: "MAYBE", artist: "¥$, Kanye West, Ty Dolla $ign", src: "music/01-12-maybe.mp3" },
     { name: "LIFESTYLE", artist: "¥$, Kanye West, Ty Dolla $ign, Lil Wayne", src: "music/01-13-lifestyle.mp3" },
     { name: "SKY CITY", artist: "¥$, Kanye West, Ty Dolla $ign, 070 Shake, Desiigner, CyHi, The-Dream, Kid Cudi, Jeremih", src: "music/01-14-sky_city.mp3" },
-    { name: "MY SOUL", artist: "¥$, Kanye West, Ty Dolla $ign, Big TC", src: "music/01-15-my_soul.mp3.mp3" },
+    { name: "MY SOUL", artist: "¥$, Kanye West, Ty Dolla $ign, Big TC", src: "music/01-15-my_soul.mp3" },
     { name: "TAKE OFF YOUR DRESS", artist: "¥$, Kanye West, Ty Dolla $ign", src: "music/02-01-take_off_your_dress.mp3" },
     { name: "BELIEVER", artist: "¥$, Kanye West, Ty Dolla $ign, Quentin Miller", src: "music/02-02-believer.mp3" },
     { name: "DRUNK", artist: "¥$, Kanye West, Ty Dolla $ign, Tory Lanez, Rick Ross, Bad Bunny, Kodak Black", src: "music/02-03-drunk.mp3" },
