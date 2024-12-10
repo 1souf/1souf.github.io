@@ -7,6 +7,12 @@ const albumList = [
         link: "vultures2.html"
     },
 
+     {
+        name: "Pink Tape",
+        img: "images/pinktapeanim.gif",
+        link: "pinktape.html"
+    },
+
     {
         name: "I AM MUSIC",
         img: "images/iammusicanim.gif",
