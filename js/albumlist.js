@@ -8,7 +8,7 @@ const albumList = [
     },
 
     {
-        name: "VULTURES 2",
+        name: "VULTURES 2✨",
         img: "images/vultures2.png",
         link: "vultures-2.html"
     },
