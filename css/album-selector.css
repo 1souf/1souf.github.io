@@ -6,7 +6,6 @@ body {
     font-family: 'Inter', Helvetica, sans-serif;
     color: #fff;
     position: relative;
-    display: flex;
     justify-content: center;
     align-items: center;
     height: 100%;
@@ -52,4 +51,8 @@ body {
     font-size: 16px;
     font-weight: 700;
     color: #fff;
+}
+
+.extra-content {
+  height: 160px;
 }
