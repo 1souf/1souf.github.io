@@ -87,7 +87,7 @@ const albumList = [
 
     {
         name: "Whole Lotta Red V2",
-        img: "images/wlrv2-256.png",
+        img: "images/wlrv2anim.gif",
         link: "whole-lotta-red-v2.html"
     },
 
@@ -168,5 +168,11 @@ const albumList = [
         name: "IGOR",
         img: "images/igor-256.png",
         link: "igor.html"
+    },
+
+    {
+        name: "LOVE LASTS FOREVER",
+        img: "images/llfanim.gif",
+        link: "love-lasts-forever.html"
     },
 ];

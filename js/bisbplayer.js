@@ -53,13 +53,13 @@ function playTrack(index) {
 function playAudio() {
     audioPlayer.play();
     isPlaying = true;
-    playPauseButton.innerText = 'Pause';
+    playPauseButton.innerHTML = '<img src="icons/pause.png" alt="Pause" />';
 }
 
 function pauseAudio() {
     audioPlayer.pause();
     isPlaying = false;
-    playPauseButton.innerText = 'Play';
+    playPauseButton.innerHTML = '<img src="icons/play.png" alt="Pause" />';
 }
 
 playPauseButton.addEventListener('click', () => {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Birds In The Trap Sing McKnight</title>
     <link rel="stylesheet" href="css/album-styles.css">
+    <link rel="stylesheet" href="css/homebar.css">
     <link rel="shortcut icon" href="images/bittsmk.ico" />
 </head>
 <body>
@@ -31,20 +32,43 @@
         </div>
 
         <div class="controls">
-            <span id="back">Back</span>
-            <span id="play-pause-button">Play</span>
-            <span id="skip">Skip</span>
+            <span id="back">
+                <img src="icons/skip-left.png" alt="back" />
+            </span>
+            <span id="play-pause-button">
+                 <img src="icons/play.png" alt="play" />
+            </span>
+            <span id="skip">
+                <img src="icons/skip-right.png" alt="skip" />
+            </span>
         </div>
 
         <div class="tracklist-container" id="tracklist-container">
             <!-- Track items will be added dynamically -->
         </div>
     </div>
+    <div class="bottom-bar" id="bottomBar">
+    <div class="icon">
+        <a href="index.html">
+            <img src="icons/home-page-gray.png" alt="Home">
+        </a>
+    </div>
+    <div class="icon">
+        <a href="search.html">
+            <img src="icons/search-gray.png" alt="Search">
+        </a>
+    </div>
+    <div class="icon">
+        <a href="miscellaneous.html">
+            <img src="icons/info-gray.png" alt="info">
+        </a>
+    </div>
 
     <div id="loading-message" class="loading">Loading...</div>
 
     <audio id="audio-player"></audio>
 
+    <script src="js/homebar.js"></script>
     <script src="js/bittsmkconfig.js"></script>
     <script src="js/bittsmkplayer.js"></script>
 </body>
