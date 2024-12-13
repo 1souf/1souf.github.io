@@ -135,7 +135,6 @@ progressBar.addEventListener('mouseout', () => {
 function populateTracklist() {
     tracklistContainer.innerHTML = trackList.map((track, index) => `
         <div class="track" onclick="playTrack(${index})" data-index="${index}">
-            <img src="images/wlrv2.png" alt="${track.name}">
             <div class="track-details">
                 <div class="track-name-list">${index + 1}. ${track.name}</div>
                 <div class="track-artist-list">${track.artist}</div>
