@@ -38,7 +38,7 @@ function loadTrack(index) {
     audioPlayer.src = track.src;
     trackNameElement.innerText = track.name;
     trackArtistElement.innerText = track.artist;
-    albumCover.src = "images/wholelottared.png";
+    albumCover.src = "../images/wholelottared.png";
     audioPlayer.addEventListener('loadedmetadata', () => {
         totalTimeElement.innerText = formatTime(audioPlayer.duration);
     });
@@ -53,13 +53,13 @@ function playTrack(index) {
 function playAudio() {
     audioPlayer.play();
     isPlaying = true;
-    playPauseButton.innerHTML = '<img src="icons/pause.png" alt="Pause" />';
+    playPauseButton.innerHTML = '<img src="../icons/pause.png" alt="Pause" />';
 }
 
 function pauseAudio() {
     audioPlayer.pause();
     isPlaying = false;
-    playPauseButton.innerHTML = '<img src="icons/play.png" alt="Pause" />';
+    playPauseButton.innerHTML = '<img src="../icons/play.png" alt="Pause" />';
 }
 
 playPauseButton.addEventListener('click', () => {

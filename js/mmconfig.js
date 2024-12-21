@@ -2,5 +2,5 @@
 
 // Updated track list with songs from the image
 const trackList = [
-    { name: "MANSION MUSIK", artist: "Trippie Redd, Playboi Carti", src: "music/mm mm.mp3" }
+    { name: "MANSION MUSIK", artist: "Trippie Redd, Playboi Carti", src: "../music/mm mm.mp3" }
 ];

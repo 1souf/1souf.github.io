@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background-color: #121212;
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+    }
+    .changelog-entry {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+    .changelog-entry h3 {
+      margin: 0 0 10px;
+      color: #007bff;
+    }
+    .changelog-entry p {
+      margin: 0;
+    }
+    .top-left-icons {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      display: flex;
+    }
+    .top-left-icons a {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      text-decoration: none;
+    }
+    .top-left-icons img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
