@@ -58,18 +58,19 @@
   </div>
 
   <script>
-    let seconds = 3;
-    const countEl = document.getElementById("count");
+  let seconds = 3;
+  const countEl = document.getElementById("count");
+  countEl.textContent = seconds; // show initial number
 
-    const timer = setInterval(() => {
-      seconds--;
-      countEl.textContent = seconds;
+  const timer = setInterval(() => {
+    seconds--;
+    countEl.textContent = seconds; // update visible number
 
-      if (seconds <= 0) {
-        clearInterval(timer);
-        window.location.href = "index.html";
-      }
-    }, 1000);
+    if (seconds <= 0) {
+      clearInterval(timer);
+      window.location.href = "index.html";
+    }
+  }, 1000);
   </script>
 
 </body>
