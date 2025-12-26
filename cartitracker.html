@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spreadsheet</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* Top bar */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 48px;
+      width: 100%;
+      background: #0f0f0f;
+      border-bottom: 1px solid #222;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      z-index: 9999;
+    }
+
+    .home-btn {
+      color: #8ab4f8;
+      text-decoration: none;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .home-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    /* Google Sheet iframe */
+    iframe {
+      position: absolute;
+      top: 48px;
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 48px);
+      border: none;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a class="home-btn" href="index.html">← Home</a>
+  </div>
+
+  <iframe
+    src="https://docs.google.com/spreadsheets/d/1hapS8V_WZplD2cXHr4kK2h3ZMHwSOXhSoI4aG9m-V98/edit?gid=661240425#gid=661240425"
+    allowfullscreen
+  ></iframe>
+
+</body>
+</html>
