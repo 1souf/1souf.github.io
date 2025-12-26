@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>404</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(
+        600px 300px at 50% 30%,
+        #151520,
+        #0b0b0d
+      );
+      color: #e6e6eb;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .box {
+      opacity: 0.95;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #9a9aa6;
+    }
+
+    .countdown {
+      margin-top: 14px;
+      font-size: 13px;
+      color: #8ab4f8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <div class="title">404 · Page not found</div>
+    <div class="subtitle">Redirecting in <span id="count">3</span></div>
+    <div class="countdown">Returning to homepage…</div>
+  </div>
+
+  <script>
+    let seconds = 3;
+    const countEl = document.getElementById("count");
+
+    const timer = setInterval(() => {
+      seconds--;
+      countEl.textContent = seconds;
+
+      if (seconds <= 0) {
+        clearInterval(timer);
+        window.location.href = "index.html";
+      }
+    }, 1000);
+  </script>
+
+</body>
+</html>
