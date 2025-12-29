@@ -37,6 +37,7 @@
     .header {
       padding: 32px 40px 24px;
       border-bottom: 1px solid var(--border);
+      position: relative;
     }
 
     .header h1 {
@@ -174,6 +175,36 @@
       position: relative;
     }
 
+    .header-icon {
+    position: absolute;
+    top: 32px;
+    right: 40px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s ease;
+    }
+
+    .header-icon img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    opacity: 0.8;
+    }
+
+    .header-icon:hover {
+    border-color: #2a2a3a;
+    }
+
+    .header-icon:hover img {
+    opacity: 1;
+    }
+
   </style>
 </head>
 <body>
@@ -181,6 +212,9 @@
   <div class="header">
     <h1>1souf's projects</h1>
     <p>A collection of personal projects focused on music trackers, archiving, and edits.</p>
+    <a href="https://www.youtube.com/@1souf/?sub_confirmation=1" class="header-icon" aria-label="Link" target="_blank" rel="noopener noreferrer">
+  <img src="icons/youtube.ico" alt="YT">
+</a>
   </div>
 
   <div class="container">
@@ -237,7 +271,7 @@
       <a class="card" href="sheet.html">
 
   <div class="card-image">
-    <img src="wip.gif">
+    <img src="tracker-previews/editstracker.png">
   </div>
 
   <div class="card-content">
