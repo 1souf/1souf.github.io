@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counter</title>
+  <link rel="icon" href="icons/counter.ico">
+
+  <style>
+    :root {
+      --bg: #0b0b0d;
+      --panel: #121218;
+      --panel-hover: #181820;
+      --border: #1f1f2a;
+      --text: #e6e6eb;
+      --muted: #9a9aa6;
+      --accent: #8ab4f8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    body {
+      background:
+        radial-gradient(900px 500px at 90% 110%, #141420 0%, transparent 60%),
+        radial-gradient(700px 350px at 10% 90%, #10101a 0%, transparent 60%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, var(--panel), #0e0e14);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 36px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    #counter {
+      font-size: 3rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    button {
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--panel);
+    color: var(--text); /* FIX */
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 0.15s ease;
+    }
+
+    button:hover {
+    background: var(--panel-hover);
+    border-color: #2a2a3a;
+    color: var(--accent);
+    transform: translateY(-1px);
+    }
+
+    /* Reset inactive */
+    .reset.inactive {
+      color: var(--muted);
+    }
+
+    /* Reset active */
+    .reset.active {
+    color: var(--text);
+    }
+
+    /* Allow hover accent ONLY when reset is active */
+    .reset.active:hover {
+      color: var(--accent);
+    }
+
+    /* Top bar */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background: linear-gradient(90deg, #0b0b0d, #1a1a1f);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+    }
+
+    .top-bar a {
+      display: inline-block;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700; /* bold */
+      text-decoration: none;
+      color: #fff; /* white text */
+      transition: all 0.25s ease;
+    }
+
+    .home-btn {
+      background: #1f1f25;
+    }
+
+    .home-btn:hover {
+      background: #2b2b33;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="panel">
+    <div id="counter">0</div>
+
+    <div class="buttons">
+      <button onclick="increaseCounter()">Click</button>
+      <button id="resetBtn" class="reset inactive" onclick="resetCounter()">Reset</button>
+      <div class="top-bar">
+    <a class="home-btn" href="index.html">← Home</a>
+  </div>
+    </div>
+  </div>
+
+  <script>
+    let count = 0;
+    const counterEl = document.getElementById('counter');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function updateResetState() {
+      if (count >= 1) {
+        resetBtn.classList.remove('inactive');
+        resetBtn.classList.add('active');
+      } else {
+        resetBtn.classList.remove('active');
+        resetBtn.classList.add('inactive');
+      }
+    }
+
+    function increaseCounter() {
+      count++;
+      counterEl.innerText = count;
+      updateResetState();
+    }
+
+    function resetCounter() {
+      count = 0;
+      counterEl.innerText = count;
+      updateResetState();
+    }
+
+    // ensure correct state on load
+    updateResetState();
+  </script>
+
+</body>
+</html>
