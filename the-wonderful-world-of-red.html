@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>the wonderful world of red</title>
+<link rel="icon" href="icons/thewonderfulworldofred.ico">
+
+<style>
+:root {
+  --bg:#0b0b0d;
+  --panel:#121218;
+  --panel-hover:#181820;
+  --border:#1f1f2a;
+  --text:#e6e6eb;
+  --muted:#9a9aa6;
+  --accent:#8ab4f8;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
+
+body {
+  background: radial-gradient(1200px 600px at 10% -10%, #141420 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, #10101a 0%, transparent 60%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:120px;
+}
+
+.page { 
+    width: 900px;                 /* Set exact width to match player */
+    max-width: calc(100% - 32px); /* Ensures it shrinks on mobile same as player */
+    margin: 0 auto; 
+    padding: 60px 20px;           /* Changed side padding to 20px to match player bar padding */
+}
+
+/* ALBUM HEADER */
+.album { display:grid; grid-template-columns:180px 1fr; gap:28px; margin-bottom:40px; align-items:center; }
+.album-cover-header { width:180px; height:180px; border-radius:14px; overflow:hidden; border:1px solid var(--border); }
+.album-cover-header img { width:100%; height:100%; object-fit:cover; }
+.album-title { font-size:28px; font-weight:700; }
+.album-artist { margin-top:6px; color:var(--muted); }
+.album-meta { margin-top:10px; font-size:13px; color:var(--muted); }
+
+/* TRACKLIST */
+.track { display:grid; grid-template-columns:48px 1fr 48px; gap:16px; padding:18px 6px; border-bottom:1px solid var(--border); align-items:center; user-select:none; cursor: pointer; transition: background 0.2s; }
+.track:hover { background: rgba(255,255,255,0.02); }
+
+.track-left { position:relative; width:48px; display:flex; justify-content:center; align-items:center; }
+.track-number { font-size:13px; color:var(--muted); transition: opacity 0.1s; }
+
+.track-play { 
+  position:absolute; width:28px; height:28px; border-radius:50%; border:1px solid var(--border); 
+  background:var(--panel); cursor:pointer; opacity:0; pointer-events:none;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.1s;
+  z-index: 2;
+}
+.track-play img { width: 10px; filter: brightness(1.5); }
+
+/* HOVER LOGIC */
+.track:hover .track-number { opacity:0 }
+.track:hover .track-play { opacity:1; pointer-events:auto }
+
+.track-title { font-size:16px; font-weight:700 }
+.track-meta { font-size:12px; color:var(--muted) }
+.track-length { 
+    font-size: 12px; 
+    color: var(--muted); 
+    
+    /* REMOVE: text-align:right */
+    
+    /* ADD THIS to match the .track-left style */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Playing track highlight */
+.track.playing { background: linear-gradient(90deg, rgba(138,180,248,.1), transparent); }
+.track.playing .track-title { color: var(--accent); }
+
+/* PLAYER BAR */
+.player-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    
+    width: 900px;                 /* CHANGED: Was fit-content, now fixed to 900px */
+    max-width: calc(100% - 32px);
+    
+    background: linear-gradient(180deg,#15151d,#0e0e14);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 20px;           /* Side padding matches .page now */
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,.6);
+    z-index: 1000;
+    box-sizing: border-box;       /* Ensures padding doesn't add extra width */
+}
+
+.player-left, .player-right-stack { width: 160px; flex-shrink: 0; display: flex; align-items: center; }
+.player-left { gap: 12px; overflow: hidden; }
+.player-cover-small { width:46px; height:46px; border-radius:6px; border:1px solid var(--border); object-fit:cover; flex-shrink: 0; }
+
+/* PLAYER TEXT SCROLLING */
+.player-now { 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+  min-width: 0; 
+  flex: 1; 
+}
+
+.text-clipper {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+
+#npTitle, #npArtist {
+  display: inline-block;
+  white-space: nowrap;
+  transform: translateX(0);
+  will-change: transform;
+}
+
+#npTitle { font-size: 14px; font-weight: 700; color: var(--text); }
+#npArtist { font-size: 11px; color: var(--muted); }
+
+.player-main { width: 500px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+.player-controls { display: flex; gap: 24px; margin-bottom: 6px; align-items: center; }
+
+.ctrl-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.8; transition: 0.15s; }
+.ctrl-btn:hover { opacity: 1; transform: scale(1.05); }
+.ctrl-btn img { width: 16px; filter: brightness(1.5); }
+#playIcon { width: 24px; }
+
+.bar-row { display: flex; align-items: center; height: 14px; width: 100%; }
+.player-bars { gap: 10px; }
+.volume-wrap { gap: 8px; width: 100%; }
+.bar { flex: 1; height: 4px; background: #2a2a3a; border-radius: 10px; cursor: pointer; position: relative; }
+.fill { height: 100%; width: 0%; background: var(--text); border-radius: 10px; }
+.time { font-size: 10px; color: var(--muted); width: 34px; text-align: center; }
+
+.player-right-stack { flex-direction: column; align-items: center; gap: 6px; }
+.extra-controls { display: flex; gap: 14px; }
+.volume-wrap img { width: 12px; opacity: 0.4; }
+
+/* Shuffle/Loop Buttons */
+.icon-btn { background: none; border: none; cursor: pointer; display: flex; transition: 0.2s; }
+.icon-btn img { width: 15px; opacity: 0.5; transition: 0.2s; }
+.icon-btn:hover img { opacity: 0.8; }
+
+/* Active State for Shuffle/Loop */
+.icon-btn.active img { 
+  opacity: 1; 
+  filter: brightness(1.2) drop-shadow(0 0 5px rgba(255,255,255,0.3)); 
+}
+
+.top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background: linear-gradient(90deg, #0b0b0d, #1a1a1f);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+    }
+
+    .top-bar a {
+      display: inline-block;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700; /* bold */
+      text-decoration: none;
+      color: #fff; /* white text */
+      transition: all 0.25s ease;
+    }
+
+    .home-btn {
+      background: #1f1f25;
+    }
+
+    .home-btn:hover {
+      background: #2b2b33;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="top-bar">
+<a class="home-btn" href="index.html">← Home</a>
+</div>
+
+<br>
+
+<audio id="audio" preload="auto"></audio>
+
+<div class="page">
+  <div class="album">
+  <div class="album-cover-header"><img src="covers/thewonderfulworldofred.png" alt="Cover"></div>
+  <div>
+  <div class="album-title">the wonderful world of red</div>
+  <div class="album-artist">Playboi Carti</div>
+  <div class="album-meta">2026 • 3? tracks</div>
+  </div>
+  </div>
+
+  <!-- TRACK 1 -->
+  <div class="track" data-src="https://api.pillows.su/api/get/047101769172d9efae77d90fc41c2d08.ogg">
+  <div class="track-left">
+  <span class="track-number">04</span>
+  <button class="track-play"><img src="icons/play.ico"></button>
+  </div>
+  <div>
+  <div class="track-title">Designer Shoes</div>
+  <div class="track-meta">Playboi Carti</div>
+  </div>
+  <div class="track-length">3:31</div>
+  </div>
+
+  <!-- TRACK 2 -->
+  <div class="track" data-src="https://api.pillows.su/api/get/00ddc63e31bcdb5eb7152b2c0f923ba1.ogg">
+  <div class="track-left">
+  <span class="track-number">13</span>
+  <button class="track-play"><img src="icons/play.ico"></button>
+  </div>
+  <div>
+  <div class="track-title">Party With Her</div>
+  <div class="track-meta">Playboi Carti</div>
+  </div>
+  <div class="track-length">1:49</div>
+  </div>
+
+  <!-- TRACK 3 -->
+  <div class="track" data-src="https://api.pillows.su/api/get/a5e14d1fc76ab9d434ce68e305cf91ea.ogg">
+  <div class="track-left">
+  <span class="track-number">17</span>
+  <button class="track-play"><img src="icons/play.ico"></button>
+  </div>
+  <div>
+  <div class="track-title">Perky Gon Grab On Meh</div>
+  <div class="track-meta">Playboi Carti</div>
+  </div>
+  <div class="track-length">3:01</div>
+  </div>
+
+  <!-- TRACK 4 -->
+  <div class="track" data-src="https://api.pillows.su/api/get/b3fb040db63bf33528c70e477daa6651.ogg">
+  <div class="track-left">
+  <span class="track-number">21</span>
+  <button class="track-play"><img src="icons/play.ico"></button>
+  </div>
+  <div>
+  <div class="track-title">Pop Our Pills</div>
+  <div class="track-meta">Playboi Carti</div>
+  </div>
+  <div class="track-length">1:52</div>
+  </div>
+
+  <!-- TRACK 5 -->
+  <div class="track" data-src="https://api.pillows.su/api/get/d21240c576bbdd800b0753268d872870.ogg">
+  <div class="track-left">
+  <span class="track-number">23</span>
+  <button class="track-play"><img src="icons/play.ico"></button>
+  </div>
+  <div>
+  <div class="track-title">Whole Lotta Red (feat. Madmaxx602 & Smooky MarGielaa)</div>
+  <div class="track-meta">Playboi Carti, Madmaxx602, Smooky MarGielaa</div>
+  </div>
+  <div class="track-length">2:23</div>
+  </div>
+</div>
+
+<!-- PLAYER BAR -->
+<div class="player-bar">
+  <div class="player-left">
+  <img class="player-cover-small" src="covers/thewonderfulworldofred.png">
+  <div class="player-now">
+  <div class="text-clipper">
+    <div id="npTitle">Select a track</div>
+  </div>
+  <div class="text-clipper">
+    <div id="npArtist">—</div>
+  </div>
+  </div>
+  </div>
+
+  <div class="player-main">
+  <div class="player-controls">
+  <button id="prevBtn" class="ctrl-btn"><img src="icons/prev.ico" alt="Prev"></button>
+  <button id="playBtn" class="ctrl-btn"><img src="icons/play.ico" id="playIcon" alt="Play"></button>
+  <button id="nextBtn" class="ctrl-btn"><img src="icons/next.ico" alt="Next"></button>
+  </div>
+  <div class="bar-row player-bars">
+  <span class="time" id="cur">0:00</span>
+  <div class="bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+  <span class="time" id="dur">0:00</span>
+  </div>
+  </div>
+
+  <div class="player-right-stack">
+  <div class="extra-controls">
+  <!-- Added IDs for JS logic -->
+  <button id="shuffleBtn" class="icon-btn"><img src="icons/shuffle.ico"></button>
+  <button id="loopBtn" class="icon-btn"><img src="icons/loop.ico"></button>
+  </div>
+  <div class="bar-row volume-wrap">
+  <img src="icons/volume.ico">
+  <div class="bar" id="volBar"><div class="fill" id="volFill"></div></div>
+  </div>
+  </div>
+</div>
+
+<script>
+const audio = document.getElementById("audio");
+const playBtn = document.getElementById("playBtn");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const shuffleBtn = document.getElementById("shuffleBtn");
+const loopBtn = document.getElementById("loopBtn");
+const playIcon = document.getElementById("playIcon");
+const tracks = document.querySelectorAll(".track");
+const npArtist = document.getElementById("npArtist");
+const npTitle = document.getElementById("npTitle");
+const cur = document.getElementById("cur");
+const dur = document.getElementById("dur");
+const progressBar = document.getElementById("progressBar");
+const progressFill = document.getElementById("progressFill");
+const volBar = document.getElementById("volBar");
+const volFill = document.getElementById("volFill");
+
+const ICON_PLAY = "icons/play.ico";
+const ICON_PAUSE = "icons/pause.ico";
+
+let scrollTimers = []; 
+// State variables for Shuffle and Loop
+let isShuffle = false;
+let isLoop = false;
+
+function fmt(t){
+  if(isNaN(t)) return "0:00";
+  return `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,"0")}`;
+}
+
+function updateTracklistIcons() {
+  const isPlaying = !audio.paused;
+  playIcon.src = isPlaying ? ICON_PAUSE : ICON_PLAY;
+  tracks.forEach(t => {
+    const btnImg = t.querySelector(".track-play img");
+    if (t.classList.contains("playing")) {
+      btnImg.src = isPlaying ? ICON_PAUSE : ICON_PLAY;
+    } else {
+      btnImg.src = ICON_PLAY;
+    }
+  });
+}
+
+// === BUTTON TOGGLE LOGIC ===
+shuffleBtn.onclick = () => {
+  isShuffle = !isShuffle;
+  shuffleBtn.classList.toggle("active", isShuffle);
+};
+
+loopBtn.onclick = () => {
+  isLoop = !isLoop;
+  loopBtn.classList.toggle("active", isLoop);
+};
+
+// === HELPER: Get Random Index ===
+function getRandomIndex(currentIndex) {
+  if (tracks.length <= 1) return 0;
+  let newIndex;
+  do {
+    newIndex = Math.floor(Math.random() * tracks.length);
+  } while (newIndex === currentIndex);
+  return newIndex;
+}
+
+// === SYNCHRONIZED SCROLL LOGIC ===
+function startSynchronizedScroll() {
+  scrollTimers.forEach(t => clearTimeout(t));
+  scrollTimers = [];
+  
+  [npTitle, npArtist].forEach(el => {
+    el.style.transition = 'none';
+    el.style.transform = 'translateX(0)';
+  });
+
+  const titleDist = Math.max(0, npTitle.scrollWidth - npTitle.parentElement.clientWidth);
+  const artistDist = Math.max(0, npArtist.scrollWidth - npArtist.parentElement.clientWidth);
+
+  if (titleDist === 0 && artistDist === 0) return;
+
+  const speed = 40; 
+  const titleTime = (titleDist / speed) * 1000;
+  const artistTime = (artistDist / speed) * 1000;
+  
+  const maxMoveTime = Math.max(titleTime, artistTime);
+
+  const runCycle = () => {
+    const t1 = setTimeout(() => {
+      
+      if (titleDist > 0) {
+        npTitle.style.transition = `transform ${titleTime}ms linear`;
+        npTitle.style.transform = `translateX(-${titleDist}px)`;
+      }
+      if (artistDist > 0) {
+        npArtist.style.transition = `transform ${artistTime}ms linear`;
+        npArtist.style.transform = `translateX(-${artistDist}px)`;
+      }
+
+      const t2 = setTimeout(() => {
+        
+        if (titleDist > 0) {
+          npTitle.style.transition = `transform ${titleTime}ms linear`;
+          npTitle.style.transform = `translateX(0)`;
+        }
+        if (artistDist > 0) {
+          npArtist.style.transition = `transform ${artistTime}ms linear`;
+          npArtist.style.transform = `translateX(0)`;
+        }
+
+        const t3 = setTimeout(() => {
+          npTitle.style.transition = 'none';
+          npArtist.style.transition = 'none';
+          runCycle(); 
+        }, maxMoveTime); 
+
+        scrollTimers.push(t3);
+      }, maxMoveTime + 3000); 
+
+      scrollTimers.push(t2);
+    }, 3000); 
+
+    scrollTimers.push(t1);
+  };
+
+  runCycle();
+}
+
+function playTrack(trackElement) {
+  const src = trackElement.getAttribute('data-src');
+
+  if (audio.src !== src) {
+    audio.src = src;
+    tracks.forEach(t => t.classList.remove("playing"));
+    trackElement.classList.add("playing");
+    
+    npTitle.textContent = trackElement.querySelector(".track-title").textContent;
+    npArtist.textContent = trackElement.querySelector(".track-meta").textContent;
+    
+    setTimeout(startSynchronizedScroll, 50);
+
+    audio.play();
+  } else {
+    audio.paused ? audio.play() : audio.pause();
+  }
+}
+
+tracks.forEach(track => {
+  track.addEventListener('dblclick', () => playTrack(track));
+  const btn = track.querySelector(".track-play");
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation(); 
+    playTrack(track);
+  });
+});
+
+playBtn.onclick = () => {
+  if (!audio.src && tracks.length > 0) {
+    playTrack(tracks[0]);
+  } else {
+    audio.paused ? audio.play() : audio.pause();
+  }
+};
+
+// === PREV BUTTON ===
+prevBtn.onclick = () => {
+  let currentIdx = Array.from(tracks).findIndex(t => t.classList.contains("playing"));
+  if (currentIdx === -1) { playTrack(tracks[0]); return; }
+  
+  if (currentIdx > 0) {
+    playTrack(tracks[currentIdx - 1]);
+  } else {
+    playTrack(tracks[tracks.length - 1]);
+  }
+};
+
+// === NEXT BUTTON ===
+nextBtn.onclick = () => {
+  let currentIdx = Array.from(tracks).findIndex(t => t.classList.contains("playing"));
+  if (currentIdx === -1) { playTrack(tracks[0]); return; }
+
+  // Check Shuffle for Next Button (ignores Loop state for manual clicks usually, but honors shuffle)
+  if (isShuffle) {
+    playTrack(tracks[getRandomIndex(currentIdx)]);
+    return;
+  }
+
+  if (currentIdx < tracks.length - 1) {
+    playTrack(tracks[currentIdx + 1]);
+  } else {
+    playTrack(tracks[0]);
+  }
+};
+
+audio.onplay = updateTracklistIcons;
+audio.onpause = updateTracklistIcons;
+
+audio.ontimeupdate = () => {
+  progressFill.style.width = `${(audio.currentTime / audio.duration || 0) * 100}%`;
+  cur.textContent = fmt(audio.currentTime);
+};
+
+audio.onloadedmetadata = () => dur.textContent = fmt(audio.duration);
+
+progressBar.onclick = e => {
+  if(!audio.src) return;
+  const r = progressBar.getBoundingClientRect();
+  audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+};
+
+const savedVol = localStorage.getItem("vol") ?? 0.8;
+audio.volume = savedVol;
+volFill.style.width = `${savedVol * 100}%`;
+
+volBar.onclick = e => {
+  const r = volBar.getBoundingClientRect();
+  const v = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  audio.volume = v;
+  volFill.style.width = `${v * 100}%`;
+  localStorage.setItem("vol", v);
+};
+
+// === SONG ENDED LOGIC (Updated for Shuffle/Loop) ===
+audio.onended = () => {
+  let currentIdx = Array.from(tracks).findIndex(t => t.classList.contains("playing"));
+  
+  // 1. Loop has highest priority
+  if (isLoop) {
+    audio.currentTime = 0;
+    audio.play();
+    return;
+  }
+
+  // 2. Shuffle has second priority
+  if (isShuffle) {
+    playTrack(tracks[getRandomIndex(currentIdx)]);
+    return;
+  }
+
+  // 3. Normal Sequence
+  if (currentIdx < tracks.length - 1) {
+    playTrack(tracks[currentIdx + 1]);
+  } else {
+    playTrack(tracks[0]);
+  }
+};
+</script>
+
+</body>
+</html>
