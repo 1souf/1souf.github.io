@@ -1,277 +1,1175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>❤︎</title>
-  <link rel="icon" href="icons/dielit.ico">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>❤︎</title>
+<link rel="icon" href="icons/icon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=gabarito&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f0f0f;
+    --panel:#212121;
+    --panel-2:#2a2a2a;
+    --text:#f1f1f1;
+    --text-dim:#aaaaaa;
+    --accent:#ffffff;
+    --accent-hover:#dcdcdc;
+    --ring: rgba(255,255,255,0.18);
+    --player-bar-h: 88px;
+  }
 
-  <style>
-    :root {
-      --bg: #0b0b0d;
-      --panel: #121218;
-      --panel-hover: #181820;
-      --border: #1f1f2a;
-      --text: #e6e6eb;
-      --muted: #9a9aa6;
-      --accent: #8ab4f8;
-    }
+  *{ box-sizing:border-box; }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Inter, Arial, sans-serif;
-    }
+  body{
+    margin:0;
+    background:var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(255,255,255,0.035), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(255,255,255,0.03), transparent 45%);
+    color:var(--text);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding-bottom:var(--player-bar-h);
+  }
 
-    body {
-      background:
-        radial-gradient(1200px 600px at 10% -10%, #141420 0%, transparent 60%),
-        radial-gradient(800px 400px at 90% 10%, #10101a 0%, transparent 60%),
-        var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+  /* ---------- Top bar ---------- */
+  .topbar{
+    height:76px;
+    display:grid;
+    grid-template-columns: 1fr minmax(0, 420px) 1fr;
+    align-items:center;
+    gap:16px;
+    padding:0 24px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
 
-    /* Top header */
-    .header {
-      padding: 32px 40px 24px;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-    }
+  .topbar-links{ display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+  .topbar-icon-btn{
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--panel); color:var(--text-dim);
+    transition:color .15s ease, background .15s ease;
+  }
+  .topbar-icon-btn:hover{ color:var(--text); background:var(--panel-2); }
+  .topbar-icon-btn svg{ width:17px; height:17px; }
 
-    .header h1 {
-      font-size: 28px;
-      letter-spacing: -0.5px;
-      margin-bottom: 6px;
-    }
+  .search-shell{ position:relative; width:100%; max-width:420px; }
 
-    .header p {
-      color: var(--muted);
-      font-size: 14px;
-    }
+  .search-shell svg{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; stroke:var(--text-dim); pointer-events:none;
+    transition:stroke .2s ease;
+  }
 
-    /* Grid */
-    .container {
-      padding: 32px 40px;
-    }
+  #searchInput{
+    width:100%;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:999px;
+    padding:11px 16px 11px 40px;
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    color:var(--text);
+    outline:none;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
-    }
+  #searchInput::placeholder{ color:var(--text-dim); }
+  #searchInput:focus{ border-color:var(--accent); box-shadow:0 0 0 4px var(--ring); }
+  .search-shell:has(#searchInput:focus) svg{ stroke:var(--accent); }
 
-    /* Card */
-    .card {
-      background: linear-gradient(
-        180deg,
-        var(--panel),
-        #0e0e14
-      );
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px 18px 20px;
-      text-decoration: none;
-      color: var(--text);
-      transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
-    }
+  /* ---------- Layout ---------- */
+  main{ padding:56px 24px 80px; }
 
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-        400px 120px at 20% 0%,
-        rgba(138,180,248,0.08),
-        transparent 60%
-      );
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      pointer-events: none;
-    }
+  .grid{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:48px;
+    margin:0 auto;
+  }
 
-    .card:hover {
-      transform: translateY(-2px);
-      border-color: #2a2a3a;
-      background: linear-gradient(
-        180deg,
-        var(--panel-hover),
-        #12121a
-      );
-    }
+  @media (max-width:600px){
+    .card{ flex-basis:100%; max-width:340px; }
+  }
 
-    .card:hover::after {
-      opacity: 1;
-    }
-    .red-title {
-  color: #ff2a2a; /* or whatever red you like */
-}
-    .card-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
+  .empty-state{
+    text-align:center; color:var(--text-dim); font-size:14px;
+    padding:64px 24px; max-width:420px; margin:0 auto;
+  }
+  .empty-state strong{ color:var(--text); font-weight:600; }
 
-    .card-desc {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.4;
-    }
+  /* ---------- Card ---------- */
+  .card{ display:flex; flex-direction:column; flex:1 1 220px; max-width:320px; min-width:220px; }
+  .card[hidden]{ display:none; }
 
-    .tag {
-      display: inline-block;
-      margin-top: 12px;
-      font-size: 11px;
-      color: var(--accent);
-      opacity: 0.85;
-    }
+  .art-wrap{ position:relative; aspect-ratio:1/1; width:100%; }
 
-    /* Footer */
-    .footer {
-      padding: 24px 40px 40px;
-      color: var(--muted);
-      font-size: 12px;
-    }
+  .cover-glow{
+    position:absolute; inset:-4%;
+    background-size:cover; background-position:center;
+    filter:blur(10px) saturate(1.3) brightness(1.1);
+    opacity:0;
+    transition:opacity .3s ease;
+    z-index:0;
+    pointer-events:none;
+  }
+  .art-wrap:hover .cover-glow{ opacity:0.85; }
 
-    @media (max-width: 600px) {
-      .header,
-      .container,
-      .footer {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-    }
-    /* Image section */
-    .card-image {
-    width: 100%;
-    height: 120px;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 14px;
-    position: relative;
-    }
+  .cover{
+    position:relative; z-index:1; width:100%; height:100%;
+    border-radius:6px; background-color:var(--panel-2);
+    box-shadow:0 12px 30px rgba(0,0,0,0.45);
+    cursor:pointer; overflow:hidden;
+    transition: transform .2s ease, box-shadow .25s ease;
+  }
 
-    .card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    }
+  .cover img{ display:block; width:100%; height:100%; object-fit:cover; }
 
-    /* Subtle overlay */
-    .card-image::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-    180deg,
-    rgba(0,0,0,0.15),
-    rgba(0,0,0,0.55)
-      );
-    }
+  .cover:hover{
+    transform: scale(1.04);
+    box-shadow:0 16px 36px rgba(0,0,0,0.5);
+  }
 
-    /* Content wrapper */
-    .card-content {
-      position: relative;
-    }
+  .cover-overlay{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:8px;
+    color:#fff; background:rgba(0,0,0,0.32);
+    opacity:0; transition:opacity .2s ease;
+    font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+    text-shadow:0 1px 4px rgba(0,0,0,0.85), 0 1px 14px rgba(0,0,0,0.5);
+  }
+  .cover-overlay svg{ width:22px; height:22px; stroke:#fff; filter:drop-shadow(0 1px 4px rgba(0,0,0,0.85)); }
+  .cover:hover .cover-overlay{ opacity:1; }
 
-    .header-icon {
-    position: absolute;
-    top: 32px;
-    right: 40px;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--panel);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.15s ease;
-    }
+  .cover-fallback{
+    display:none; position:absolute; inset:0; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px; text-align:center;
+    padding:20px; color:var(--text-dim); font-size:11px; line-height:1.5;
+  }
+  .cover-fallback span{
+    color:var(--text); font-family:'SFMono-Regular', Consolas, monospace;
+    font-size:12.5px; background:rgba(255,255,255,0.08);
+    padding:3px 8px; border-radius:4px;
+  }
+  .cover.cover-missing .cover-fallback{ display:flex; }
+  .cover.cover-missing img{ display:none; }
+  .cover.cover-missing .cover-overlay{ display:none; }
 
-    .header-icon img {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    opacity: 0.8;
-    }
+  /* ---------- Meta text ---------- */
+  .meta{ margin-top:18px; padding-right:6px; }
 
-    .header-icon:hover {
-    border-color: #2a2a3a;
-    }
+  .title{
+    font-family:'Gabarito', sans-serif; font-size:25px;
+    line-height:1.1; margin:0 0 4px;
+  }
 
-    .header-icon:hover img {
-    opacity: 1;
-    }
+  .sub{ margin:0; font-size:13.5px; color:var(--text-dim); }
+  .sub .dot{ margin:0 6px; opacity:.6; }
 
-    .header-icon.second-icon {
-    right: 80px; /* move left from the first icon */
-    top: 32px;   /* same vertical position */
-    }
+  /* ---------- Modal ---------- */
+  .modal-backdrop{
+    position:fixed;
+    top:0; left:0; right:0;
+    bottom:var(--player-bar-h);
+    background:rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px); display:flex; align-items:center;
+    justify-content:center; padding:24px; z-index:100;
+    opacity:0; transition:opacity .25s ease, bottom .2s ease;
+  }
+  .modal-backdrop.open{ opacity:1; }
+  .modal-backdrop[hidden]{ display:none; }
 
+  .modal{
+    position:relative; overflow:hidden;
+    background:var(--panel); border-radius:14px; max-width:760px; width:100%;
+    max-height:100%; display:grid; grid-template-columns:260px 1fr;
+    grid-template-rows:minmax(0,1fr);
+    gap:32px; padding:32px; box-shadow:0 30px 80px rgba(0,0,0,0.55);
+    transform:scale(.96) translateY(8px); transition:transform .25s cubic-bezier(.2,.8,.2,1);
+  }
+  .modal-backdrop.open .modal{ transform:scale(1) translateY(0); }
 
-  </style>
+  @media (max-width:640px){
+    .modal{ grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr); padding:24px; }
+  }
+
+  .modal-bg{
+    position:absolute; inset:-15%;
+    background-size:cover; background-position:center;
+    filter:blur(60px) saturate(1.2);
+    opacity:0; transition:opacity .35s ease;
+    z-index:0;
+  }
+  .modal-bg.visible{ opacity:0.85; }
+
+  .modal-close{
+    position:absolute; top:16px; right:16px; z-index:2;
+    width:32px; height:32px;
+    border-radius:50%; border:1px solid rgba(255,255,255,0.28);
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(26px); -webkit-backdrop-filter:blur(26px);
+    color:rgba(255,255,255,0.85); font-size:20px; line-height:1;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    user-select:none; -webkit-user-select:none; -moz-user-select:none;
+    outline:none; -moz-outline-style:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .modal-close::-moz-focus-inner{ border:0; }
+  .modal-close:focus, .modal-close:focus-visible{ outline:none; box-shadow:none; }
+  .modal-close:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
+
+  .modal-art{ position:relative; z-index:1; min-height:0; }
+  .modal-cover{
+    display:block; width:100%; aspect-ratio:1/1;
+    object-fit:cover; border-radius:8px; box-shadow:0 14px 32px rgba(0,0,0,0.5);
+    background:var(--panel-2); transition:opacity .2s ease;
+  }
+
+  .modal-info{
+    position:relative; z-index:1; min-width:0; min-height:0;
+    display:flex; flex-direction:column;
+    text-shadow:0 1px 3px rgba(0,0,0,0.55);
+  }
+  .modal-info h2{
+    font-family:'Gabarito',sans-serif; font-size:25px; margin:0 0 2px;
+  }
+  .modal-artist{ margin:0; color:var(--text-dim); font-size:15px; }
+  .modal-stats-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin:6px 0 18px;
+  }
+  .modal-meta{
+    margin:0; color:var(--text-dim); font-size:12px;
+    letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
+  }
+  .download-btn{
+    display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+    padding:6px 13px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.28);
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    color:rgba(255,255,255,0.85);
+    font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap;
+    user-select:none; -webkit-user-select:none; -moz-user-select:none;
+    outline:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .download-btn svg{ width:13px; height:13px; }
+  .download-btn:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
+
+  .tracklist-header{
+    display:grid; grid-template-columns: 26px 1fr 46px; gap:12px; align-items:center;
+    color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    padding-bottom:8px; padding-right:6px; margin-bottom:4px;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    flex-shrink:0;
+  }
+  .tracklist-header .header-time-icon{ justify-self:end; width:13px; height:13px; display:block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55)); }
+
+  .tracklist{
+    list-style:none; margin:0; padding:0; padding-right:6px;
+    flex:1; min-height:0; overflow-y:auto; user-select:none;
+  }
+  .track{
+    display:grid; grid-template-columns: 26px 1fr 46px; gap:12px; align-items:baseline;
+    padding:7px 4px; margin:0 -4px; border-radius:5px;
+    border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px;
+    cursor:pointer; transition:background .12s ease;
+  }
+  .track:hover{ background:rgba(255,255,255,0.06); }
+
+  .track-num-cell{ position:relative; width:100%; height:15px; align-self:center; }
+  .track-num-cell > *{ position:absolute; left:0; top:50%; transform:translateY(-50%); }
+  .track-num{ color:var(--text-dim); font-variant-numeric:tabular-nums; }
+
+  .track-play-btn{
+    display:none; align-items:center; justify-content:flex-start;
+    width:15px; height:15px; padding:0; margin:0; border:none; background:none;
+    cursor:pointer; color:var(--text);
+  }
+  .track-play-btn svg{ width:13px; height:13px; display:block; }
+  .track-play-btn .icon-pause{ display:none; }
+
+  .track-playing-icon{ display:none; align-items:flex-end; gap:2.5px; height:13px; }
+  .track-playing-icon .eq-bar{
+    width:2.5px; background:var(--accent); border-radius:1px;
+    transform-origin:bottom;
+    animation:eq-bounce 0.9s ease-in-out infinite;
+  }
+  .track-playing-icon .eq-bar:nth-child(1){ height:40%; animation-delay:-0.6s; }
+  .track-playing-icon .eq-bar:nth-child(2){ height:100%; animation-delay:-0.2s; }
+  .track-playing-icon .eq-bar:nth-child(3){ height:65%; animation-delay:-0.9s; }
+  @keyframes eq-bounce{
+    0%, 100% { transform:scaleY(0.3); }
+    50% { transform:scaleY(1); }
+  }
+
+  .track:hover .track-num{ display:none; }
+  .track:hover .track-play-btn{ display:flex; }
+
+  .track.is-playing .track-num{ display:none; }
+  .track.is-playing .track-playing-icon{ display:flex; }
+  .track.is-playing:hover .track-playing-icon{ display:none; }
+  .track.is-playing .track-play-btn .icon-play{ display:none; }
+  .track.is-playing .track-play-btn .icon-pause{ display:block; }
+
+  .track-title{ line-height:1.4; }
+  .track-credits{ color:var(--text-dim); font-size:12px; }
+  .track-len{ color:var(--text-dim); font-variant-numeric:tabular-nums; text-align:right; }
+
+  /* ---------- Player bar ---------- */
+  .player-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:110;
+    min-height:88px;
+    background:var(--panel);
+    border-top:1px solid rgba(255,255,255,0.08);
+    display:grid;
+    grid-template-columns: 1fr minmax(0, 560px) 1fr;
+    align-items:center;
+    gap:20px;
+    padding:0 24px;
+  }
+
+  .player-track{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .player-cover{
+    width:52px; height:52px; border-radius:4px; object-fit:cover;
+    background:var(--panel-2); flex-shrink:0;
+  }
+  .player-meta{ min-width:0; }
+  .player-title{
+    font-size:14px; font-weight:600; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .player-artists{
+    font-size:12px; color:var(--text-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .player-center{
+    align-self:stretch;
+    display:grid; grid-template-rows:1fr auto;
+    justify-items:center; align-items:center;
+    gap:6px; min-width:0;
+    padding-bottom:19px;
+  }
+  .player-controls{ display:flex; align-items:center; gap:26px; margin-top:7px; }
+  .ctrl-btn{
+    position:relative;
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    padding:4px; display:flex; align-items:center; justify-content:center;
+    transition:color .15s ease, transform .1s ease;
+  }
+  .ctrl-btn:hover{ color:var(--text); }
+  .ctrl-btn.active{ color:var(--accent); }
+  .ctrl-btn:active{ transform:scale(0.9); }
+  .ctrl-btn svg{ width:16px; height:16px; }
+  .ctrl-btn::after{
+    content:''; position:absolute; left:50%; bottom:-1px;
+    width:3.5px; height:3.5px; border-radius:50%;
+    background:var(--accent);
+    transform:translateX(-50%) scale(0);
+    transition:transform .15s ease;
+  }
+  .ctrl-btn.active::after{ transform:translateX(-50%) scale(1); }
+
+  .ctrl-btn-transport{
+    background:none; border:none; padding:0; margin:0;
+    color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity .15s ease, transform .1s ease;
+  }
+  .ctrl-btn-transport:hover{ opacity:0.65; }
+  .ctrl-btn-transport:active{ transform:scale(0.9); }
+  .ctrl-btn-transport svg{ width:25px; height:25px; display:block; }
+
+  .player-progress{ display:flex; align-items:center; gap:8px; width:100%; max-width:520px; }
+  .player-progress span{
+    font-size:11px; color:var(--text-dim); font-variant-numeric:tabular-nums;
+    width:34px; flex-shrink:0; user-select:none;
+  }
+  .player-progress .time-current{ text-align:right; }
+
+  .player-volume{ display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+  .volume-btn svg{ width:18px; height:18px; flex-shrink:0; }
+  #volumeSlider{ width:133px; flex:none; }
+
+  input[type="range"]{
+    -webkit-appearance:none; appearance:none;
+    flex:1; height:5px; border-radius:999px; outline:none; cursor:pointer;
+    background:rgba(255,255,255,0.15);
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:5px; height:5px; border-radius:50%;
+    background:transparent; border:none; box-shadow:none; cursor:pointer;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:5px; height:5px; border-radius:50%; background:transparent;
+    border:none; box-shadow:none; cursor:pointer;
+  }
+  input[type="range"]::-moz-range-track{ background:transparent; border:none; }
+
+  @media (max-width:760px){
+    .player-bar{ grid-template-columns:1fr; height:auto; padding:12px 16px; row-gap:10px; }
+    .player-volume{ justify-content:center; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cover, .modal, .modal-backdrop, .modal-bg{ transition:none; }
+    .track-playing-icon .eq-bar{ animation:none; }
+  }
+</style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>1souf's projects</h1>
-    <p>A collection of personal projects focused on music trackers, archiving, and edits.</p>
-
-    <a href="https://www.youtube.com/@1souf/?sub_confirmation=1" class="header-icon" aria-label="Link" target="_blank" rel="noopener noreferrer">
-  <img src="icons/youtube.ico" alt="YT">
-</a>
-
-<a href="https://discord.com/users/1067812292512714802" class="header-icon second-icon" aria-label="Link" target="_blank" rel="noopener noreferrer">
-  <img src="icons/discord.ico" alt="DC">
-</a>
-
-  </div>
-
-  <div class="container">
-    <div class="grid">
-
-        <!-- CARD 3 -->
-      <a class="card" href="the-wonderful-world-of-red.html">
-
-  <div class="card-image">
-    <img src="tracker-previews/worldofred.webp" loading="lazy">
-  </div>
-
-  <div class="card-content">
-    <div class="card-title">the wonderful world of red</div>
-    <div class="card-desc">
-      A fan-made Whole Lotta Red deluxe with fan-favorite grails and remastered songs.
+  <header class="topbar">
+    <div></div>
+    <div class="search-shell">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="searchInput" type="text" placeholder="Search albums…" autocomplete="off">
     </div>
-    <div class="tag">Comp • Playlist</div>
-  </div>
-
-  <!-- CARD 6 -->
-      <a class="card" href="counter.html">
-
-  <div class="card-image">
-    <img src="tracker-previews/counter.png" loading="lazy">
-  </div>
-
-  <div class="card-content">
-    <div class="card-title">Counter</div>
-    <div class="card-desc">
-      A simple counter which you can increase by one. Yes, that's it.
+    <!-- Swap these two href values for your real Discord profile and YouTube channel links -->
+    <div class="topbar-links">
+      <a class="topbar-icon-btn" href="https://discord.com/users/1067812292512714802" target="_blank" rel="noopener noreferrer" aria-label="Discord" title="Discord">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.891.076.076 0 0 0-.04.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.029 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.674-3.548-13.662a.06.06 0 0 0-.031-.028zM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.955 2.418-2.157 2.418zm7.974 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.211 0 2.176 1.096 2.157 2.42 0 1.332-.946 2.418-2.157 2.418z"/></svg>
+      </a>
+      <a class="topbar-icon-btn" href="https://www.youtube.com/@1souf/?sub_confirmation=1" target="_blank" rel="noopener noreferrer" aria-label="YouTube" title="YouTube">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a2.999 2.999 0 0 0-2.112-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.386.505A2.999 2.999 0 0 0 .502 6.186 31.28 31.28 0 0 0 0 12a31.28 31.28 0 0 0 .502 5.814 2.999 2.999 0 0 0 2.112 2.136c1.881.505 9.386.505 9.386.505s7.505 0 9.386-.505a2.999 2.999 0 0 0 2.112-2.136A31.28 31.28 0 0 0 24 12a31.28 31.28 0 0 0-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      </a>
     </div>
-    <div class="tag">Counter • Numbers • Addition</div>
-  </div>
+  </header>
 
-</a>
+  <main>
+    <p class="empty-state" id="emptyState" hidden>No albums match <strong id="emptyQuery"></strong>.</p>
 
+    <div class="grid" id="grid">
+
+      <article class="card" data-id="1">
+        <div class="art-wrap">
+          <div class="cover-glow" id="cover-glow-1"></div>
+          <div class="cover" id="cover-1">
+            <img alt="">
+            <div class="cover-fallback"><span>cover-1.jpg</span>Drop an image with this name next to this HTML file</div>
+            <div class="cover-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span>View tracklist</span>
+            </div>
+          </div>
+        </div>
+        <div class="meta">
+          <h2 class="title" data-field="title">the wonderful world of red</h2>
+          <p class="sub">
+            <span data-field="artist">Playboi Carti</span><span class="dot">·</span><span data-field="tracks"></span> Tracks
+          </p>
+        </div>
+      </article>
+
+      <article class="card" data-id="2">
+        <div class="art-wrap">
+          <div class="cover-glow" id="cover-glow-2"></div>
+          <div class="cover" id="cover-2">
+            <img alt="">
+            <div class="cover-fallback"><span>cover-2.jpg</span>Drop an image with this name next to this HTML file</div>
+            <div class="cover-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span>View tracklist</span>
+            </div>
+          </div>
+        </div>
+        <div class="meta">
+          <h2 class="title" data-field="title">Barter 16</h2>
+          <p class="sub">
+            <span data-field="artist">Lil Uzi Vert</span><span class="dot">·</span><span data-field="tracks"></span> Tracks
+          </p>
+        </div>
+      </article>
+
+      <article class="card" data-id="3">
+        <div class="art-wrap">
+          <div class="cover-glow" id="cover-glow-3"></div>
+          <div class="cover" id="cover-3">
+            <img alt="">
+            <div class="cover-fallback"><span>cover-3.jpg</span>Drop an image with this name next to this HTML file</div>
+            <div class="cover-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span>View tracklist</span>
+            </div>
+          </div>
+        </div>
+        <div class="meta">
+          <h2 class="title" data-field="title">ALL WHITE</h2>
+          <p class="sub">
+            <span data-field="artist">Lil Uzi Vert</span><span class="dot">·</span><span data-field="tracks"></span> Tracks
+          </p>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-bg" id="modalBg"></div>
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      <div class="modal-art">
+        <img class="modal-cover" id="modalCover" src="" alt="" onerror="this.style.opacity=0">
+      </div>
+      <div class="modal-info">
+        <h2 id="modalTitle"></h2>
+        <p class="modal-artist" id="modalArtist"></p>
+        <div class="modal-stats-row">
+          <p class="modal-meta" id="modalMeta"></p>
+          <!-- Default download link (overridden per-album by downloadUrl in ALBUM_DATA) -->
+          <a class="download-btn" id="downloadBtn" href="https://mega.io" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 20h14"/></svg>
+            Download
+          </a>
+        </div>
+        <div class="tracklist-header" id="tracklistHeader">
+          <span>#</span><span>Title</span>
+          <svg class="header-time-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Time"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+        </div>
+        <ol class="tracklist" id="tracklist"></ol>
+      </div>
     </div>
   </div>
 
-  <div class="footer">
-    © 2026 — Hosted via GitHub Pages
-  </div>
+  <footer class="player-bar" id="playerBar">
+    <div class="player-track">
+      <img class="player-cover" id="playerCover" alt="">
+      <!-- No track playing yet? This shows player-placeholder.jpg — drop an image
+           with that name next to this HTML file to set your own default. -->
+      <div class="player-meta">
+        <div class="player-title" id="playerTitle">No track selected</div>
+        <div class="player-artists" id="playerArtists">Double-click a track to play</div>
+      </div>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="ctrl-btn" id="shuffleBtn" aria-label="Shuffle" title="Shuffle">
+          <svg viewBox="0 -1 25 25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+        </button>
+        <button class="ctrl-btn-transport" id="prevBtn" aria-label="Previous">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 6v12l-8.5-6z"/><path d="M13 6v12L4.5 12z"/></svg>
+        </button>
+        <button class="ctrl-btn-transport" id="playPauseBtn" aria-label="Play">
+          <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l13-7z"/></svg>
+          <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="5" y="4" width="5" height="16" rx="1.5"/><rect x="14" y="4" width="5" height="16" rx="1.5"/></svg>
+        </button>
+        <button class="ctrl-btn-transport" id="nextBtn" aria-label="Next">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 6v12l8.5-6z"/><path d="M11 6v12l8.5-6z"/></svg>
+        </button>
+        <button class="ctrl-btn" id="loopBtn" aria-label="Loop" title="Loop">
+          <svg viewBox="0 -1 25 25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+      </div>
+      <div class="player-progress">
+        <span class="time-current" id="timeCurrent">0:00</span>
+        <input type="range" id="progressSlider" min="0" max="100" value="0" step="0.1">
+        <span class="time-total" id="timeTotal">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-volume">
+      <button class="ctrl-btn volume-btn" id="muteBtn" aria-label="Mute" title="Mute">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <g id="volumeWaves">
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </g>
+          <g id="volumeMuted" style="display:none">
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </g>
+        </svg>
+      </button>
+      <input type="range" id="volumeSlider" min="0" max="100" value="50">
+    </div>
+  </footer>
+
+  <audio id="audioPlayer" preload="none"></audio>
+
+<script>
+  // -----------------------------------------------------------------
+  // ALBUM DATA — this is what you edit to swap in any album you like.
+  // Title and artist are edited directly in the HTML above (the
+  // <h2 class="title"> and the artist <span> inside each card).
+  //
+  // cover:         filename of the cover image used everywhere — the
+  //                tracklist view and the bottom player bar. Also used
+  //                on the homepage grid card UNLESS homepageCover is set.
+  // homepageCover: optional. A different image (e.g. a .webp) to use
+  //                just for the homepage grid card + its hover glow.
+  //                Delete this line entirely and cover is used there
+  //                too, same as everywhere else.
+  // downloadUrl:   where the Download button in the tracklist view
+  //                links to for this album.
+  // tracks:        number, title, length ("m:ss"), audio (URL to the
+  //                audio file — every track below defaults to the same
+  //                placeholder clip; just add your own
+  //                "audio: 'your-file.mp3'" on a track to override it
+  //                individually).
+  //                title is shown exactly as typed, everywhere — it's
+  //                never modified automatically.
+  //                credits (optional): array of extra artist names on
+  //                that track. Shown as a gray "[Main Artist, Extra
+  //                Artist]" next to the title in the tracklist, and
+  //                combined into the artist line in the bottom player
+  //                bar. Leave it off (or use []) for a track with no
+  //                extra artists.
+  // -----------------------------------------------------------------
+  const PLACEHOLDER_AUDIO = 'https://api.pillows.su/api/get/9e1c4879d0185d2e9bf155ff2450f455';
+  const DEFAULT_DOWNLOAD_URL = '404.html';
+
+  const ALBUM_DATA = {
+    1: {
+      cover: 'covers/thewonderfulworldofred.png',
+      homepageCover: 'covers/thewonderfulworldofred.webp',
+      downloadUrl: 'https://mega.nz/folder/l71QkJxC#XHOvddTs-LIq9onEs8MXow',
+      tracks: [
+        { number: 1,  title: 'Red Rain',        length: '2:43', audio: 'https://api.pillows.su/api/get/c2484b41683ef429bf89010d8557c0b6' },
+        { number: 2,  title: 'Whole Lotta Red (feat. Madmaxx602 & Smooky MarGielaa)',       length: '2:23', audio: 'https://api.pillows.su/api/get/d21240c576bbdd800b0753268d872870', credits: ['Madmaxx602, Smooky MarGielaa'] },
+        { number: 3,  title: 'Things Too',      length: '1:34', audio: 'https://api.pillows.su/api/get/850f5d754ad0fa2333f4268fe490db3d' },
+        { number: 4,  title: 'Designer Shoes',  length: '3:31', audio: 'https://api.pillows.su/api/get/047101769172d9efae77d90fc41c2d08' },
+        { number: 5,  title: 'B O Y',           length: '2:27', audio: 'https://api.pillows.su/api/get/a79f1d978f00d668d4fa6267a1be70ea' },
+        { number: 6,  title: 'One Day (feat. Drake)',   length: '3:02', audio: 'https://api.pillows.su/api/get/7c5823f018c3764b47b9ace3a718e0c2', credits: ['Drake'] },
+        { number: 7,  title: "I'm In This Bitch",          length: '1:06', audio: 'https://api.pillows.su/api/get/233c7f9601f98ff22dcf8c3911a15dbd' },
+        { number: 8,  title: 'Diamonds',        length: '2:49', audio: 'https://api.pillows.su/api/get/102b17f5d91ca25eb5d21564e2ff5fe0' },
+        { number: 9,  title: 'Miss The Rage',   length: '2:54', audio: 'https://api.pillows.su/api/get/a98a39ec60230f6d83d819038f612ca9' },
+        { number: 10, title: 'Hermès Link',     length: '1:04', audio: 'https://api.pillows.su/api/get/37cc1c9439322797eaab49c64e281d68' },
+        { number: 11, title: 'Kid Cudi (feat. Young Nudy)',          length: '3:17', audio: 'https://api.pillows.su/api/get/eb7967b271f2109fd013d242e5419043', credits: ['Young Nudy'] },
+        { number: 12, title: 'Party With Her',  length: '1:47', audio: 'https://api.pillows.su/api/get/0759d4d35f428dae69932e0b5129f9a7' },
+        { number: 13, title: 'Right Now',       length: '1:53', audio: 'https://api.pillows.su/api/get/2a88b147f06c474336228376843924f6' },
+        { number: 14, title: 'Alien Autopsy (feat. Trippie Redd & NoCap)',        length: '4:03', audio: 'https://api.pillows.su/api/get/3b502e01648dcdb0e9395f36686a0cf0', credits: ['Trippie Redd, NoCap'] },
+        { number: 15, title: "Let's Get It",    length: '1:11', audio: 'https://api.pillows.su/api/get/153e90f1f2bcf17bc1203d902b6a295b' },
+        { number: 16, title: 'Perky Gon Grab On Meh',       length: '3:01', audio: 'https://api.pillows.su/api/get/80904561289ed2d9b0bbc1b56612ee12' },
+        { number: 17, title: 'molly.jpg',       length: '2:27', audio: 'https://api.pillows.su/api/get/2b8834c8379afb43242c0996aa283954' },
+        { number: 18, title: 'No Smoke Freestyle',       length: '2:45', audio: 'https://api.pillows.su/api/get/caa374f604a275963552e1d810489389' },
+        { number: 19, title: 'Pop Our Pills',   length: '1:52', audio: 'https://api.pillows.su/api/get/b3fb040db63bf33528c70e477daa6651' },
+        { number: 20, title: 'Ready To Die',    length: '1:57', audio: 'https://api.pillows.su/api/get/951ca7ed52a280d949ed7177e3cd4f6b' },
+        { number: 21, title: 'R.I.P. Yams (feat. Gunna & Young Thug)',   length: '4:52', audio: 'https://api.pillows.su/api/get/5208e83a3d860bb84bf27ecd761b1d8e', credits: ['Gunna, Young Thug'] },
+        { number: 22, title: 'u kan do it too.',           length: '3:07', audio: 'https://api.pillows.su/api/get/5db8172d47e655317293aa06b8b858d5' },
+        { number: 23, title: 'Breathin',        length: '2:10', audio: 'https://api.pillows.su/api/get/deb465f350891fea6359e0d814c11662' },
+        { number: 24, title: '10 Vibes',        length: '3:39', audio: 'https://api.pillows.su/api/get/bded38354f24b9b269b1d85224be44f5' },
+        { number: 25, title: 'Act Like A Fool', length: '1:22', audio: 'https://api.pillows.su/api/get/f8d76245668acf841da5cf109f15f4b8' },
+        { number: 26, title: 'Talkative',       length: '2:13', audio: 'https://api.pillows.su/api/get/a5074d1e326ab97d7bdec4871c04e0e8' },
+        { number: 27, title: 'JumpOutTheCoupe (feat. Lil Uzi Vert)', length: '3:32', audio: 'https://api.pillows.su/api/get/cadfbbb1db72c8f49abc4a3534272820', credits: ['Lil Uzi Vert'] },
+        { number: 28, title: 'HXD',             length: '1:09', audio: 'https://api.pillows.su/api/get/7b25143b22d45a3e6ceabfd813a1f3e9' },
+        { number: 29, title: 'My Cup',          length: '2:40', audio: 'https://api.pillows.su/api/get/a421de8e9bc6449d6e81e11ab50f3220' },
+        { number: 30, title: 'I Got These',     length: '1:25', audio: 'https://api.pillows.su/api/get/a30fef5f8443b18aed175be552865e56' },
+        { number: 31, title: "Destiny's Child", length: '2:29', audio: 'https://api.pillows.su/api/get/8c3380b17baedffb5f34c1db6dd28c6a' },
+        { number: 32, title: 'Tr3nches',        length: '2:06', audio: 'https://api.pillows.su/api/get/d3bab59450f7be74f44b89827976589c' },
+        { number: 33, title: 'Kill One Of You Niggas',      length: '3:04', audio: 'https://api.pillows.su/api/get/892ba57b61fc77840ca7230470fb208d' },
+        { number: 34, title: 'Top Of The List (feat. Guap Tarantino)',        length: '2:53', audio: 'https://api.pillows.su/api/get/a775ff10a0b3f165fa44cd09474b7dea', credits: ['Guap Tarantino'] },
+        { number: 35, title: 'Opium *',         length: '2:16', audio: 'https://api.pillows.su/api/get/edff0e7aeec05f1f392ae32ad92692d2' },
+        { number: 36, title: 'Not4Meh',         length: '2:28', audio: 'https://api.pillows.su/api/get/a002398ab8ba3356966948f605905c47' },
+        { number: 37, title: 'Eastside',        length: '1:49', audio: 'https://api.pillows.su/api/get/44c61c53e875d9043761af3432dd1e13' },
+        { number: 38, title: 'Tryna Get Down',  length: '2:13', audio: 'https://api.pillows.su/api/get/7d4bcc5c2b5b11f158485ef3ff0e27f5' },
+        { number: 39, title: 'M.A.D. (feat. RX PESO)',  length: '3:20', audio: 'https://api.pillows.su/api/get/0d899e2661dd1a5b8eb4e2558d9a6e7a', credits: ['RX PESO'] },
+        { number: 40, title: 'oh my god !',     length: '4:43', audio: 'https://api.pillows.su/api/get/ceb2b83bb14a3a811e9cd03daa3d439d' },
+        { number: 41, title: 'In Line',         length: '2:41', audio: 'https://api.pillows.su/api/get/9f17372cba93aaed87ef236f9aea9c96' },
+        { number: 42, title: 'XTC',             length: '1:12', audio: 'https://api.pillows.su/api/get/f67810f2f17cde3b9aaf9428222f0e9b' }
+      ]
+    },
+    2: {
+      cover: 'covers/barter16.png',
+      homepageCover: 'covers/barter16.webp',
+      downloadUrl: 'https://mega.nz/folder/QzNE3YBa#ydQBL-M3OD_4JbUYwPQeDw',
+      tracks: [
+        { number: 1,  title: 'Scary Stories',   length: '4:41', audio: 'https://api.pillows.su/api/get/4bc6d56b3a2c2973545647c3debb7e1f' },
+        { number: 2,  title: 'Barter',          length: '2:40', audio: 'https://api.pillows.su/api/get/bb49416242306887a30c4a482040dac6' },
+        { number: 3,  title: 'Racks',           length: '2:13', audio: 'https://api.pillows.su/api/get/0d3ce4258f454a656734f0b567260209' },
+        { number: 4,  title: 'RIP Ms Connie (feat. Birdman)',       length: '3:49', audio: 'https://api.pillows.su/api/get/dafb21bc131eb29c24a17b0a79a11c6b', credits: ['Birdman'] },
+        { number: 5,  title: 'Stick Up',        length: '3:08', audio: 'https://api.pillows.su/api/get/83b733369fb95cbcf1ab88c9aef49efc' },
+        { number: 6,  title: 'Free Da Goat (feat. Young Thug)',       length: '3:34', audio: 'https://api.pillows.su/api/get/88176c8c8ab856f9a8ad8c2ae4217340', credits: ['Young Thug'] },
+        { number: 7,  title: 'Green Diamonds',  length: '2:13', audio: 'https://api.pillows.su/api/get/8b4c4a1df87f5d170c83f2b08675657c' },
+        { number: 8,  title: 'Thigh Pads',      length: '3:02', audio: 'https://api.pillows.su/api/get/10ce1eff49a91b028f770c35804e7b1f' },
+        { number: 9,  title: 'Shar Pei',        length: '2:16', audio: 'https://api.pillows.su/api/get/30d38b2d96bd0636fb6270fee5bfca99' },
+        { number: 10, title: 'Butter In It',    length: '2:26', audio: 'https://api.pillows.su/api/get/7ebd71a1d62a05f42f01a565132040e3' },
+        { number: 11, title: 'Bloods',          length: '2:05', audio: 'https://api.pillows.su/api/get/7f7d4e5ec840eabbffbbbf8c65884b71' },
+        { number: 12, title: 'Thug Voice',      length: '3:26', audio: 'https://api.pillows.su/api/get/9b171e95fce64ea054fb5be92594b1bf' },
+        { number: 13, title: 'Jet',             length: '2:23', audio: 'https://api.pillows.su/api/get/f55d9ffc4e4c9ce311fc7969b703b181' },
+        { number: 14, title: 'Bob Marley',      length: '1:44', audio: 'https://api.pillows.su/api/get/31c5478cc248f0d789df452b43ac847b' },
+        { number: 15, title: 'Guarantee (feat. Young Thug & Ayanis)',           length: '2:38', audio: 'https://api.pillows.su/api/get/7f409afe3c78c320ed748bfc25657808', credits: ['Young Thug, Ayanis'] },
+        { number: 16, title: 'Realest From Philly', length: '4:29', audio: 'https://api.pillows.su/api/get/05098c7bc0e10d776229272fe7411b80', },
+        { number: 17, title: 'Workout (feat. Young Thug)', length: '3:19', audio: 'https://api.pillows.su/api/get/7a7adc4d47a1af4a3446ec4d2dcedd9f', credits: ['Young Thug'] },
+        { number: 18, title: 'K-Pop',           length: '2:06', audio: 'https://api.pillows.su/api/get/95ea467310b17c9aff95231d4a839361' },
+        { number: 19, title: "Rich Gang",       length: '2:48', audio: 'https://api.pillows.su/api/get/eb14ab5de025c0d7e83c639ad28170b8' }
+      ]
+    },
+    3: {
+      cover: 'covers/allwhite.jpg',
+      downloadUrl: 'https://mega.nz/folder/A7cTkbbZ#_K3LXxcxoeFgqmHGi0PCAw',
+      tracks: [
+        { number: 0,  title: 'Soon . > A!! WH1T3 🤭🫣🤍',   length: '0:47', audio: 'https://api.pillows.su/api/get/d5ea62abbaad903df4ad4bc6bbb373b2' }
+      ]
+    }
+  };
+
+  Object.values(ALBUM_DATA).forEach((album) => {
+    album.tracks.forEach((t) => { if (!t.audio) t.audio = PLACEHOLDER_AUDIO; });
+  });
+
+  // ---------------- Cover images ----------------
+  // The hover glow is just this same image, duplicated behind the cover and
+  // heavily blurred via CSS — no pixel-reading involved, so it works for
+  // any image (local file or a remote URL) with no cross-origin issues.
+  function setupCoverImage(id){
+    const wrap = document.getElementById(`cover-${id}`);
+    const img = wrap.querySelector('img');
+    const glow = document.getElementById(`cover-glow-${id}`);
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    card.querySelector('[data-field="tracks"]').textContent = ALBUM_DATA[id].tracks.length;
+
+    img.addEventListener('load', () => wrap.classList.remove('cover-missing'));
+    img.addEventListener('error', () => {
+      wrap.classList.add('cover-missing');
+      glow.style.backgroundImage = 'none';
+    });
+    const homepageSrc = ALBUM_DATA[id].homepageCover || ALBUM_DATA[id].cover;
+    img.src = homepageSrc;
+    glow.style.backgroundImage = `url('${homepageSrc}')`;
+  }
+  [1, 2, 3].forEach(setupCoverImage);
+
+  // ---------------- Search ----------------
+  const searchInput = document.getElementById('searchInput');
+  const grid = document.getElementById('grid');
+  const emptyState = document.getElementById('emptyState');
+  const emptyQuery = document.getElementById('emptyQuery');
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    document.querySelectorAll('.card').forEach((card) => {
+      const title = card.querySelector('[data-field="title"]').textContent.toLowerCase();
+      const match = q === '' || title.includes(q);
+      card.hidden = !match;
+      if (match) visibleCount++;
+    });
+
+    emptyState.hidden = visibleCount > 0;
+    grid.hidden = visibleCount === 0;
+    emptyQuery.textContent = `"${searchInput.value.trim()}"`;
+  });
+
+  // ---------------- Expanded album view ----------------
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalClose = document.getElementById('modalClose');
+  const modalBg = document.getElementById('modalBg');
+  const modalCover = document.getElementById('modalCover');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalArtist = document.getElementById('modalArtist');
+  const modalMeta = document.getElementById('modalMeta');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const tracklistEl = document.getElementById('tracklist');
+  const tracklistHeaderEl = document.getElementById('tracklistHeader');
+
+  let lastFocused = null;
+  let openTracklistAlbumId = null;
+
+  function formatRuntime(tracks){
+    const totalSeconds = tracks.reduce((sum, t) => {
+      const [m, s] = t.length.split(':').map(Number);
+      return sum + m * 60 + (s || 0);
+    }, 0);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      : `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function openModal(id){
+    const card = document.querySelector(`.card[data-id="${id}"]`);
+    const title = card.querySelector('[data-field="title"]').textContent;
+    const artist = card.querySelector('[data-field="artist"]').textContent;
+    const data = ALBUM_DATA[id];
+
+    openTracklistAlbumId = id;
+    modalTitle.textContent = title;
+    modalArtist.textContent = artist;
+    modalMeta.textContent = `${data.tracks.length} tracks · ${formatRuntime(data.tracks)}`;
+    downloadBtn.href = data.downloadUrl || DEFAULT_DOWNLOAD_URL;
+
+    // The tracklist/player always use the plain "cover" image — never the
+    // homepage-only one — and this is checked independently of whatever
+    // the homepage grid card happens to be showing.
+    modalCover.alt = title;
+    modalCover.style.opacity = 0;
+    modalBg.classList.remove('visible');
+    const coverProbe = new Image();
+    coverProbe.onload = () => {
+      modalCover.src = data.cover;
+      modalCover.style.opacity = 1;
+      modalBg.style.backgroundImage = `url('${data.cover}')`;
+      modalBg.classList.add('visible');
+    };
+    coverProbe.onerror = () => {
+      modalCover.removeAttribute('src');
+    };
+    coverProbe.src = data.cover;
+
+    tracklistEl.innerHTML = '';
+
+    data.tracks.forEach((t, idx) => {
+      const li = document.createElement('li');
+      li.className = 'track';
+      li.dataset.index = idx;
+      let titleHtml = escapeHtml(t.title);
+      if (t.credits && t.credits.length) {
+        const creditNames = [artist, ...t.credits].map(escapeHtml).join(', ');
+        titleHtml += ` <span class="track-credits">[${creditNames}]</span>`;
+      }
+      li.innerHTML = `
+        <span class="track-num-cell">
+          <span class="track-num">${t.number}</span>
+          <button class="track-play-btn" type="button" aria-label="Play">
+            <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+          </button>
+          <span class="track-playing-icon" aria-hidden="true">
+            <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+          </span>
+        </span>
+        <span class="track-title">${titleHtml}</span>
+        <span class="track-len">${t.length}</span>
+      `;
+      li.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.track-play-btn')) return;
+        playTrack(id, idx);
+      });
+      li.querySelector('.track-play-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleTrackPlayClick(id, idx);
+      });
+      tracklistEl.appendChild(li);
+    });
+
+    lastFocused = document.activeElement;
+    modalBackdrop.hidden = false;
+
+    // Line the header's Time column up with a real track row's Time column.
+    // Reset to the base padding first every time, otherwise repeated opens
+    // would keep stacking a correction on top of the last one and the icon
+    // would slowly creep sideways.
+    const sampleLen = tracklistEl.querySelector('.track-len');
+    if (sampleLen) {
+      tracklistHeaderEl.style.paddingRight = '6px';
+      const gap = tracklistHeaderEl.getBoundingClientRect().right - sampleLen.getBoundingClientRect().right;
+      tracklistHeaderEl.style.paddingRight = (6 + gap) + 'px';
+    }
+
+    updateNowPlayingRow();
+    requestAnimationFrame(() => modalBackdrop.classList.add('open'));
+    modalClose.focus();
+  }
+
+  function closeModal(){
+    modalBackdrop.classList.remove('open');
+    setTimeout(() => { modalBackdrop.hidden = true; }, 200);
+    if (lastFocused) lastFocused.focus();
+    openTracklistAlbumId = null;
+  }
+
+  [1, 2, 3].forEach((id) => {
+    document.getElementById(`cover-${id}`).addEventListener('click', () => openModal(id));
+  });
+
+  modalClose.addEventListener('click', closeModal);
+  modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modalBackdrop.hidden) closeModal(); });
+
+  // ---------------- Player ----------------
+  const audioEl = document.getElementById('audioPlayer');
+  const playerBar = document.getElementById('playerBar');
+  const playerCover = document.getElementById('playerCover');
+  const playerTitle = document.getElementById('playerTitle');
+  const playerArtists = document.getElementById('playerArtists');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const iconPlay = document.getElementById('iconPlay');
+  const iconPause = document.getElementById('iconPause');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const loopBtn = document.getElementById('loopBtn');
+  const progressSlider = document.getElementById('progressSlider');
+  const timeCurrent = document.getElementById('timeCurrent');
+  const timeTotal = document.getElementById('timeTotal');
+  const volumeSlider = document.getElementById('volumeSlider');
+
+  // Default cover shown in the bottom bar before anything has been played.
+  // Drop an image named player-placeholder.jpg next to this HTML file to swap it.
+  const DEFAULT_PLAYER_COVER = 'icons/player-placeholder.jpg';
+  playerCover.addEventListener('error', () => playerCover.removeAttribute('src'));
+  playerCover.src = DEFAULT_PLAYER_COVER;
+
+  // Always start from a clean 0:00 — never resume a previous position on reload.
+  audioEl.pause();
+  audioEl.removeAttribute('src');
+  audioEl.currentTime = 0;
+  progressSlider.value = 0;
+  timeCurrent.textContent = '0:00';
+  timeTotal.textContent = '0:00';
+
+  let currentAlbumId = null;
+  let currentTrackIndex = null;
+  let playOrder = [];
+  let orderPos = 0;
+  let shuffleOn = false;
+  let loopOn = false;
+  let isSeeking = false;
+
+  function buildPlayOrder(albumId, shuffle){
+    const n = ALBUM_DATA[albumId].tracks.length;
+    const order = Array.from({ length: n }, (_, i) => i);
+    if (shuffle) {
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+    }
+    return order;
+  }
+
+  function formatTime(sec){
+    sec = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  function updateSliderFill(el){
+    const min = parseFloat(el.min) || 0;
+    const max = parseFloat(el.max) || 100;
+    const val = parseFloat(el.value) || 0;
+    const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+    el.style.background = `linear-gradient(to right, var(--accent) ${pct}%, rgba(255,255,255,0.15) ${pct}%)`;
+  }
+
+  function setPlayPauseIcon(playing){
+    iconPlay.style.display = playing ? 'none' : 'block';
+    iconPause.style.display = playing ? 'block' : 'none';
+    playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  }
+
+  // Shows a small animated "now playing" indicator on whichever track row
+  // matches what's actually loaded — but only if that album's tracklist is
+  // the one currently open in the modal.
+  function updateNowPlayingRow(){
+    tracklistEl.querySelectorAll('.track.is-playing').forEach((el) => el.classList.remove('is-playing'));
+    if (openTracklistAlbumId !== null && openTracklistAlbumId === currentAlbumId && currentTrackIndex !== null && !audioEl.paused) {
+      const row = tracklistEl.querySelector(`.track[data-index="${currentTrackIndex}"]`);
+      if (row) row.classList.add('is-playing');
+    }
+  }
+
+  function handleTrackPlayClick(albumId, trackIndex){
+    if (currentAlbumId === albumId && currentTrackIndex === trackIndex) {
+      if (audioEl.paused) audioEl.play(); else audioEl.pause();
+    } else {
+      playTrack(albumId, trackIndex);
+    }
+  }
+
+  function playTrack(albumId, trackIndex, opts = {}){
+    currentAlbumId = albumId;
+    currentTrackIndex = trackIndex;
+
+    if (!opts.keepOrder || playOrder.length !== ALBUM_DATA[albumId].tracks.length) {
+      playOrder = buildPlayOrder(albumId, shuffleOn);
+    }
+    orderPos = playOrder.indexOf(trackIndex);
+
+    const track = ALBUM_DATA[albumId].tracks[trackIndex];
+    const card = document.querySelector(`.card[data-id="${albumId}"]`);
+    const artistName = card.querySelector('[data-field="artist"]').textContent;
+
+    playerCover.src = ALBUM_DATA[albumId].cover;
+    playerTitle.textContent = track.title;
+    const artistsList = track.credits && track.credits.length ? [artistName, ...track.credits] : [artistName];
+    playerArtists.textContent = artistsList.join(', ');
+    document.title = `${track.title} · ${artistsList.join(', ')}`;
+
+    audioEl.src = track.audio;
+    audioEl.currentTime = 0;
+    audioEl.play();
+
+    progressSlider.value = 0;
+    timeCurrent.textContent = '0:00';
+    updateSliderFill(progressSlider);
+    updateNowPlayingRow();
+  }
+
+  function advanceTrack(direction){
+    if (currentAlbumId === null) return;
+    const total = playOrder.length;
+    orderPos = (orderPos + direction + total) % total;
+    const nextIndex = playOrder[orderPos];
+    playTrack(currentAlbumId, nextIndex, { keepOrder: true });
+  }
+
+  playPauseBtn.addEventListener('click', () => {
+    if (currentAlbumId === null) return;
+    if (audioEl.paused) audioEl.play(); else audioEl.pause();
+  });
+  audioEl.addEventListener('play', () => { setPlayPauseIcon(true); updateNowPlayingRow(); });
+  audioEl.addEventListener('pause', () => { setPlayPauseIcon(false); updateNowPlayingRow(); });
+
+  nextBtn.addEventListener('click', () => advanceTrack(1));
+
+  prevBtn.addEventListener('click', () => {
+    if (currentAlbumId === null) return;
+    // If we're more than a few seconds into the track, restart it.
+    // Otherwise (including right after a previous back-press landed us
+    // here) go to the actual previous track — this way repeated clicks
+    // keep walking backward instead of needing two presses every time.
+    if (audioEl.currentTime > 1) {
+      audioEl.currentTime = 0;
+      if (audioEl.paused) audioEl.play();
+    } else {
+      advanceTrack(-1);
+    }
+  });
+
+  shuffleBtn.addEventListener('click', () => {
+    shuffleOn = !shuffleOn;
+    shuffleBtn.classList.toggle('active', shuffleOn);
+    if (currentAlbumId !== null) {
+      if (shuffleOn) {
+        // Shuffle the rest of the album, but keep the currently playing
+        // track first so turning shuffle on doesn't jump anywhere yet.
+        const newOrder = buildPlayOrder(currentAlbumId, true);
+        const idx = newOrder.indexOf(currentTrackIndex);
+        if (idx > -1) { newOrder.splice(idx, 1); newOrder.unshift(currentTrackIndex); }
+        playOrder = newOrder;
+        orderPos = 0;
+      } else {
+        // Back to plain sequential order — just locate where the current
+        // track naturally sits, don't move it anywhere.
+        playOrder = buildPlayOrder(currentAlbumId, false);
+        orderPos = playOrder.indexOf(currentTrackIndex);
+      }
+    }
+  });
+
+  loopBtn.addEventListener('click', () => {
+    loopOn = !loopOn;
+    loopBtn.classList.toggle('active', loopOn);
+    audioEl.loop = loopOn;
+  });
+
+  audioEl.addEventListener('ended', () => {
+    if (!loopOn) advanceTrack(1);
+  });
+
+  audioEl.addEventListener('loadedmetadata', () => {
+    progressSlider.max = audioEl.duration || 0;
+    timeTotal.textContent = formatTime(audioEl.duration);
+  });
+
+  audioEl.addEventListener('timeupdate', () => {
+    if (isSeeking) return;
+    progressSlider.value = audioEl.currentTime;
+    timeCurrent.textContent = formatTime(audioEl.currentTime);
+    updateSliderFill(progressSlider);
+  });
+
+  progressSlider.addEventListener('pointerdown', () => { isSeeking = true; });
+  progressSlider.addEventListener('input', () => {
+    timeCurrent.textContent = formatTime(progressSlider.value);
+    updateSliderFill(progressSlider);
+  });
+  progressSlider.addEventListener('change', () => {
+    audioEl.currentTime = progressSlider.value;
+    isSeeking = false;
+  });
+
+  // ---------------- Volume + mute (persisted in this browser) ----------------
+  const VOLUME_KEY = 'albumSitePlayerVolume';
+  const muteBtn = document.getElementById('muteBtn');
+  const volumeWaves = document.getElementById('volumeWaves');
+  const volumeMuted = document.getElementById('volumeMuted');
+
+  let previousVolume = 0.5;
+  let isMuted = false;
+
+  function setMuteIcon(muted){
+    volumeWaves.style.display = muted ? 'none' : '';
+    volumeMuted.style.display = muted ? '' : 'none';
+    muteBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    muteBtn.setAttribute('title', muted ? 'Unmute' : 'Mute');
+  }
+
+  function loadVolume(){
+    let vol = 0.5;
+    try {
+      const stored = localStorage.getItem(VOLUME_KEY);
+      if (stored !== null) {
+        const parsed = parseFloat(stored);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) vol = parsed;
+      }
+    } catch (e) {
+      // localStorage unavailable — fall back to default
+    }
+    audioEl.volume = vol;
+    previousVolume = vol > 0 ? vol : 0.5;
+    isMuted = vol === 0;
+    volumeSlider.value = Math.round(vol * 100);
+    updateSliderFill(volumeSlider);
+    setMuteIcon(isMuted);
+  }
+  loadVolume();
+
+  volumeSlider.addEventListener('input', () => {
+    const vol = volumeSlider.value / 100;
+    audioEl.volume = vol;
+    updateSliderFill(volumeSlider);
+    isMuted = vol === 0;
+    setMuteIcon(isMuted);
+    if (vol > 0) previousVolume = vol;
+    try { localStorage.setItem(VOLUME_KEY, String(vol)); } catch (e) { /* ignore */ }
+  });
+
+  muteBtn.addEventListener('click', () => {
+    if (!isMuted) {
+      previousVolume = audioEl.volume > 0 ? audioEl.volume : previousVolume;
+      audioEl.volume = 0;
+      volumeSlider.value = 0;
+      isMuted = true;
+    } else {
+      audioEl.volume = previousVolume;
+      volumeSlider.value = Math.round(previousVolume * 100);
+      isMuted = false;
+    }
+    updateSliderFill(volumeSlider);
+    setMuteIcon(isMuted);
+    try { localStorage.setItem(VOLUME_KEY, String(audioEl.volume)); } catch (e) { /* ignore */ }
+  });
+
+  // ---------------- Keep the player bar's real height in sync ----------------
+  function updatePlayerBarHeight(){
+    const h = playerBar.getBoundingClientRect().height;
+    if (h > 0) document.documentElement.style.setProperty('--player-bar-h', h + 'px');
+  }
+  updatePlayerBarHeight();
+  window.addEventListener('load', updatePlayerBarHeight);
+  window.addEventListener('resize', updatePlayerBarHeight);
+  if (window.ResizeObserver) new ResizeObserver(updatePlayerBarHeight).observe(playerBar);
+</script>
 
 </body>
 </html>
