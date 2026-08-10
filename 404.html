@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 · Track Not Found</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=gabarito&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f0f0f;
+    --panel:#212121;
+    --panel-2:#2a2a2a;
+    --text:#f1f1f1;
+    --text-dim:#aaaaaa;
+    --accent:#ffffff;
+    --accent-hover:#dcdcdc;
+    --ring: rgba(255,255,255,0.18);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html, body{ height:100%; }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(255,255,255,0.035), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(255,255,255,0.03), transparent 45%);
+    color:var(--text);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    overflow:hidden;
+  }
+
+  .scene{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    max-width:440px;
+    width:100%;
+  }
+
+  /* ---------- Vinyl ---------- */
+  .vinyl-wrap{
+    position:relative;
+    width:132px; height:132px;
+    margin-bottom:28px;
+    filter:drop-shadow(0 18px 34px rgba(0,0,0,0.55));
+  }
+
+  .vinyl{
+    width:100%; height:100%;
+    animation:spin 5s linear infinite, wobble 2.4s ease-in-out infinite;
+  }
+
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes wobble{
+    0%, 100%{ transform:translateY(0) rotate(var(--r, 0deg)); }
+    50%{ transform:translateY(-3px); }
+  }
+
+  .scratch{
+    stroke:rgba(255,255,255,0.5);
+    stroke-width:1.4;
+    stroke-linecap:round;
+    opacity:0;
+    animation:scratch-flash 2.4s ease-in-out infinite;
+  }
+  @keyframes scratch-flash{
+    0%, 40%, 100%{ opacity:0; }
+    45%, 55%{ opacity:1; }
+  }
+
+  /* ---------- Glitch title ---------- */
+  .glitch-wrap{ position:relative; margin:0 0 6px; }
+  .glitch{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:92px;
+    line-height:0.9;
+    letter-spacing:.02em;
+    margin:0;
+    position:relative;
+    color:var(--text);
+  }
+  .glitch::before, .glitch::after{
+    content:'404';
+    position:absolute; left:0; top:0; right:0;
+    color:var(--text);
+    clip-path:inset(0 0 0 0);
+    animation:glitch-shift 3.6s infinite steps(1);
+  }
+  .glitch::before{ text-shadow:2px 0 rgba(255,60,90,0.75); }
+  .glitch::after{ text-shadow:-2px 0 rgba(70,180,255,0.75); }
+
+  @keyframes glitch-shift{
+    0%, 92%, 100%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
+    93%{ clip-path:inset(10% 0 60% 0); transform:translate(-2px,0); }
+    94%{ clip-path:inset(60% 0 5% 0); transform:translate(2px,0); }
+    95%{ clip-path:inset(30% 0 40% 0); transform:translate(-1px,0); }
+    96%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
+  }
+
+  .label{
+    font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-dim); margin:0 0 22px;
+  }
+  .label span{ color:var(--text); }
+
+  h1.title{
+    font-family:'Gabarito', sans-serif;
+    font-size:23px; margin:0 0 8px; letter-spacing:.01em;
+  }
+
+  p.desc{
+    margin:0 0 30px; color:var(--text-dim); font-size:14.5px; line-height:1.55;
+    max-width:360px;
+  }
+  p.desc b{ color:var(--text); font-weight:600; }
+
+  /* ---------- Flatline equalizer ---------- */
+  .flatline{ display:flex; align-items:flex-end; gap:3px; height:16px; margin-bottom:30px; }
+  .flatline .bar{
+    width:3px; border-radius:1px; background:var(--text-dim);
+    animation:flat-jitter 1.4s ease-in-out infinite;
+  }
+  .flatline .bar:nth-child(1){ height:20%; animation-delay:-1.1s; }
+  .flatline .bar:nth-child(2){ height:20%; animation-delay:-0.4s; }
+  .flatline .bar:nth-child(3){ height:20%; animation-delay:-0.9s; }
+  .flatline .bar:nth-child(4){ height:20%; animation-delay:-0.2s; }
+  .flatline .bar:nth-child(5){ height:20%; animation-delay:-1.3s; }
+  @keyframes flat-jitter{
+    0%, 100%{ transform:scaleY(1); }
+    50%{ transform:scaleY(1.15); }
+  }
+
+  /* ---------- Redirect scrubber ---------- */
+  .redirect{ width:100%; max-width:300px; }
+  .redirect-row{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:12px; color:var(--text-dim); margin-bottom:8px;
+    letter-spacing:.02em;
+  }
+  .redirect-row b{ color:var(--text); font-variant-numeric:tabular-nums; }
+
+  .bar-track{
+    height:5px; border-radius:999px; background:rgba(255,255,255,0.14);
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%; width:0%; border-radius:999px;
+    background:var(--accent);
+    animation:fill-up 5s linear forwards;
+  }
+  @keyframes fill-up{ to{ width:100%; } }
+
+  .home-link{
+    display:inline-flex; align-items:center; gap:6px;
+    margin-top:26px;
+    padding:9px 18px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.28);
+    background:rgba(255,255,255,0.08);
+    color:rgba(255,255,255,0.9);
+    font-size:13px; font-weight:600; text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .home-link:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
+  .home-link svg{ width:14px; height:14px; }
+
+  @media (max-width:420px){
+    .glitch{ font-size:72px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .vinyl{ animation:none; }
+    .glitch::before, .glitch::after{ animation:none; display:none; }
+    .flatline .bar{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="scene">
+
+    <div class="vinyl-wrap">
+      <svg class="vinyl" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="49" fill="#111"/>
+        <circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <circle cx="50" cy="50" r="33" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+        <line class="scratch" x1="18" y1="30" x2="60" y2="86"/>
+        <circle cx="50" cy="50" r="16" fill="var(--panel-2)"/>
+        <circle cx="50" cy="50" r="2.6" fill="#0f0f0f"/>
+      </svg>
+    </div>
+
+    <div class="glitch-wrap">
+      <h2 class="glitch">404</h2>
+    </div>
+    <p class="label">Page <span>Not Found</span></p>
+
+    <h1 class="title">Nothing to see here. Literally.</h1>
+    <p class="desc">Whatever you were looking doesn't exist — maybe it got deleted, renamed, or never existed. Taking you back to <b>the homepage</b> automatically.</p>
+
+    <div class="flatline">
+      <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+    </div>
+
+    <div class="redirect">
+      <div class="redirect-row">
+        <span>Redirecting</span>
+        <b id="countdown">3s</b>
+      </div>
+      <div class="bar-track"><div class="bar-fill"></div></div>
+    </div>
+
+    <a class="home-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Take me home now
+    </a>
+
+  </div>
+
+<script>
+  const REDIRECT_URL = 'index.html';
+  const REDIRECT_MS = 5000;
+
+  const countdownEl = document.getElementById('countdown');
+  const startTime = performance.now();
+
+  function tick(){
+    const elapsed = performance.now() - startTime;
+    const remaining = Math.max(0, Math.ceil((REDIRECT_MS - elapsed) / 1000));
+    countdownEl.textContent = remaining + 's';
+    if (elapsed < REDIRECT_MS) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  setTimeout(() => { window.location.href = REDIRECT_URL; }, REDIRECT_MS);
+</script>
+
+</body>
+</html>

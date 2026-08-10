@@ -164,6 +164,7 @@
   .title{
     font-family:'Gabarito', sans-serif; font-size:25px;
     line-height:1.1; margin:0 0 4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
 
   .sub{ margin:0; font-size:13.5px; color:var(--text-dim); }
@@ -246,8 +247,8 @@
     letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
   }
   .download-btn{
-    display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
-    padding:6px 13px; border-radius:999px;
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0;
+    height:30px; padding:0 13px; border-radius:999px;
     border:1px solid rgba(255,255,255,0.28);
     background:rgba(255,255,255,0.08);
     backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
@@ -259,6 +260,78 @@
   }
   .download-btn svg{ width:13px; height:13px; }
   .download-btn:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
+
+  .modal-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+  .icon-action-btn{
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(255,255,255,0.28);
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    color:rgba(255,255,255,0.85);
+    cursor:pointer;
+    user-select:none; -webkit-user-select:none; -moz-user-select:none;
+    outline:none;
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .icon-action-btn svg{ width:15px; height:15px; }
+  .icon-action-btn:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
+
+  .misc-menu-wrap{ position:relative; }
+  .misc-dropdown{
+    position:absolute; top:calc(100% + 8px); right:0; z-index:5;
+    min-width:180px;
+    background:var(--panel-2);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:10px;
+    padding:6px;
+    box-shadow:0 14px 32px rgba(0,0,0,0.45);
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .misc-dropdown[hidden]{ display:none; }
+  .misc-dropdown .file-link{
+    display:block; width:100%; padding:8px 10px; border-radius:6px;
+    background:none; border:none; text-align:left;
+    color:var(--text); font-size:13px; font-family:'Work Sans', sans-serif;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    cursor:pointer; transition:background .12s ease;
+  }
+  .misc-dropdown .file-link:hover{ background:rgba(255,255,255,0.08); }
+
+  /* ---------- File viewer (opens above the tracklist window) ---------- */
+  .file-modal-backdrop{
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+    opacity:0; transition:opacity .2s ease;
+  }
+  .file-modal-backdrop.open{ opacity:1; }
+  .file-modal-backdrop[hidden]{ display:none; }
+
+  .file-modal{
+    position:relative;
+    background:var(--panel); border-radius:14px;
+    max-width:560px; width:100%; max-height:78vh;
+    padding:28px; box-shadow:0 30px 80px rgba(0,0,0,0.55);
+    display:flex; flex-direction:column;
+    transform:scale(.96) translateY(8px);
+    transition:transform .2s cubic-bezier(.2,.8,.2,1);
+  }
+  .file-modal-backdrop.open .file-modal{ transform:scale(1) translateY(0); }
+
+  .file-modal-title{
+    font-family:'Gabarito', sans-serif; font-size:19px;
+    margin:0 0 16px; padding-right:28px; flex-shrink:0;
+  }
+  .file-modal-body{
+    overflow-y:auto; min-height:0;
+    color:var(--text-dim); font-size:14px; line-height:1.7;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .file-modal-body.is-error{ font-style:italic; }
 
   .tracklist-header{
     display:grid; grid-template-columns: 26px 1fr 46px; gap:12px; align-items:center;
@@ -507,6 +580,26 @@
         </div>
       </article>
 
+      <article class="card" data-id="4">
+        <div class="art-wrap">
+          <div class="cover-glow" id="cover-glow-4"></div>
+          <div class="cover" id="cover-4">
+            <img alt="">
+            <div class="cover-fallback"><span>cover-4.jpg</span>Drop an image with this name next to this HTML file</div>
+            <div class="cover-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              <span>View tracklist</span>
+            </div>
+          </div>
+        </div>
+        <div class="meta">
+          <h2 class="title" data-field="title">MUSIC - SORRY 4 DA WAIT</h2>
+          <p class="sub">
+            <span data-field="artist">Playboi Carti</span><span class="dot">·</span><span data-field="tracks"></span> Tracks
+          </p>
+        </div>
+      </article>
+
     </div>
   </main>
 
@@ -522,11 +615,24 @@
         <p class="modal-artist" id="modalArtist"></p>
         <div class="modal-stats-row">
           <p class="modal-meta" id="modalMeta"></p>
-          <!-- Default download link (overridden per-album by downloadUrl in ALBUM_DATA) -->
-          <a class="download-btn" id="downloadBtn" href="https://mega.io" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 20h14"/></svg>
-            Download
-          </a>
+          <div class="modal-actions">
+            <!-- Default Discord link (overridden per-album by discordUrl in ALBUM_DATA) -->
+            <a class="icon-action-btn" id="starBtn" href="https://discord.com/channels/your-server-id/your-thread-id" target="_blank" rel="noopener noreferrer" aria-label="Star this thread on Discord" title="Star this thread on Discord">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </a>
+            <!-- Default download link (overridden per-album by downloadUrl in ALBUM_DATA) -->
+            <a class="download-btn" id="downloadBtn" href="https://mega.io" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 20h14"/></svg>
+              Download
+            </a>
+            <div class="misc-menu-wrap">
+              <button class="icon-action-btn" id="miscBtn" aria-label="More options" aria-haspopup="true" aria-expanded="false" title="More">
+                <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+              </button>
+              <!-- Default file links (overridden per-album by the "files" array in ALBUM_DATA) -->
+              <div class="misc-dropdown" id="miscDropdown" hidden></div>
+            </div>
+          </div>
         </div>
         <div class="tracklist-header" id="tracklistHeader">
           <span>#</span><span>Title</span>
@@ -534,6 +640,14 @@
         </div>
         <ol class="tracklist" id="tracklist"></ol>
       </div>
+    </div>
+  </div>
+
+  <div class="file-modal-backdrop" id="fileModalBackdrop" hidden>
+    <div class="file-modal" role="dialog" aria-modal="true" aria-labelledby="fileModalTitle">
+      <button class="modal-close" id="fileModalClose" aria-label="Close">&times;</button>
+      <h3 class="file-modal-title" id="fileModalTitle"></h3>
+      <div class="file-modal-body" id="fileModalBody"></div>
     </div>
   </div>
 
@@ -609,6 +723,13 @@
   //                too, same as everywhere else.
   // downloadUrl:   where the Download button in the tracklist view
   //                links to for this album.
+  // discordUrl:    where the star button next to Download links to —
+  //                point it at a Discord thread you want people to
+  //                star-react to.
+  // files:         array of { label, url } shown in the "···" dropdown
+  //                next to Download — e.g. lyrics, credits, liner
+  //                notes. Add, remove, or rename entries freely; each
+  //                just opens its url in a new tab.
   // tracks:        number, title, length ("m:ss"), audio (URL to the
   //                audio file — every track below defaults to the same
   //                placeholder clip; just add your own
@@ -625,12 +746,25 @@
   // -----------------------------------------------------------------
   const PLACEHOLDER_AUDIO = 'https://api.pillows.su/api/get/9e1c4879d0185d2e9bf155ff2450f455';
   const DEFAULT_DOWNLOAD_URL = '404.html';
+  const DEFAULT_DISCORD_URL = '404.html';
+  const DEFAULT_FILES = [
+    { label: 'View lyrics.txt', url: 'lyrics.txt' },
+    { label: 'View credits.txt', url: 'credits.txt' },
+    { label: 'View notes.txt', url: 'notes.txt' }
+  ];
 
   const ALBUM_DATA = {
     1: {
       cover: 'covers/thewonderfulworldofred.png',
       homepageCover: 'covers/thewonderfulworldofred.webp',
       downloadUrl: 'https://mega.nz/folder/l71QkJxC#XHOvddTs-LIq9onEs8MXow',
+      discordUrl: 'https://discord.com/channels/1385199008926138499/1492879862338289744',
+      files: [
+        { label: 'View Credits', url: 'txt/the wonderful world of red/credits.txt' },
+        { label: 'View Description', url: 'txt/the wonderful world of red/description.txt'},
+        { label: 'View List Of Changes', url: 'txt/the wonderful world of red/list of changes.txt' },
+        { label: 'View Scrapped Stuff', url: 'txt/the wonderful world of red/scrapped stuff.txt' }
+      ],
       tracks: [
         { number: 1,  title: 'Red Rain',        length: '2:43', audio: 'https://api.pillows.su/api/get/c2484b41683ef429bf89010d8557c0b6' },
         { number: 2,  title: 'Whole Lotta Red (feat. Madmaxx602 & Smooky MarGielaa)',       length: '2:23', audio: 'https://api.pillows.su/api/get/d21240c576bbdd800b0753268d872870', credits: ['Madmaxx602, Smooky MarGielaa'] },
@@ -680,6 +814,12 @@
       cover: 'covers/barter16.png',
       homepageCover: 'covers/barter16.webp',
       downloadUrl: 'https://mega.nz/folder/QzNE3YBa#ydQBL-M3OD_4JbUYwPQeDw',
+      discordUrl: 'https://discord.com/channels/1385199008926138499/1534208080949280848',
+      files: [
+        { label: 'View Credits', url: 'txt/Barter 16/credits.txt' },
+        { label: 'View Description', url: 'txt/Barter 16/description.txt' },
+        { label: 'View List Of Changes', url: 'txt/Barter 16/list of changes.txt' }
+      ],
       tracks: [
         { number: 1,  title: 'Scary Stories',   length: '4:41', audio: 'https://api.pillows.su/api/get/4bc6d56b3a2c2973545647c3debb7e1f' },
         { number: 2,  title: 'Barter',          length: '2:40', audio: 'https://api.pillows.su/api/get/bb49416242306887a30c4a482040dac6' },
@@ -705,8 +845,58 @@
     3: {
       cover: 'covers/allwhite.jpg',
       downloadUrl: 'https://mega.nz/folder/A7cTkbbZ#_K3LXxcxoeFgqmHGi0PCAw',
+      files: [
+        { label: 'View Credits', url: 'txt/ALL WHITE/credits.txt' }
+      ],
       tracks: [
         { number: 0,  title: 'Soon . > A!! WH1T3 🤭🫣🤍',   length: '0:47', audio: 'https://api.pillows.su/api/get/d5ea62abbaad903df4ad4bc6bbb373b2' }
+      ]
+    },
+
+    4: {
+      cover: 'covers/music - sorry 4 da wait.jpg',
+      downloadUrl: 'https://mega.nz/folder/cnMkxK5R#ubCmVImgpNSfNuzgAIhVdA',
+      discordUrl: 'https://discord.com/channels/1385199008926138499/1536101116675362988',
+      files: [
+        { label: 'View Credits', url: 'txt/MUSIC - SORRY 4 DA WAIT/credits.txt' },
+        { label: 'View Description', url: 'txt/MUSIC - SORRY 4 DA WAIT/description.txt' },
+        { label: 'View List Of Changes', url: 'txt/MUSIC - SORRY 4 DA WAIT/list of changes.txt' }
+      ],
+      tracks: [
+        { number: 1,  title: 'POP OUT',         length: '2:17', audio: 'https://api.pillows.su/api/get/7068416c4fc02eec5faa03231eada704' },
+        { number: 2,  title: 'CRUSH (with Travis Scott)',         length: '2:53', audio: 'https://api.pillows.su/api/get/3d762e4fd01c9fc5d7fb5ef56af0e23d', credits: ['Travis Scott'] },
+        { number: 3,  title: 'K POP',         length: '1:52', audio: 'https://api.pillows.su/api/get/415a59260a9d545d375717a4dceb1cba' },
+        { number: 4,  title: 'EVIL J0RDAN',     length: '2:04', audio: 'https://api.pillows.su/api/get/120f354087f29fb5b59552fadbae923b' },
+        { number: 5,  title: 'MOJO JOJO',       length: '2:37', audio: 'https://api.pillows.su/api/get/d7f45f3cc86cacc192716905a4bd4ff2' },
+        { number: 6,  title: 'PHILLY (with Travis Scott)',       length: '3:05', audio: 'https://api.pillows.su/api/get/2d1f70c3e9b6dfc6179ab79f154a1cad', credits: ['Travis Scott'] },
+        { number: 7,  title: 'RADAR',           length: '1:47', audio: 'https://api.pillows.su/api/get/5630b97e48d7157feec527a8769e78e4' },
+        { number: 8,  title: 'RATHER LIE (with The Weeknd)',       length: '3:29', audio: 'https://api.pillows.su/api/get/ee50c9ecc834308e9b808508f1b93df8', credits: ['The Weeknd'] },
+        { number: 9,  title: 'FINE SHIT',       length: '1:46', audio: 'https://api.pillows.su/api/get/2ae31790e53d155659747a5d1edb4ad7' },
+        { number: 10, title: 'BACKD00R',        length: '1:55', audio: 'https://api.pillows.su/api/get/d2ced25797df3a678427d183a498907e' },
+        { number: 11, title: 'TOXIC (with Skepta)',        length: '2:15', audio: 'https://api.pillows.su/api/get/012d82db9bc22b95b78280bfb7910174', credits: ['Skepta'] },
+        { number: 12, title: 'MUNYUN',          length: '2:34', audio: 'https://api.pillows.su/api/get/1ecb1f59f3a197347e68a47a50680761' },
+        { number: 13, title: 'CRANK',           length: '2:27', audio: 'https://api.pillows.su/api/get/dbebb2b16797b6c3c41a59ee41d5d560' },
+        { number: 14, title: 'CHARDE DEM HOES A FEE (with Future & Travis Scott)',          length: '2:57', audio: 'https://api.pillows.su/api/get/456307cb1400801bb6887aeba5780b1f', credits: ['Future, Travis Scott'] },
+        { number: 15, title: 'GOOD CREDIT',     length: '1:52', audio: 'https://api.pillows.su/api/get/b21b4c9a114ca74eeb15eba915e71942' },
+        { number: 16, title: 'I SEEEEEE YOU BABY BOI',     length: '2:38', audio: 'https://api.pillows.su/api/get/572b0bd2035bf413ef22bdee534936ec' },
+        { number: 17, title: 'WAKE UP F1LTHY (with Travis Scott)',     length: '3:50', audio: 'https://api.pillows.su/api/get/df140375f70ef0dd519fbcda5c82afca', credits: ['Travis Scott'] },
+        { number: 18, title: 'JUMPIN (with Lil Uzi Vert)',     length: '1:35', audio: 'https://api.pillows.su/api/get/ab81ea1178689ff99646612f49d85824', credits: ['Lil Uzi Vert'] },
+        { number: 19, title: 'TRIM (with Future)',     length: '3:55', audio: 'https://api.pillows.su/api/get/a7a97f8d522e544dcb01e1e86fbb44da', credits: ['Future'] },
+        { number: 20, title: 'COCAINE NOSE',    length: '2:31', audio: 'https://api.pillows.su/api/get/b2abcacb96d1af6d11dc5ac463a0f4d3' },
+        { number: 21, title: 'WE NEED ALL DA VIBES (with Young Thug & Ty Dolla $ign)',    length: '3:01', audio: 'https://api.pillows.su/api/get/8be0f12a5d94c1c167408bd2878a356d', credits: ['Young Thug, Ty Dolla $ign'] },
+        { number: 22, title: 'OLYMPIAN',        length: '2:54', audio: 'https://api.pillows.su/api/get/96d72013093930cf9829842af256fd46' },
+        { number: 23, title: 'OPM BABI',        length: '2:52', audio: 'https://api.pillows.su/api/get/c7ca8644da3bffc6b18f6d8a4dca5db8' },
+        { number: 24, title: 'TWIN TRIM (with Lil Uzi Vert)',        length: '1:34', audio: 'https://api.pillows.su/api/get/c8a3a1f17202d881452160429d792833', credits: ['Lil Uzi Vert'] },
+        { number: 25, title: 'LIKE WEEZY',      length: '1:55', audio: 'https://api.pillows.su/api/get/cc66ca2be6fb35464c6922e9b7f383b2' },
+        { number: 26, title: 'DIS 1 GOT IT',    length: '2:03', audio: 'https://api.pillows.su/api/get/2f0964269fd02c563419de8b9b62cfa6' },
+        { number: 27, title: 'WALK',            length: '1:34', audio: 'https://api.pillows.su/api/get/8a7177dfcf3c92d7120bfb0e43a24d64' },
+        { number: 28, title: 'HBA',             length: '3:32', audio: 'https://api.pillows.su/api/get/aa811d71983aede03e562193d080fcf5' },
+        { number: 29, title: 'OVERLY',          length: '1:45', audio: 'https://api.pillows.su/api/get/d2bc3fea377d8b88190150ef3e3a520b' },
+        { number: 30, title: 'SOUTH ATLANTA BABY',          length: '2:13', audio: 'https://api.pillows.su/api/get/18d10fd5058c708a0ec3d998eb320324' },
+        { number: 31, title: 'DIFFERENT DAY',   length: '2:46', audio: 'https://api.pillows.su/api/get/dc9cc1d5415b513352ce566453a2a250' },
+        { number: 32, title: '2024',            length: '3:29', audio: 'https://api.pillows.su/api/get/3f5a9bc3a75bb019fd13e46808875624' },
+        { number: 33, title: 'BACKR00MS (with Travis Scott)',          length: '2:40', audio: 'https://api.pillows.su/api/get/cfea98825d9ff817e4728734b4963656', credits: ['Travis Scott'] },
+        { number: 34, title: 'FOMDJ',           length: '3:19', audio: 'https://api.pillows.su/api/get/f0f9f26c53fddeb9b57f8271b313e37d' }
       ]
     }
   };
@@ -735,7 +925,7 @@
     img.src = homepageSrc;
     glow.style.backgroundImage = `url('${homepageSrc}')`;
   }
-  [1, 2, 3].forEach(setupCoverImage);
+  [1, 2, 3, 4].forEach(setupCoverImage);
 
   // ---------------- Search ----------------
   const searchInput = document.getElementById('searchInput');
@@ -768,6 +958,9 @@
   const modalArtist = document.getElementById('modalArtist');
   const modalMeta = document.getElementById('modalMeta');
   const downloadBtn = document.getElementById('downloadBtn');
+  const starBtn = document.getElementById('starBtn');
+  const miscBtn = document.getElementById('miscBtn');
+  const miscDropdown = document.getElementById('miscDropdown');
   const tracklistEl = document.getElementById('tracklist');
   const tracklistHeaderEl = document.getElementById('tracklistHeader');
 
@@ -804,6 +997,22 @@
     modalArtist.textContent = artist;
     modalMeta.textContent = `${data.tracks.length} tracks · ${formatRuntime(data.tracks)}`;
     downloadBtn.href = data.downloadUrl || DEFAULT_DOWNLOAD_URL;
+    starBtn.href = data.discordUrl || DEFAULT_DISCORD_URL;
+
+    const files = data.files && data.files.length ? data.files : DEFAULT_FILES;
+    miscDropdown.innerHTML = files.map((f, i) =>
+      `<button type="button" class="file-link" data-idx="${i}">${escapeHtml(f.label)}</button>`
+    ).join('');
+    miscDropdown.querySelectorAll('.file-link').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        miscDropdown.hidden = true;
+        miscBtn.setAttribute('aria-expanded', 'false');
+        const f = files[Number(btn.dataset.idx)];
+        openFileViewer(f.label, f.url);
+      });
+    });
+    miscDropdown.hidden = true;
+    miscBtn.setAttribute('aria-expanded', 'false');
 
     // The tracklist/player always use the plain "cover" image — never the
     // homepage-only one — and this is checked independently of whatever
@@ -883,15 +1092,72 @@
     setTimeout(() => { modalBackdrop.hidden = true; }, 200);
     if (lastFocused) lastFocused.focus();
     openTracklistAlbumId = null;
+    miscDropdown.hidden = true;
+    miscBtn.setAttribute('aria-expanded', 'false');
   }
 
-  [1, 2, 3].forEach((id) => {
+  [1, 2, 3, 4].forEach((id) => {
     document.getElementById(`cover-${id}`).addEventListener('click', () => openModal(id));
   });
 
   modalClose.addEventListener('click', closeModal);
   modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modalBackdrop.hidden) closeModal(); });
+
+  miscBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = !miscDropdown.hidden;
+    miscDropdown.hidden = isOpen;
+    miscBtn.setAttribute('aria-expanded', String(!isOpen));
+  });
+  document.addEventListener('click', (e) => {
+    if (!miscDropdown.hidden && !miscDropdown.contains(e.target) && e.target !== miscBtn) {
+      miscDropdown.hidden = true;
+      miscBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !miscDropdown.hidden) {
+      miscDropdown.hidden = true;
+      miscBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // ---------------- File viewer (opens above the tracklist window) ----------------
+  const fileModalBackdrop = document.getElementById('fileModalBackdrop');
+  const fileModalClose = document.getElementById('fileModalClose');
+  const fileModalTitle = document.getElementById('fileModalTitle');
+  const fileModalBody = document.getElementById('fileModalBody');
+
+  async function openFileViewer(label, url){
+    fileModalTitle.textContent = label.replace(/^view\s+/i, '');
+    fileModalBody.classList.remove('is-error');
+    fileModalBody.textContent = 'Loading…';
+    fileModalBackdrop.hidden = false;
+    requestAnimationFrame(() => fileModalBackdrop.classList.add('open'));
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      fileModalBody.textContent = text.trim() ? text : '(This file is empty.)';
+    } catch (err) {
+      fileModalBody.classList.add('is-error');
+      fileModalBody.textContent =
+        `Couldn't load "${url}". Make sure a file with that name exists next to this HTML file. ` +
+        `If you're opening this page directly from your file system (a file:// address), browsers ` +
+        `block this kind of file loading — try viewing the page through a local server instead.`;
+    }
+  }
+
+  function closeFileViewer(){
+    fileModalBackdrop.classList.remove('open');
+    setTimeout(() => { fileModalBackdrop.hidden = true; }, 200);
+  }
+
+  fileModalClose.addEventListener('click', closeFileViewer);
+  fileModalBackdrop.addEventListener('click', (e) => { if (e.target === fileModalBackdrop) closeFileViewer(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fileModalBackdrop.hidden) closeFileViewer(); });
 
   // ---------------- Player ----------------
   const audioEl = document.getElementById('audioPlayer');
