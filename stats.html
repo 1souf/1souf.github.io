@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>❤︎</title>
+<link rel="icon" href="img/icon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#111111;
+    --bg-elevated:#1b1b1b;
+    --sidebar:#0c0c0c;
+    --text:#f2f2f2;
+    --text-dim:#969696;
+    --stamp:#ffffff;
+    --stamp-dim:#555555;
+    --hazard:#e0e0e0;
+    --border:#2a2a2a;
+    --border-light:#3d3d3d;
+    --mono:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --display:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text); min-height:100%;
+    font-family:var(--mono); font-weight:600; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  ::selection{background:var(--stamp); color:#111111;}
+  html{scrollbar-color:var(--border-light) transparent;}
+  ::-webkit-scrollbar{width:10px; height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border-light); border:2px solid var(--bg);}
+  :focus-visible{outline:2px solid var(--stamp); outline-offset:2px;}
+
+  .page{max-width:960px; margin:0 auto; padding:20px 24px 90px; position:relative; z-index:1;}
+
+  /* ---------- ambient background: starfield canvas ---------- */
+  .star-canvas{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block;}
+
+  .back-link{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:7px 12px; background:var(--bg-elevated); color:var(--text-dim);
+    border:1px solid var(--border-light); border-radius:3px;
+    font-family:var(--mono); font-size:.72rem; letter-spacing:.03em;
+    cursor:pointer; transition:color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .back-link:hover{color:var(--text); border-color:var(--stamp); transform:translateX(-2px);}
+  .back-link svg{width:14px; height:14px; flex-shrink:0; display:block;}
+
+  .page-header{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:0 0 6px;}
+  .page-title{font-family:var(--display); font-weight:900; font-size:1.9rem; letter-spacing:-.01em; margin:0;}
+  .page-sub{color:var(--text-dim); font-size:.8rem; font-weight:500;}
+
+  .summary-row{
+    display:flex; gap:32px; flex-wrap:wrap; margin:26px 0 40px;
+    padding:18px 22px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:6px;
+  }
+  .summary-stat{display:flex; flex-direction:column; gap:3px;}
+  .summary-num{font-family:var(--display); font-weight:800; font-size:1.5rem; color:var(--stamp); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .summary-label{font-size:.62rem; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;}
+
+  .year-block{margin-bottom:28px; padding:22px 22px 18px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:6px;}
+  .year-header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px;}
+  .year-label{font-family:var(--display); font-weight:800; font-size:1.3rem;}
+  .year-total{color:var(--text-dim); font-size:.72rem; letter-spacing:.03em;}
+
+  .bars-row{display:flex; align-items:flex-end; gap:6px; height:150px;}
+  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; cursor:default;}
+  .bar-count{font-size:.66rem; color:var(--text-dim); margin-bottom:5px; font-variant-numeric:tabular-nums; height:12px; transition:color .15s ease;}
+  .bar-col.has-count .bar-count{color:var(--text);}
+  .bar-col:hover .bar-count{color:var(--stamp);}
+  .bar{
+    width:100%; max-width:26px; background:var(--border-light);
+    border-radius:3px 3px 1px 1px; height:0%; position:relative; overflow:hidden;
+    transition:height .8s cubic-bezier(.2,.8,.2,1), box-shadow .15s ease, transform .15s ease;
+  }
+  .bar-col.has-count .bar{background:var(--stamp);}
+  .bar-col:hover .bar{box-shadow:0 0 14px rgba(255,255,255,.3); transform:scaleY(1.01);}
+  .bar-segment{position:absolute; left:0; right:0;}
+  .bar-month{margin-top:9px; font-size:.62rem; color:var(--text-dim); letter-spacing:.05em; text-transform:uppercase;}
+
+  /* ---------- legend: hidden by default ----------
+     The eye button in the top-left corner opens it as a floating, map-style
+     key; the eye-slash button inside it (or Esc) hides it again. It floats
+     above the page instead of sitting in it, so the centered layout never
+     moves whether it's open or closed. */
+  .legend-toggle, .legend-close{
+    display:flex; align-items:center; justify-content:center; padding:0;
+    color:var(--text-dim); cursor:pointer; border-radius:3px;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .legend-toggle:hover, .legend-close:hover{color:var(--text);}
+  .legend-toggle svg, .legend-close svg{width:16px; height:16px; display:block;}
+
+  .legend-toggle{
+    position:fixed; left:20px; top:20px; z-index:3; width:34px; height:34px;
+    background:var(--bg-elevated); border:1px solid var(--border-light);
+  }
+  .legend-toggle:hover{border-color:var(--stamp);}
+  .page.legend-open .legend-toggle{display:none;}
+
+  .legend-panel{
+    display:none; position:fixed; left:20px; top:20px; z-index:3;
+    width:min(220px, calc(100vw - 40px)); max-height:calc(100vh - 40px); overflow-y:auto;
+    padding:10px 16px 18px; background:var(--bg-elevated);
+    border:1px solid var(--border); border-radius:6px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  .page.legend-open .legend-panel{display:block; animation:legend-in .16s ease-out;}
+  @keyframes legend-in{
+    from{opacity:0; transform:translateX(-8px);}
+    to{opacity:1; transform:none;}
+  }
+  @media (prefers-reduced-motion: reduce){ .page.legend-open .legend-panel{animation:none;} }
+
+  .legend-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);
+  }
+  .legend-title{font-family:var(--display); font-weight:800; font-size:.85rem;}
+  .legend-close{width:28px; height:28px; margin-right:-8px; background:none; border:1px solid transparent;}
+  .legend-close:hover{border-color:var(--border-light);}
+
+  .legend-list{display:flex; flex-direction:column; gap:9px;}
+  .legend-item{display:flex; align-items:flex-start; gap:9px; font-size:.7rem; line-height:1.35; color:var(--text-dim); letter-spacing:.02em;}
+  .legend-swatch{width:12px; height:12px; margin-top:2px; border-radius:2px; flex-shrink:0; display:inline-block;}
+
+  /* On narrow windows there's no empty margin beside the page for the eye
+     button, so the page gets a little extra room at the top for it instead
+     of the button sitting on top of the title. */
+  @media (max-width:1060px){
+    .page{padding-top:68px;}
+  }
+
+  .stats-empty{padding:70px 20px; text-align:center; color:var(--text-dim); font-size:.85rem; line-height:1.6;}
+
+  /* ---------- skeleton loading (matches index.html's .skel) ---------- */
+  @keyframes skel-shimmer{
+    0%{background-position:-360px 0;}
+    100%{background-position:360px 0;}
+  }
+  .skel{
+    display:inline-block; border-radius:3px; vertical-align:middle; color:transparent;
+    background-color:var(--border-light);
+    background-image:linear-gradient(90deg, var(--border-light) 0px, #5c5c5c 40px, var(--border-light) 80px);
+    background-size:720px 100%;
+    animation:skel-shimmer 1.6s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce){ .skel{animation:none;} }
+
+  @media (max-width:640px){
+    .bars-row{gap:3px; height:120px;}
+    .bar-month{font-size:.54rem; margin-top:6px;}
+    .bar-count{font-size:.56rem;}
+    .summary-row{gap:22px; padding:16px 18px;}
+    .summary-num{font-size:1.25rem;}
+  }
+</style>
+</head>
+<body>
+
+<canvas class="star-canvas" id="starCanvas" aria-hidden="true"></canvas>
+
+<script>
+/* =====================================================================
+   Starfield background. Self-contained (wrapped in its own function so
+   nothing here can clash with the stats script below) — safe
+   to tweak or delete without touching anything else on the page.
+   Hover your cursor near a star and a line snaps to it.
+   ===================================================================== */
+(function(){
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let width, height, stars = [];
+  const mouse = { x: null, y: null };
+
+  // Tuning knobs — safe to change these numbers to adjust the look.
+  const STAR_COUNT = 45;
+  const CONNECTION_DISTANCE = 150;       // star-to-star line range (px)
+  const MOUSE_CONNECTION_DISTANCE = 190; // cursor-to-star line range (px)
+  const CONNECTION_DISTANCE_SQ = CONNECTION_DISTANCE * CONNECTION_DISTANCE;
+  const MOUSE_CONNECTION_DISTANCE_SQ = MOUSE_CONNECTION_DISTANCE * MOUSE_CONNECTION_DISTANCE;
+
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    createStars();
+  }
+
+  function createStars(){
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 0.14 + 0.04;
+      stars.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 1.1 + 0.35,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        drift: Math.random() * Math.PI * 2,            // gentle wandering
+        driftSpeed: Math.random() * 0.0008 + 0.0003,
+        alpha: Math.random() * 0.35 + 0.5,              // base brightness
+        twinkleSpeed: Math.random() * 0.0015 + 0.0005,  // subtle shimmer
+        twinkleOffset: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function drawStars(time){
+    for (const star of stars){
+      // Skip the drifting motion for people who've asked their OS for
+      // reduced motion — the stars just sit still and twinkle stays off.
+      if (!reduceMotion){
+        star.drift += star.driftSpeed;
+        star.x += star.vx + Math.cos(star.drift) * 0.02;
+        star.y += star.vy + Math.sin(star.drift) * 0.02;
+
+        if (star.x < -20) star.x = width + 20;
+        if (star.x > width + 20) star.x = -20;
+        if (star.y < -20) star.y = height + 20;
+        if (star.y > height + 20) star.y = -20;
+      }
+
+      const twinkle = reduceMotion ? 0 : Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.06;
+      const alpha = Math.max(0.35, Math.min(0.9, star.alpha + twinkle));
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220,230,255,${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  // Star-to-star lines. Compared as squared distances first so the far
+  // more common "too far apart to connect" case never pays for a sqrt —
+  // only the pairs that actually end up connected need the real distance.
+  function drawStarConnections(){
+    for (let i = 0; i < stars.length; i++){
+      const a = stars[i];
+      for (let j = i + 1; j < stars.length; j++){
+        const b = stars[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq >= CONNECTION_DISTANCE_SQ) continue;
+
+        const d = Math.sqrt(distSq);
+        const opacity = Math.pow(1 - d / CONNECTION_DISTANCE, 2) * 0.12;
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = `rgba(150,180,255,${opacity})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Cursor glow + lines to nearby stars. Same squared-distance shortcut.
+  function drawMouseConnections(){
+    if (mouse.x === null || mouse.y === null) return;
+
+    for (const star of stars){
+      const dx = mouse.x - star.x;
+      const dy = mouse.y - star.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq >= MOUSE_CONNECTION_DISTANCE_SQ) continue;
+
+      const d = Math.sqrt(distSq);
+      const strength = Math.pow(1 - d / MOUSE_CONNECTION_DISTANCE, 2);
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius + strength * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(190,215,255,${strength * 0.3})`;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(mouse.x, mouse.y);
+      ctx.lineTo(star.x, star.y);
+      ctx.strokeStyle = `rgba(170,200,255,${strength * 0.65})`;
+      ctx.lineWidth = 0.7 + strength * 0.6;
+      ctx.stroke();
+    }
+  }
+
+  let rafId = null;
+  function animate(time){
+    ctx.clearRect(0, 0, width, height);
+    drawStars(time);
+    drawStarConnections();
+    drawMouseConnections();
+    rafId = requestAnimationFrame(animate);
+  }
+
+  // Pause the loop entirely while this tab isn't visible — no point
+  // drawing frames nobody can see, and it saves battery/CPU.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){
+      if (rafId !== null){ cancelAnimationFrame(rafId); rafId = null; }
+    } else if (rafId === null){
+      rafId = requestAnimationFrame(animate);
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+  window.addEventListener('resize', resize);
+
+  resize();
+  rafId = requestAnimationFrame(animate);
+})();
+</script>
+
+<div class="page">
+  <button type="button" class="legend-toggle" id="legendToggle" title="Show legend" aria-label="Show legend" aria-expanded="false" aria-controls="legendPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+  </button>
+  <aside class="legend-panel" id="legendPanel" aria-label="Artist colors">
+    <div class="legend-header">
+      <span class="legend-title">Legend</span>
+      <button type="button" class="legend-close" id="legendClose" title="Hide legend" aria-label="Hide legend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+      </button>
+    </div>
+    <div class="legend-list" id="legendList"></div>
+  </aside>
+  <div class="page-header">
+    <div class="page-title">Statistics</div>
+    <a href="index.html" class="back-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Archive
+    </a>
+  </div>
+  <div class="page-sub">Songs per month, built live from each track's file date</div>
+
+  <div id="statsContent">
+    <div class="summary-row">
+      <div class="summary-stat"><span class="skel" style="display:block;width:56px;height:24px;margin-bottom:6px;"></span><span class="skel" style="display:block;width:78px;height:9px;"></span></div>
+      <div class="summary-stat"><span class="skel" style="display:block;width:40px;height:24px;margin-bottom:6px;"></span><span class="skel" style="display:block;width:80px;height:9px;"></span></div>
+      <div class="summary-stat"><span class="skel" style="display:block;width:64px;height:24px;margin-bottom:6px;"></span><span class="skel" style="display:block;width:84px;height:9px;"></span></div>
+      <div class="summary-stat"><span class="skel" style="display:block;width:92px;height:24px;margin-bottom:6px;"></span><span class="skel" style="display:block;width:118px;height:9px;"></span></div>
+    </div>
+    <div class="year-block">
+      <div class="year-header"><span class="skel" style="width:56px;height:19px;"></span><span class="skel" style="width:66px;height:10px;"></span></div>
+      <div class="bars-row">
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:38px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:70px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:52px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:95px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:60px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:28px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:82px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:45px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:68px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:100px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:35px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:58px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+      </div>
+    </div>
+    <div class="year-block">
+      <div class="year-header"><span class="skel" style="width:56px;height:19px;"></span><span class="skel" style="width:66px;height:10px;"></span></div>
+      <div class="bars-row">
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:55px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:30px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:88px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:62px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:40px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:75px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:20px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:95px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:48px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:65px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:33px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:80px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Keep this CONFIG block in sync with the one in index.html — same
+   spreadsheet, same artist tabs — so the counts on this page always
+   match the archive. See index.html for the full setup instructions.
+   ===================================================================== */
+const CONFIG = {
+  spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
+  // Each artist's chart color (stacked bar segments + legend) is generated
+  // automatically from its name — see the color block right below — so a
+  // new tab only needs { name, sheetTab }. Optional: add a "color" (any
+  // CSS color value) to an entry to pin that one artist to a color you pick.
+  artists: [
+    { name: "¥$, Kanye West, Ty Dolla $ign", sheetTab: "¥$, Kanye West, Ty Dolla $ign" },
+    { name: "A$AP Rocky", sheetTab: "A$AP Rocky" },
+    { name: "Destroy Lonely", sheetTab: "Destroy Lonely" },
+    { name: "Don Toliver", sheetTab: "Don Toliver" },
+    { name: "Drake", sheetTab: "Drake" },
+    { name: "Frank Ocean", sheetTab: "Frank Ocean" },
+    { name: "HXG", sheetTab: "HXG" },
+    { name: "JID", sheetTab: "JID" },
+    { name: "Future", sheetTab: "Future" },
+    { name: "Kanye West", sheetTab: "Kanye West" },
+    { name: "Ken Carson", sheetTab: "Ken Carson" },
+    { name: "Lil Uzi Vert", sheetTab: "Lil Uzi Vert" },
+    { name: "Lil Uzi Vert, Playboi Carti", sheetTab: "Lil Uzi Vert, Playboi Carti" },
+    { name: "Metro Boomin", sheetTab: "Metro Boomin" },
+    { name: "Offset", sheetTab: "Offset" },
+    { name: "Playboi Carti", sheetTab: "Playboi Carti" },
+    { name: "The Weeknd", sheetTab: "The Weeknd" },
+    { name: "Travis Scott", sheetTab: "Travis Scott" },
+    { name: "Trippie Redd", sheetTab: "Trippie Redd" },
+    { name: "Trippie Redd, Playboi Carti", sheetTab: "Trippie Redd, Playboi Carti" },
+    { name: "Tyler, The Creator", sheetTab: "Tyler, The Creator" },
+    { name: "Young Nudy", sheetTab: "Young Nudy" },
+    { name: "Young Thug", sheetTab: "Young Thug" }
+  ]
+};
+
+/* =====================================================================
+   Automatic artist colors. An artist's color is worked out from its name
+   and nothing else — not its position in the list, not how many artists
+   there are, nothing random — so the same name gives the exact same
+   color on every device, every visit, forever. Adding, removing or
+   reordering tabs never changes anyone else's color.
+
+   DON'T CHANGE COLOR_SEED, COLOR_SATURATIONS or COLOR_LIGHTNESSES: they're
+   part of the formula, so editing any of them reshuffles every artist's
+   color at once. This seed was re-picked by brute-force searching a billion
+   candidates for the one that keeps the (now 23) artists' colors as far
+   apart from each other as possible (mostly judged on hue, worst-case pair
+   first, so no color family gets crowded); new names just get whatever
+   color their name hashes to under it.
+   ===================================================================== */
+const COLOR_SEED = 399527510;
+const COLOR_SATURATIONS = [62, 72, 82];
+const COLOR_LIGHTNESSES = [58, 66, 74];
+
+// Turns any text into a stable 32-bit number (FNV-1a plus a final mix).
+function hashString(str){
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+// Name -> color. Case and stray spaces are ignored, so "Future" and
+// " future " match. Saturation and lightness are kept in a bright-enough
+// range to stay readable on the dark background.
+function colorForName(name){
+  const h = hashString(COLOR_SEED + ":" + String(name).trim().toLowerCase());
+  const hue = h % 360;
+  const sat = COLOR_SATURATIONS[(h >>> 9) % COLOR_SATURATIONS.length];
+  const light = COLOR_LIGHTNESSES[(h >>> 13) % COLOR_LIGHTNESSES.length];
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+}
+
+// Give every artist a color unless CONFIG pinned one by hand.
+CONFIG.artists.forEach(artist => {
+  if (!artist.color) artist.color = colorForName(artist.name);
+});
+
+/* =====================================================================
+   Legend. Hidden by default. It's built from CONFIG alone, so it works
+   right away without waiting on the sheet. The eye button in the top-left
+   corner opens it; the eye-slash button inside it (or Esc) hides it again.
+   Every page load starts hidden.
+   ===================================================================== */
+(function setupLegend(){
+  const page = document.querySelector('.page');
+  const toggle = document.getElementById('legendToggle');
+  const close = document.getElementById('legendClose');
+
+  document.getElementById('legendList').innerHTML = CONFIG.artists.map(artist =>
+    `<div class="legend-item"><span class="legend-swatch" style="background:${artist.color}"></span>${artist.name}</div>`
+  ).join('');
+
+  // Keyboard users: focus follows whichever button is showing.
+  function setOpen(open){
+    page.classList.toggle('legend-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    (open ? close : toggle).focus();
+  }
+  toggle.addEventListener('click', () => setOpen(true));
+  close.addEventListener('click', () => setOpen(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && page.classList.contains('legend-open')) setOpen(false);
+  });
+})();
+
+function fetchSheetData(sheetId, tabName){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'statsSheetCallback_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+    const url =
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
+      `?tqx=out:json;responseHandler:${callbackName}` +
+      `&headers=1` +
+      `&sheet=${encodeURIComponent(tabName)}`;
+
+    const script = document.createElement('script');
+    script.src = url;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Google Sheets request timed out."));
+    }, 10000);
+
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      try {
+        if (!data || !data.table) throw new Error("Google returned no table.");
+        const cols = data.table.cols || [];
+        const rows = data.table.rows || [];
+        const result = [];
+        result.push(cols.map(c => (c && c.label) || ""));
+        for (const row of rows) {
+          const cells = row.c || [];
+          const converted = [];
+          for (let i = 0; i < cols.length; i++) {
+            const cell = cells[i];
+            if (!cell) converted.push("");
+            else if (cell.v !== null && cell.v !== undefined && cell.v !== "") converted.push(String(cell.v));
+            else if (cell.f) converted.push(String(cell.f));
+            else converted.push("");
+          }
+          result.push(converted);
+        }
+        cleanup();
+        resolve(result);
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    };
+
+    script.onerror = () => { cleanup(); reject(new Error("Could not load Google Sheet.")); };
+    document.body.appendChild(script);
+  });
+}
+
+/* Same row-parsing rules as index.html's buildAlbumsFromRows (columns
+   matched by their row-1 header label, cross-listed songs flagged so
+   they aren't double-counted) — trimmed down to just what the chart
+   needs: each song's name, its own release date, and its album's. */
+function buildAlbumsFromRows(rows){
+  const albums = [];
+  let current = null;
+
+  const headerLabels = (rows[0] || []).map(h => String(h || "").trim().toLowerCase());
+  const col = (label) => headerLabels.indexOf(label.toLowerCase());
+
+  const idx = {
+    name:        col("Name"),
+    releaseDate: col("Release & File Date"),
+    originalEra: col("Original Era"),
+    link:        col("Link(s)"),
+  };
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const a = String(row[0] || "").trim();
+    const b = String(row[idx.name] || "").trim();
+
+    // Section divider row — not an album, skip it.
+    if (a !== "" && a === b) { continue; }
+
+    // Album header row.
+    if (a === "" && b !== "") {
+      current = {
+        name: b,
+        releaseDate: String(row[idx.releaseDate] || "").trim(),
+        songs: []
+      };
+      albums.push(current);
+      continue;
+    }
+
+    // Song row.
+    if (a !== "" && b !== "" && current) {
+      current.songs.push({
+        name: b,
+        releaseDate: String(row[idx.releaseDate] || "").trim(),
+        originalEra: String(row[idx.originalEra] || "").trim(),
+        playLink: String(row[idx.link] || "").trim()
+      });
+    }
+  }
+
+  // Cross-list: a song with "Original Era" set also counts toward that
+  // album, flagged so the totals below don't count it twice.
+  const byName = new Map();
+  albums.forEach(a => byName.set(a.name.trim().toLowerCase(), a));
+  albums.forEach(album => {
+    album.songs.slice().forEach(song => {
+      if (!song.originalEra) return;
+      const target = byName.get(song.originalEra.toLowerCase());
+      if (!target || target === album) return;
+      target.songs.push({ ...song, crossListed: true });
+    });
+  });
+
+  return albums;
+}
+
+/* Reads a song's (or, if blank, its album's) "Release & File Date"
+   cell. Google's gviz endpoint sends real Date-typed cells back as a
+   JS-constructor string like "Date(2024,2,15)" (month is 0-indexed)
+   rather than plain text, so that's checked first; anything else
+   falls through to normal date parsing, then to a bare 4-digit year
+   as a last resort. Returns null if nothing usable is found. */
+function parseReleaseDate(raw){
+  const str = String(raw || "").trim();
+  if (!str) return null;
+
+  const gviz = str.match(/^Date\((\d+),\s*(\d+),\s*(\d+)/);
+  if (gviz) return { year: +gviz[1], month: +gviz[2] };
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) return { year: d.getFullYear(), month: d.getMonth() };
+
+  const yearOnly = str.match(/\b(19|20)\d{2}\b/);
+  return yearOnly ? { year: +yearOnly[0], month: null } : null;
+}
+
+const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Same pillows.su share-link -> direct-stream-endpoint conversion as
+// index.html's toStreamUrl() — kept in sync deliberately, since a track's
+// duration can only ever be read off the actual audio file (see the
+// comment on probeDuration below), never off the sheet.
+function toStreamUrl(shareUrl){
+  if (!shareUrl) return null;
+  const m = shareUrl.match(/pillows\.su\/f\/([a-zA-Z0-9]+)/i);
+  if (m) return `https://api.pillows.su/api/get/${m[1]}`;
+  return shareUrl;
+}
+
+// Same localStorage key index.html's probeDuration() reads and writes, so
+// the two pages share one cache: a track probed while browsing the
+// archive is already known here, and vice versa, rather than each page
+// re-probing everything from scratch.
+function getDurationCache(){
+  try { return JSON.parse(localStorage.getItem('archiveDurations') || '{}'); }
+  catch { return {}; }
+}
+function cacheDuration(playLink, seconds){
+  try {
+    const cache = getDurationCache();
+    cache[playLink] = seconds;
+    localStorage.setItem('archiveDurations', JSON.stringify(cache));
+  } catch {}
+}
+
+// Probes one track's audio file for its duration via a throwaway <audio
+// preload="metadata">, same as index.html — only the file's header gets
+// fetched, not the whole track.
+function probeDurationOnce(playLink){
+  return new Promise(resolve => {
+    const cached = getDurationCache()[playLink];
+    if (cached !== undefined) { resolve(cached); return; }
+    const probe = document.createElement('audio');
+    probe.preload = 'metadata';
+    const cleanup = () => { probe.removeAttribute('src'); probe.load(); };
+    probe.addEventListener('loadedmetadata', () => {
+      const secs = probe.duration;
+      if (isFinite(secs) && secs > 0) { cacheDuration(playLink, secs); resolve(secs); }
+      else resolve(0);
+      cleanup();
+    }, { once: true });
+    probe.addEventListener('error', () => { cleanup(); resolve(0); }, { once: true });
+    probe.src = toStreamUrl(playLink);
+  });
+}
+
+// Total runtime has to be built by probing every track's audio file
+// individually (see above) — for a whole catalog that can be a lot of
+// files, so this works through them a handful at a time (CONCURRENCY)
+// rather than firing every probe at once, and reports the running total
+// back via onUpdate after each batch so the stat can count up live
+// instead of sitting blank until the very last track resolves.
+async function computeTotalRuntime(songs, onUpdate){
+  const CONCURRENCY = 8;
+  let totalSeconds = 0;
+  let done = 0;
+  let i = 0;
+  async function worker(){
+    while (i < songs.length) {
+      const song = songs[i++];
+      const secs = await probeDurationOnce(song.playLink);
+      totalSeconds += secs;
+      done++;
+      onUpdate(totalSeconds, done, songs.length);
+    }
+  }
+  const workers = Array.from({ length: Math.min(CONCURRENCY, songs.length) }, worker);
+  await Promise.all(workers);
+  return totalSeconds;
+}
+
+// "1,284 hrs" — a whole-catalog total reads better as a big round number
+// of hours than the H:MM:SS format index.html uses for one track/album.
+function formatTotalHours(totalSeconds){
+  return `${Math.round(totalSeconds / 3600).toLocaleString()} hrs`;
+}
+
+async function loadAllAlbums(){
+  const results = await Promise.allSettled(
+    CONFIG.artists.map(artist =>
+      fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab)
+        .then(buildAlbumsFromRows)
+        .then(albums => albums.map(album => ({ ...album, artist: artist.name })))
+    )
+  );
+  const allAlbums = [];
+  results.forEach(r => {
+    if (r.status === 'fulfilled') allAlbums.push(...r.value);
+    else console.error("A tab failed to load for stats:", r.reason);
+  });
+  return allAlbums;
+}
+
+function aggregate(albums){
+  const buckets = {}; // "year-month" -> { [artistName]: count }
+  let minYear = null, maxYear = null;
+  let totalSongs = 0, totalDated = 0;
+  let busiest = null; // { year, month, count }
+
+  albums.forEach(album => {
+    album.songs.forEach(song => {
+      if (song.crossListed) return;
+      totalSongs++;
+      const parsed = parseReleaseDate(song.releaseDate || album.releaseDate);
+      if (!parsed || parsed.month === null) return;
+      totalDated++;
+      const key = `${parsed.year}-${parsed.month}`;
+      const bucket = buckets[key] || (buckets[key] = {});
+      bucket[album.artist] = (bucket[album.artist] || 0) + 1;
+      const count = bucketTotal(bucket);
+      if (!busiest || count > busiest.count) busiest = { year: parsed.year, month: parsed.month, count };
+      if (minYear === null || parsed.year < minYear) minYear = parsed.year;
+      if (maxYear === null || parsed.year > maxYear) maxYear = parsed.year;
+    });
+  });
+
+  return { buckets, minYear, maxYear, totalSongs, totalDated, busiest };
+}
+
+// Sum of every artist's count in a single month's bucket.
+function bucketTotal(bucket){
+  return bucket ? Object.values(bucket).reduce((a, b) => a + b, 0) : 0;
+}
+
+function render(stats){
+  const slot = document.getElementById('statsContent');
+
+  if (stats.totalSongs === 0) {
+    slot.innerHTML = `<div class="stats-empty">Couldn't load any songs from the sheet.<br>If you're opening this file directly instead of through GitHub Pages (or a local server), that's expected — try it live instead.</div>`;
+    return;
+  }
+  if (stats.totalDated === 0) {
+    slot.innerHTML = `<div class="stats-empty">None of the ${stats.totalSongs.toLocaleString()} tracked songs have a usable "Release &amp; File Date" yet — fill that column in to see monthly stats here.</div>`;
+    return;
+  }
+
+  const globalMax = Object.values(stats.buckets).reduce((m, b) => Math.max(m, bucketTotal(b)), 0);
+
+  let html = `<div class="summary-row">
+    <div class="summary-stat"><span class="summary-num">${stats.totalSongs.toLocaleString()}</span><span class="summary-label">Total Edits</span></div>
+    <div class="summary-stat"><span class="summary-num">${CONFIG.artists.length.toLocaleString()}</span><span class="summary-label">Total Artists</span></div>
+    <div class="summary-stat"><span class="summary-num" id="totalRuntimeVal"><span class="skel" style="display:inline-block;width:64px;height:24px;"></span></span><span class="summary-label">Total Runtime</span></div>
+    <div class="summary-stat"><span class="summary-num">${MONTH_LABELS[stats.busiest.month]} ${stats.busiest.year}</span><span class="summary-label">Busiest Month · ${stats.busiest.count}</span></div>
+  </div>`;
+
+  for (let year = stats.maxYear; year >= stats.minYear; year--) {
+    let yearTotal = 0;
+    const cols = MONTH_LABELS.map((label, m) => {
+      const bucket = stats.buckets[`${year}-${m}`] || {};
+      const count = bucketTotal(bucket);
+      yearTotal += count;
+      // Square-root scale instead of linear: a couple of huge outlier
+      // months (e.g. a 70-100 song sprint) would otherwise eat the whole
+      // scale and squash every normal 10-30 month down into a sliver,
+      // making a completely typical month look like nothing happened.
+      // Square-rooting both sides compresses the gap between big and
+      // small counts while still keeping bigger bars visibly bigger.
+      // The real number is always printed above the bar regardless.
+      const pct = globalMax ? Math.max((Math.sqrt(count) / Math.sqrt(globalMax)) * 100, count > 0 ? 6 : 2) : 2;
+
+      // Stack each artist's share inside the bar in a fixed order (the
+      // order artists appear in CONFIG), so a color always means the
+      // same artist and sits in the same position across every column.
+      let cumulative = 0;
+      const segments = CONFIG.artists.map(artist => {
+        const artistCount = bucket[artist.name] || 0;
+        if (!artistCount) return '';
+        const segPct = (artistCount / count) * 100;
+        const bottom = cumulative;
+        cumulative += segPct;
+        return `<div class="bar-segment" style="height:${segPct}%;bottom:${bottom}%;background:${artist.color};" title="${artist.name} — ${artistCount}"></div>`;
+      }).join('');
+
+      return `<div class="bar-col ${count > 0 ? 'has-count' : ''}" title="${label} ${year} — ${count} song${count === 1 ? '' : 's'}">
+        <span class="bar-count">${count > 0 ? count : ''}</span>
+        <div class="bar" data-final-height="${pct}%">${segments}</div>
+        <span class="bar-month">${label}</span>
+      </div>`;
+    }).join('');
+
+    html += `<div class="year-block">
+      <div class="year-header"><span class="year-label">${year}</span><span class="year-total">${yearTotal.toLocaleString()} song${yearTotal === 1 ? '' : 's'}</span></div>
+      <div class="bars-row">${cols}</div>
+    </div>`;
+  }
+
+  slot.innerHTML = html;
+
+  // Animate the bars in after they've painted at height 0, rather than
+  // snapping straight to their final height.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar').forEach(bar => {
+        bar.style.height = bar.dataset.finalHeight;
+      });
+    });
+  });
+}
+
+(async function boot(){
+  try {
+    const albums = await loadAllAlbums();
+    const stats = aggregate(albums);
+    render(stats);
+
+    // Runtime can only be known by probing each track's actual audio file
+    // (see computeTotalRuntime above), so it's filled in after everything
+    // else has already painted rather than delaying the rest of the page
+    // on it. Cross-listed duplicates are skipped, same as the song counts
+    // in aggregate(), so a track appearing on two albums isn't counted
+    // twice; tracks with no file linked yet are skipped too, since there's
+    // nothing to probe.
+    const runtimeEl = document.getElementById('totalRuntimeVal');
+    if (runtimeEl) {
+      const songs = [];
+      albums.forEach(album => album.songs.forEach(song => {
+        if (!song.crossListed && song.playLink) songs.push(song);
+      }));
+      if (songs.length) {
+        computeTotalRuntime(songs, (totalSeconds) => {
+          runtimeEl.textContent = formatTotalHours(totalSeconds);
+        });
+      } else {
+        runtimeEl.textContent = "0 hrs";
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('statsContent').innerHTML = `<div class="stats-empty">Something went wrong loading the stats — check the browser console for details.</div>`;
+  }
+})();
+</script>
+
+</body>
+</html>

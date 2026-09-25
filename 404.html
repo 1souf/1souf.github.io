@@ -1,249 +1,302 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>404 · Track Not Found</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- No-JS / slow-JS fallback — if the script below never runs, this still
+     gets people back to the archive on its own. -->
+<meta http-equiv="refresh" content="6;url=index.html">
+<title>404 — ❤︎</title>
+<link rel="icon" href="img/icon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=gabarito&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0f0f0f;
-    --panel:#212121;
-    --panel-2:#2a2a2a;
-    --text:#f1f1f1;
-    --text-dim:#aaaaaa;
-    --accent:#ffffff;
-    --accent-hover:#dcdcdc;
-    --ring: rgba(255,255,255,0.18);
+    --bg:#111111;
+    --bg-elevated:#1b1b1b;
+    --text:#f2f2f2;
+    --text-dim:#969696;
+    --stamp:#ffffff;
+    --stamp-dim:#555555;
+    --border:#2a2a2a;
+    --border-light:#3d3d3d;
+    --mono:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --display:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
   }
-
-  *{ box-sizing:border-box; }
-
-  html, body{ height:100%; }
-
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
   body{
-    margin:0;
-    background:var(--bg);
-    background-image:
-      radial-gradient(circle at 15% 0%, rgba(255,255,255,0.035), transparent 45%),
-      radial-gradient(circle at 85% 100%, rgba(255,255,255,0.03), transparent 45%);
-    color:var(--text);
-    font-family:'Work Sans', sans-serif;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px;
-    overflow:hidden;
+    margin:0; background:var(--bg); color:var(--text); min-height:100%;
+    font-family:var(--mono); font-weight:600; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  ::selection{background:var(--stamp); color:#111111;}
+  :focus-visible{outline:2px solid var(--stamp); outline-offset:2px;}
+
+  /* ---------- ambient background: starfield canvas (same as stats.html) ---------- */
+  .star-canvas{position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block;}
+
+  .notfound{
+    position:relative; z-index:1; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:32px 24px; gap:0;
   }
 
-  .scene{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    max-width:440px;
-    width:100%;
+  /* The "missing file" plate reuses the exact hazard-stripe pattern
+     index.html shows for an album with no cover on file — same idea,
+     scaled up: this whole page is the thing that's missing. */
+  .file-plate{
+    width:100%; max-width:300px; height:130px; border-radius:8px;
+    background:repeating-linear-gradient(45deg, var(--bg-elevated), var(--bg-elevated) 9px, #23232380 9px, #23232480 18px);
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    display:flex; align-items:center; justify-content:center; margin-bottom:26px;
+  }
+  .file-plate-num{
+    font-family:var(--display); font-weight:900; font-size:2.6rem; letter-spacing:.02em;
+    color:var(--stamp); background:rgba(17,17,17,.72); padding:6px 22px; border-radius:5px;
   }
 
-  /* ---------- Vinyl ---------- */
-  .vinyl-wrap{
-    position:relative;
-    width:132px; height:132px;
-    margin-bottom:28px;
-    filter:drop-shadow(0 18px 34px rgba(0,0,0,0.55));
+  .eyebrow{
+    font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim);
+    margin:0 0 12px;
+  }
+  h1{
+    font-family:var(--display); font-weight:800; font-size:1.5rem; letter-spacing:-.005em;
+    margin:0; max-width:24ch; line-height:1.3;
+  }
+  .lede{
+    color:var(--text-dim); font-weight:500; font-size:.86rem; line-height:1.6;
+    max-width:42ch; margin:14px 0 0;
   }
 
-  .vinyl{
-    width:100%; height:100%;
-    animation:spin 5s linear infinite, wobble 2.4s ease-in-out infinite;
-  }
+  .redirect-block{margin:32px 0 26px;}
+  .redirect-text{font-size:.78rem; color:var(--text-dim); margin:0;}
+  .redirect-text b{color:var(--text); font-weight:700; font-variant-numeric:tabular-nums;}
+  .redirect-bar{width:200px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; margin:12px auto 0;}
+  .redirect-bar-fill{height:100%; width:100%; background:var(--stamp);}
+  @media (prefers-reduced-motion: reduce){ .redirect-bar{display:none;} }
 
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  @keyframes wobble{
-    0%, 100%{ transform:translateY(0) rotate(var(--r, 0deg)); }
-    50%{ transform:translateY(-3px); }
+  .back-link{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:9px 16px; background:var(--bg-elevated); color:var(--text);
+    border:1px solid var(--border-light); border-radius:3px;
+    font-family:var(--mono); font-size:.76rem; font-weight:600; letter-spacing:.02em;
+    cursor:pointer; transition:color .15s ease, border-color .15s ease, transform .15s ease;
   }
+  .back-link:hover{color:var(--stamp); border-color:var(--stamp); transform:translateX(-2px);}
+  .back-link svg{width:14px; height:14px; flex-shrink:0; display:block;}
 
-  .scratch{
-    stroke:rgba(255,255,255,0.5);
-    stroke-width:1.4;
-    stroke-linecap:round;
-    opacity:0;
-    animation:scratch-flash 2.4s ease-in-out infinite;
-  }
-  @keyframes scratch-flash{
-    0%, 40%, 100%{ opacity:0; }
-    45%, 55%{ opacity:1; }
-  }
-
-  /* ---------- Glitch title ---------- */
-  .glitch-wrap{ position:relative; margin:0 0 6px; }
-  .glitch{
-    font-family:'Bebas Neue', sans-serif;
-    font-size:92px;
-    line-height:0.9;
-    letter-spacing:.02em;
-    margin:0;
-    position:relative;
-    color:var(--text);
-  }
-  .glitch::before, .glitch::after{
-    content:'404';
-    position:absolute; left:0; top:0; right:0;
-    color:var(--text);
-    clip-path:inset(0 0 0 0);
-    animation:glitch-shift 3.6s infinite steps(1);
-  }
-  .glitch::before{ text-shadow:2px 0 rgba(255,60,90,0.75); }
-  .glitch::after{ text-shadow:-2px 0 rgba(70,180,255,0.75); }
-
-  @keyframes glitch-shift{
-    0%, 92%, 100%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
-    93%{ clip-path:inset(10% 0 60% 0); transform:translate(-2px,0); }
-    94%{ clip-path:inset(60% 0 5% 0); transform:translate(2px,0); }
-    95%{ clip-path:inset(30% 0 40% 0); transform:translate(-1px,0); }
-    96%{ clip-path:inset(0 0 0 0); transform:translate(0,0); }
-  }
-
-  .label{
-    font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--text-dim); margin:0 0 22px;
-  }
-  .label span{ color:var(--text); }
-
-  h1.title{
-    font-family:'Gabarito', sans-serif;
-    font-size:23px; margin:0 0 8px; letter-spacing:.01em;
-  }
-
-  p.desc{
-    margin:0 0 30px; color:var(--text-dim); font-size:14.5px; line-height:1.55;
-    max-width:360px;
-  }
-  p.desc b{ color:var(--text); font-weight:600; }
-
-  /* ---------- Flatline equalizer ---------- */
-  .flatline{ display:flex; align-items:flex-end; gap:3px; height:16px; margin-bottom:30px; }
-  .flatline .bar{
-    width:3px; border-radius:1px; background:var(--text-dim);
-    animation:flat-jitter 1.4s ease-in-out infinite;
-  }
-  .flatline .bar:nth-child(1){ height:20%; animation-delay:-1.1s; }
-  .flatline .bar:nth-child(2){ height:20%; animation-delay:-0.4s; }
-  .flatline .bar:nth-child(3){ height:20%; animation-delay:-0.9s; }
-  .flatline .bar:nth-child(4){ height:20%; animation-delay:-0.2s; }
-  .flatline .bar:nth-child(5){ height:20%; animation-delay:-1.3s; }
-  @keyframes flat-jitter{
-    0%, 100%{ transform:scaleY(1); }
-    50%{ transform:scaleY(1.15); }
-  }
-
-  /* ---------- Redirect scrubber ---------- */
-  .redirect{ width:100%; max-width:300px; }
-  .redirect-row{
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:12px; color:var(--text-dim); margin-bottom:8px;
-    letter-spacing:.02em;
-  }
-  .redirect-row b{ color:var(--text); font-variant-numeric:tabular-nums; }
-
-  .bar-track{
-    height:5px; border-radius:999px; background:rgba(255,255,255,0.14);
-    overflow:hidden;
-  }
-  .bar-fill{
-    height:100%; width:0%; border-radius:999px;
-    background:var(--accent);
-    animation:fill-up 5s linear forwards;
-  }
-  @keyframes fill-up{ to{ width:100%; } }
-
-  .home-link{
-    display:inline-flex; align-items:center; gap:6px;
-    margin-top:26px;
-    padding:9px 18px; border-radius:999px;
-    border:1px solid rgba(255,255,255,0.28);
-    background:rgba(255,255,255,0.08);
-    color:rgba(255,255,255,0.9);
-    font-size:13px; font-weight:600; text-decoration:none;
-    transition:background .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .home-link:hover{ background:rgba(255,255,255,0.18); border-color:rgba(255,255,255,0.5); color:#fff; }
-  .home-link svg{ width:14px; height:14px; }
-
-  @media (max-width:420px){
-    .glitch{ font-size:72px; }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    .vinyl{ animation:none; }
-    .glitch::before, .glitch::after{ animation:none; display:none; }
-    .flatline .bar{ animation:none; }
+  @media (max-width:480px){
+    .file-plate{max-width:240px; height:110px;}
+    .file-plate-num{font-size:2.1rem; padding:5px 16px;}
+    h1{font-size:1.25rem;}
   }
 </style>
 </head>
 <body>
 
-  <div class="scene">
-
-    <div class="vinyl-wrap">
-      <svg class="vinyl" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="49" fill="#111"/>
-        <circle cx="50" cy="50" r="49" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-        <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-        <circle cx="50" cy="50" r="33" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-        <circle cx="50" cy="50" r="25" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-        <line class="scratch" x1="18" y1="30" x2="60" y2="86"/>
-        <circle cx="50" cy="50" r="16" fill="var(--panel-2)"/>
-        <circle cx="50" cy="50" r="2.6" fill="#0f0f0f"/>
-      </svg>
-    </div>
-
-    <div class="glitch-wrap">
-      <h2 class="glitch">404</h2>
-    </div>
-    <p class="label">Page <span>Not Found</span></p>
-
-    <h1 class="title">Nothing to see here. Literally.</h1>
-    <p class="desc">Whatever you were looking doesn't exist — maybe it got deleted, renamed, or never existed. Taking you back to <b>the homepage</b> automatically.</p>
-
-    <div class="flatline">
-      <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
-    </div>
-
-    <div class="redirect">
-      <div class="redirect-row">
-        <span>Redirecting</span>
-        <b id="countdown">3s</b>
-      </div>
-      <div class="bar-track"><div class="bar-fill"></div></div>
-    </div>
-
-    <a class="home-link" href="index.html">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-      Take me home now
-    </a>
-
-  </div>
+<canvas class="star-canvas" id="starCanvas" aria-hidden="true"></canvas>
 
 <script>
-  const REDIRECT_URL = 'index.html';
-  const REDIRECT_MS = 5000;
+/* =====================================================================
+   Starfield background — identical to the one on stats.html. Kept
+   self-contained on purpose so it can be copy-pasted between pages
+   without dragging any page-specific code along with it. Hover your
+   cursor near a star and a line snaps to it.
+   ===================================================================== */
+(function(){
+  const canvas = document.getElementById('starCanvas');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const countdownEl = document.getElementById('countdown');
-  const startTime = performance.now();
+  let width, height, stars = [];
+  const mouse = { x: null, y: null };
 
-  function tick(){
-    const elapsed = performance.now() - startTime;
-    const remaining = Math.max(0, Math.ceil((REDIRECT_MS - elapsed) / 1000));
-    countdownEl.textContent = remaining + 's';
-    if (elapsed < REDIRECT_MS) requestAnimationFrame(tick);
+  const STAR_COUNT = 45;
+  const CONNECTION_DISTANCE = 150;
+  const MOUSE_CONNECTION_DISTANCE = 190;
+  const CONNECTION_DISTANCE_SQ = CONNECTION_DISTANCE * CONNECTION_DISTANCE;
+  const MOUSE_CONNECTION_DISTANCE_SQ = MOUSE_CONNECTION_DISTANCE * MOUSE_CONNECTION_DISTANCE;
+
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    createStars();
   }
-  requestAnimationFrame(tick);
 
-  setTimeout(() => { window.location.href = REDIRECT_URL; }, REDIRECT_MS);
+  function createStars(){
+    stars = [];
+    for (let i = 0; i < STAR_COUNT; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 0.14 + 0.04;
+      stars.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 1.1 + 0.35,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        drift: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.0008 + 0.0003,
+        alpha: Math.random() * 0.35 + 0.5,
+        twinkleSpeed: Math.random() * 0.0015 + 0.0005,
+        twinkleOffset: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function drawStars(time){
+    for (const star of stars){
+      if (!reduceMotion){
+        star.drift += star.driftSpeed;
+        star.x += star.vx + Math.cos(star.drift) * 0.02;
+        star.y += star.vy + Math.sin(star.drift) * 0.02;
+
+        if (star.x < -20) star.x = width + 20;
+        if (star.x > width + 20) star.x = -20;
+        if (star.y < -20) star.y = height + 20;
+        if (star.y > height + 20) star.y = -20;
+      }
+
+      const twinkle = reduceMotion ? 0 : Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.06;
+      const alpha = Math.max(0.35, Math.min(0.9, star.alpha + twinkle));
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220,230,255,${alpha})`;
+      ctx.fill();
+    }
+  }
+
+  function drawStarConnections(){
+    for (let i = 0; i < stars.length; i++){
+      const a = stars[i];
+      for (let j = i + 1; j < stars.length; j++){
+        const b = stars[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq >= CONNECTION_DISTANCE_SQ) continue;
+
+        const d = Math.sqrt(distSq);
+        const opacity = Math.pow(1 - d / CONNECTION_DISTANCE, 2) * 0.12;
+
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.strokeStyle = `rgba(150,180,255,${opacity})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function drawMouseConnections(){
+    if (mouse.x === null || mouse.y === null) return;
+
+    for (const star of stars){
+      const dx = mouse.x - star.x;
+      const dy = mouse.y - star.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq >= MOUSE_CONNECTION_DISTANCE_SQ) continue;
+
+      const d = Math.sqrt(distSq);
+      const strength = Math.pow(1 - d / MOUSE_CONNECTION_DISTANCE, 2);
+
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius + strength * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(190,215,255,${strength * 0.3})`;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(mouse.x, mouse.y);
+      ctx.lineTo(star.x, star.y);
+      ctx.strokeStyle = `rgba(170,200,255,${strength * 0.65})`;
+      ctx.lineWidth = 0.7 + strength * 0.6;
+      ctx.stroke();
+    }
+  }
+
+  let rafId = null;
+  function animate(time){
+    ctx.clearRect(0, 0, width, height);
+    drawStars(time);
+    drawStarConnections();
+    drawMouseConnections();
+    rafId = requestAnimationFrame(animate);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){
+      if (rafId !== null){ cancelAnimationFrame(rafId); rafId = null; }
+    } else if (rafId === null){
+      rafId = requestAnimationFrame(animate);
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+  window.addEventListener('resize', resize);
+
+  resize();
+  rafId = requestAnimationFrame(animate);
+})();
+</script>
+
+<main class="notfound">
+  <div class="file-plate" aria-hidden="true"><span class="file-plate-num">404</span></div>
+
+  <p class="eyebrow">Case File — Not Found</p>
+  <h1>This page isn't in the archive.</h1>
+  <p class="lede">Whatever you were looking for got moved, renamed, or never existed here.</p>
+
+  <div class="redirect-block">
+    <p class="redirect-text">Taking you back to the archive in <b id="countdownNum">5</b>s…</p>
+    <div class="redirect-bar"><div class="redirect-bar-fill" id="redirectFill"></div></div>
+  </div>
+
+  <a href="index.html" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    Back to Archive now
+  </a>
+</main>
+
+<script>
+/* =====================================================================
+   Auto-redirect. The <meta http-equiv="refresh"> tag in <head> is the
+   safety net for no-JS browsers/crawlers; this drives the visible
+   countdown + progress bar and fires the actual redirect a beat sooner
+   so the two never race each other.
+   ===================================================================== */
+const REDIRECT_SECONDS = 5;
+const REDIRECT_TARGET = 'index.html';
+
+let secondsLeft = REDIRECT_SECONDS;
+const countdownEl = document.getElementById('countdownNum');
+
+function tick(){
+  secondsLeft--;
+  if (secondsLeft <= 0) {
+    window.location.replace(REDIRECT_TARGET);
+    return;
+  }
+  countdownEl.textContent = secondsLeft;
+  setTimeout(tick, 1000);
+}
+setTimeout(tick, 1000);
+
+// Drain the progress bar over the same window. Set to full width first,
+// then flip it to 0% one frame later so the transition actually has a
+// starting point to animate from instead of snapping straight to empty.
+const fillEl = document.getElementById('redirectFill');
+fillEl.style.transition = `width ${REDIRECT_SECONDS}s linear`;
+requestAnimationFrame(() => requestAnimationFrame(() => { fillEl.style.width = '0%'; }));
 </script>
 
 </body>

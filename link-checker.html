@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Link Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#111111;
+    --bg-elevated:#1b1b1b;
+    --text:#f2f2f2;
+    --text-dim:#969696;
+    --stamp:#ffffff;
+    --stamp-dim:#555555;
+    --hazard:#e0a03c;
+    --bad:#e05c4c;
+    --good:#5cc98a;
+    --border:#2a2a2a;
+    --border-light:#3d3d3d;
+    --mono:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--mono); font-weight:500; -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  :focus-visible{outline:2px solid var(--stamp); outline-offset:2px;}
+  a{color:inherit;}
+
+  .wrap{max-width:720px; margin:0 auto; padding:56px 24px 90px;}
+
+  .title-row{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  h1{font-size:1.5rem; font-weight:800; margin:0; letter-spacing:.01em;}
+  .subtitle{color:var(--text-dim); font-size:.85rem; margin:10px 0 0; max-width:56ch;}
+  .subtitle b{color:var(--text); font-weight:600;}
+
+  .controls{display:flex; align-items:center; gap:10px; margin:26px 0 0; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono); font-weight:600; font-size:.8rem; letter-spacing:.01em;
+    padding:10px 18px; border:1px solid var(--border-light); background:var(--bg-elevated);
+    color:var(--text); border-radius:4px; cursor:pointer; transition:border-color .15s ease, color .15s ease, transform .15s ease;
+  }
+  .btn:hover{border-color:var(--stamp); color:var(--stamp); transform:translateY(-1px);}
+  .btn:disabled{opacity:.4; cursor:default; transform:none; border-color:var(--border-light); color:var(--text);}
+  .btn.primary{background:var(--stamp); border-color:var(--stamp); color:#111111;}
+  .btn.primary:hover{background:var(--stamp-dim); border-color:var(--stamp-dim); color:var(--text);}
+  .btn.small{padding:6px 12px; font-size:.7rem;}
+
+  .status{margin-top:22px; display:none;}
+  .status.show{display:block;}
+  .status-line{font-size:.78rem; color:var(--text-dim); display:flex; justify-content:space-between; gap:12px;}
+  .status-line b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums;}
+  .bar{height:5px; background:var(--border); border-radius:3px; margin-top:8px; overflow:hidden;}
+  .bar-fill{height:100%; width:0%; background:var(--stamp); transition:width .25s ease;}
+
+  .results{margin-top:34px;}
+  .summary{
+    font-size:.86rem; padding:14px 16px; border-radius:5px; border:1px solid var(--border-light);
+    background:var(--bg-elevated); display:none;
+  }
+  .summary.show{display:block;}
+  .summary.all-clear{border-color:var(--good); color:var(--good);}
+  .summary.has-broken{border-color:var(--bad); color:var(--text);}
+  .summary.has-broken b{color:var(--bad);}
+
+  .warnings{margin-top:14px; display:none;}
+  .warnings.show{display:block;}
+  .warnings ul{margin:8px 0 0; padding-left:18px; color:var(--hazard); font-size:.76rem; line-height:1.7;}
+
+  .broken-list{margin-top:20px; display:flex; flex-direction:column; gap:10px;}
+  .broken-row{
+    border:1px solid var(--border-light); border-left:3px solid var(--bad);
+    background:var(--bg-elevated); border-radius:4px; padding:13px 15px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
+  }
+  .broken-row.resolved{border-left-color:var(--good); opacity:.6;}
+  .broken-meta{min-width:0;}
+  .broken-path{font-size:.7rem; color:var(--text-dim); letter-spacing:.01em;}
+  .broken-name{font-size:.88rem; font-weight:600; margin-top:3px;}
+  .broken-link{
+    font-size:.74rem; color:var(--text-dim); word-break:break-all; margin-top:6px; display:block;
+    text-decoration:none; border-bottom:1px dashed var(--border-light);
+  }
+  .broken-link:hover{color:var(--stamp); border-color:var(--stamp);}
+  .broken-reason{font-size:.7rem; color:var(--bad); margin-top:6px;}
+  .broken-row.resolved .broken-reason{color:var(--good);}
+  .broken-actions{flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:8px;}
+
+  .empty-hint{color:var(--text-dim); font-size:.82rem; margin-top:30px; max-width:52ch;}
+  .empty-hint code{background:var(--bg-elevated); padding:2px 5px; border-radius:3px; font-size:.78rem;}
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
+    background:var(--text); color:#111111; font-size:.78rem; padding:10px 18px;
+    border-radius:4px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="title-row">
+    <h1>Link Check</h1>
+  </div>
+  <p class="subtitle">
+    Scans every connected artist tab on the same spreadsheet the archive
+    site reads from, and tries to actually load each <b>pillows.su</b>
+    link behind it. Only the ones that fail to load are shown below —
+    everything that plays fine is left out.
+  </p>
+
+  <div class="controls">
+    <button class="btn primary" id="scanBtn">Run scan</button>
+    <button class="btn small" id="copyBtn" style="display:none;">Copy broken list</button>
+  </div>
+
+  <div class="status" id="status">
+    <div class="status-line">
+      <span id="statusText">Starting…</span>
+      <span><b id="statusBroken">0</b> broken so far</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="summary" id="summary"></div>
+    <div class="warnings" id="warnings"><b style="color:var(--hazard); font-size:.76rem;">Some tabs couldn't be read:</b><ul id="warningsList"></ul></div>
+    <div class="broken-list" id="brokenList"></div>
+  </div>
+
+  <p class="empty-hint" id="emptyHint">
+    This checks the <b style="color:var(--text);">Link(s)</b> column on
+    every song row (and every album header's download link) against
+    <code>api.pillows.su</code>. A row is flagged broken if the file
+    either errors out or never starts loading within 10 seconds — a slow
+    connection can occasionally cause a false flag, so anything shown
+    here is worth a manual click before assuming the sheet needs fixing.
+  </p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Same spreadsheet + tab list as the main archive site. If artist tabs
+   get added, renamed, or removed there, mirror the same change into
+   this CONFIG block so the two stay in sync.
+   ===================================================================== */
+const CONFIG = {
+  spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
+  artists: [
+    { name: "¥$, Kanye West, Ty Dolla $ign", sheetTab: "¥$, Kanye West, Ty Dolla $ign" },
+    { name: "A$AP Rocky", sheetTab: "A$AP Rocky" },
+    { name: "Destroy Lonely", sheetTab: "Destroy Lonely" },
+    { name: "Don Toliver", sheetTab: "Don Toliver" },
+    { name: "Drake", sheetTab: "Drake" },
+    { name: "Frank Ocean", sheetTab: "Frank Ocean" },
+    { name: "HXG", sheetTab: "HXG" },
+    { name: "JID", sheetTab: "JID" },
+    { name: "Future", sheetTab: "Future" },
+    { name: "Kanye West", sheetTab: "Kanye West" },
+    { name: "Ken Carson", sheetTab: "Ken Carson" },
+    { name: "Lil Uzi Vert", sheetTab: "Lil Uzi Vert" },
+    { name: "Lil Uzi Vert, Playboi Carti", sheetTab: "Lil Uzi Vert, Playboi Carti" },
+    { name: "Metro Boomin", sheetTab: "Metro Boomin" },
+    { name: "Offset", sheetTab: "Offset" },
+    { name: "Playboi Carti", sheetTab: "Playboi Carti" },
+    { name: "The Weeknd", sheetTab: "The Weeknd" },
+    { name: "Travis Scott", sheetTab: "Travis Scott" },
+    { name: "Trippie Redd", sheetTab: "Trippie Redd" },
+    { name: "Trippie Redd, Playboi Carti", sheetTab: "Trippie Redd, Playboi Carti" },
+    { name: "Tyler, The Creator", sheetTab: "Tyler, The Creator" },
+    { name: "Young Nudy", sheetTab: "Young Nudy" },
+    { name: "Young Thug", sheetTab: "Young Thug" }
+  ]
+};
+
+const el = (id) => document.getElementById(id);
+
+function esc(s){
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function showToast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------------- sheet fetching (same JSONP technique as the main site) ---------------- */
+
+let fetchCallbackCounter = 0;
+function fetchSheetData(sheetId, tabName){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'linkCheckCallback_' + Date.now() + '_' + (fetchCallbackCounter++);
+    const url =
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
+      `?tqx=out:json;responseHandler:${callbackName}` +
+      `&headers=1` +
+      `&sheet=${encodeURIComponent(tabName)}`;
+
+    const script = document.createElement('script');
+    script.src = url;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Request to Google Sheets timed out."));
+    }, 12000);
+
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      try {
+        if (!data?.table) throw new Error("Google returned no table for this tab.");
+        const cols = data.table.cols || [];
+        const rows = data.table.rows || [];
+        const result = [cols.map(c => c?.label || "")];
+        for (const row of rows) {
+          const cells = row.c || [];
+          const converted = [];
+          for (let i = 0; i < cols.length; i++) {
+            const cell = cells[i];
+            if (!cell) converted.push("");
+            else if (cell.v !== null && cell.v !== undefined && cell.v !== "") converted.push(String(cell.v));
+            else if (cell.f) converted.push(String(cell.f));
+            else converted.push("");
+          }
+          result.push(converted);
+        }
+        cleanup();
+        resolve(result);
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    };
+
+    script.onerror = () => { cleanup(); reject(new Error("Couldn't load this tab from Google Sheets.")); };
+    document.body.appendChild(script);
+  });
+}
+
+/* ---------------- pulling pillowcase links out of a tab's raw rows ----------------
+   Mirrors the row-type detection in the main site's buildAlbumsFromRows():
+   a divider row has column A equal to the Name column; an album header row
+   has column A empty and Name non-empty; a song row has both filled in.
+   Only the "Link(s)" cell is relevant here — that's the only column the
+   main site ever turns into a pillows.su URL (song playback links and an
+   album's download link both live there). */
+
+const PILLOWCASE_RE = /pillows\.su\/f\/[a-zA-Z0-9]+/i;
+
+function collectPillowcaseLinks(rows, artistName){
+  const found = [];
+  const headerLabels = (rows[0] || []).map(h => String(h || "").trim().toLowerCase());
+  const col = (label) => headerLabels.indexOf(label.toLowerCase());
+  const idx = { name: col("Name"), link: col("Link(s)") };
+  if (idx.name === -1 || idx.link === -1) return found;
+
+  let currentAlbum = null;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const a = String(row[0] || "").trim();
+    const b = String(row[idx.name] || "").trim();
+
+    if (a !== "" && a === b) continue; // section divider
+
+    if (a === "" && b !== "") { // album header
+      currentAlbum = b;
+      const link = String(row[idx.link] || "").trim();
+      if (PILLOWCASE_RE.test(link)) {
+        found.push({ artistName, albumName: currentAlbum, songName: null, link });
+      }
+      continue;
+    }
+
+    if (a !== "" && b !== "" && currentAlbum) { // song row
+      const link = String(row[idx.link] || "").trim();
+      if (PILLOWCASE_RE.test(link)) {
+        found.push({ artistName, albumName: currentAlbum, songName: b, link });
+      }
+    }
+  }
+  return found;
+}
+
+function toStreamUrl(shareUrl){
+  const m = shareUrl.match(/pillows\.su\/f\/([a-zA-Z0-9]+)/i);
+  return m ? `https://api.pillows.su/api/get/${m[1]}` : shareUrl;
+}
+
+/* ---------------- probing a single link ----------------
+   Same technique the main site already relies on for reading a track's
+   duration (an <audio> element pointed at the file): loading metadata
+   cross-origin works fine without any CORS headers on pillows.su's end,
+   which a raw fetch() would need. "loadedmetadata" = the file is really
+   there; "error" or no response inside the timeout = flagged broken. */
+
+function probeLink(url, timeoutMs = 10000){
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('error', onError);
+      audio.removeAttribute('src');
+      audio.load();
+    };
+    const finish = (ok, reason) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve({ ok, reason });
+    };
+    const onLoaded = () => finish(true, null);
+    const onError = () => finish(false, "Couldn't load — the file may have been deleted or the link is broken.");
+    audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+    audio.addEventListener('error', onError, { once: true });
+    const timer = setTimeout(() => finish(false, "Timed out — no response after 10s."), timeoutMs);
+    audio.src = url;
+  });
+}
+
+async function runWithConcurrency(items, limit, worker){
+  let idx = 0;
+  async function next(){
+    const i = idx++;
+    if (i >= items.length) return;
+    await worker(items[i], i);
+    return next();
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, next));
+}
+
+/* ---------------- orchestration + rendering ---------------- */
+
+function setProgress(done, total, brokenCount){
+  el('statusText').textContent = total ? `Checking ${done} of ${total} links…` : 'Reading spreadsheet tabs…';
+  el('statusBroken').textContent = brokenCount;
+  el('barFill').style.width = total ? `${(done / total) * 100}%` : '4%';
+}
+
+function renderBrokenRow(entry){
+  const row = document.createElement('div');
+  row.className = 'broken-row';
+  const label = entry.songName ? esc(entry.songName) : 'Album download link';
+  row.innerHTML = `
+    <div class="broken-meta">
+      <div class="broken-path">${esc(entry.artistName)} › ${esc(entry.albumName)}</div>
+      <div class="broken-name">${label}</div>
+      <a class="broken-link" href="${esc(entry.link)}" target="_blank" rel="noopener">${esc(entry.link)}</a>
+      <div class="broken-reason">${esc(entry.reason)}</div>
+    </div>
+    <div class="broken-actions">
+      <button class="btn small recheck-btn" type="button">Recheck</button>
+    </div>`;
+
+  row.querySelector('.recheck-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    const { ok, reason } = await probeLink(toStreamUrl(entry.link));
+    if (ok) {
+      row.classList.add('resolved');
+      row.querySelector('.broken-reason').textContent = 'Working now — recheck came back clean.';
+      btn.style.display = 'none';
+    } else {
+      row.querySelector('.broken-reason').textContent = reason;
+      btn.disabled = false;
+      btn.textContent = 'Recheck';
+    }
+  });
+
+  return row;
+}
+
+async function runScan(){
+  const scanBtn = el('scanBtn');
+  scanBtn.disabled = true;
+  scanBtn.textContent = 'Scanning…';
+  el('copyBtn').style.display = 'none';
+  el('emptyHint').style.display = 'none';
+  el('status').classList.add('show');
+  el('summary').classList.remove('show', 'all-clear', 'has-broken');
+  el('warnings').classList.remove('show');
+  el('warningsList').innerHTML = '';
+  el('brokenList').innerHTML = '';
+  setProgress(0, 0, 0);
+
+  const tabResults = await Promise.all(CONFIG.artists.map(async artist => {
+    try {
+      const rows = await fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab);
+      return { artist: artist.name, links: collectPillowcaseLinks(rows, artist.name), error: null };
+    } catch (err) {
+      return { artist: artist.name, links: [], error: err.message || String(err) };
+    }
+  }));
+
+  const tabErrors = tabResults.filter(r => r.error);
+  if (tabErrors.length) {
+    el('warnings').classList.add('show');
+    el('warningsList').innerHTML = tabErrors.map(r => `<li>${esc(r.artist)}: ${esc(r.error)}</li>`).join('');
+  }
+
+  const allLinks = tabResults.flatMap(r => r.links);
+
+  // Test each unique URL once even if it shows up on more than one row —
+  // a broken file is broken everywhere it's referenced, no need to probe
+  // it twice.
+  const occurrencesByUrl = new Map();
+  allLinks.forEach(entry => {
+    if (!occurrencesByUrl.has(entry.link)) occurrencesByUrl.set(entry.link, []);
+    occurrencesByUrl.get(entry.link).push(entry);
+  });
+  const uniqueUrls = [...occurrencesByUrl.keys()];
+
+  let done = 0;
+  let brokenCount = 0;
+  const brokenEntries = [];
+  const listEl = el('brokenList');
+  setProgress(0, uniqueUrls.length, 0);
+
+  await runWithConcurrency(uniqueUrls, 8, async (url) => {
+    const { ok, reason } = await probeLink(toStreamUrl(url));
+    done++;
+    if (!ok) {
+      brokenCount++;
+      occurrencesByUrl.get(url).forEach(occ => {
+        const entry = { ...occ, reason };
+        brokenEntries.push(entry);
+        listEl.appendChild(renderBrokenRow(entry));
+      });
+    }
+    setProgress(done, uniqueUrls.length, brokenCount);
+  });
+
+  el('status').classList.remove('show');
+
+  const summaryEl = el('summary');
+  summaryEl.classList.add('show');
+  if (brokenEntries.length === 0) {
+    summaryEl.classList.add('all-clear');
+    summaryEl.textContent = uniqueUrls.length
+      ? `All clear — all ${uniqueUrls.length} pillows.su links across ${CONFIG.artists.length} tabs loaded fine.`
+      : `No pillows.su links were found on any connected tab.`;
+  } else {
+    summaryEl.classList.add('has-broken');
+    summaryEl.innerHTML = `<b>${brokenEntries.length}</b> of ${uniqueUrls.length} pillows.su links didn't load, out of ${CONFIG.artists.length} tabs checked.`;
+    el('copyBtn').style.display = 'inline-flex';
+    el('copyBtn').dataset.payload = brokenEntries
+      .map(e => `${e.artistName} — ${e.albumName}${e.songName ? " — " + e.songName : ""}: ${e.link}`)
+      .join('\n');
+  }
+
+  scanBtn.disabled = false;
+  scanBtn.textContent = 'Rescan';
+}
+
+el('scanBtn').addEventListener('click', runScan);
+el('copyBtn').addEventListener('click', async () => {
+  const payload = el('copyBtn').dataset.payload || '';
+  try {
+    await navigator.clipboard.writeText(payload);
+    showToast('Copied broken link list.');
+  } catch {
+    showToast("Couldn't copy — your browser may be blocking clipboard access.");
+  }
+});
+</script>
+
+</body>
+</html>
