@@ -4047,13 +4047,15 @@ function __ensureThemeTransition() {
   style.textContent = `
     html, body, .sidebar, .player, .search-bar, .search-results,
     .case-file, .btn, .link-menu, .info-menu, .changelog-panel,
-    .queue-drawer, .toast,
+    .toast,
     table.manifest tbody tr, table.manifest thead th,
     .artist-list-item, .tree-album-item, .pane-albums-header {
       transition: background-color ${THEME_TRANSITION_MS}ms ease,
                   color ${THEME_TRANSITION_MS}ms ease,
                   border-color ${THEME_TRANSITION_MS}ms ease;
     }
+    /* .queue-drawer keeps its own transition (transform .26s) so the
+       slide-in animation isn't clobbered by the theme's blanket rule. */
   `;
   document.head.appendChild(style);
   document.documentElement.dataset.themeTransition = 'on';
