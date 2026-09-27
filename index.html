@@ -230,6 +230,43 @@
   .search-result-goto svg{width:15px; height:15px; display:block;}
   .search-result-empty{padding:14px 12px; font-size:.78rem; color:var(--text-dim);}
 
+  /* ---------- pillowcase status pill ---------- */
+  /* Absolutely positioned on the hard left of the search bar row (mirrors
+     the changelog "Updates" pill on the hard right), so the search bar
+     itself stays perfectly centered regardless of this pill's width. */
+  .status-pill{
+    position:absolute; left:18px; top:50%; transform:translateY(-50%);
+    display:flex; align-items:center; gap:7px;
+    background:var(--bg-elevated); color:var(--text-dim);
+    border:1px solid var(--border-light); border-radius:20px;
+    padding:6px 12px 6px 10px;
+    font-family:var(--mono); font-weight:600; font-size:.68rem; letter-spacing:.03em;
+    white-space:nowrap; cursor:default;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .status-dot{
+    width:7px; height:7px; border-radius:50%; flex-shrink:0;
+    background:var(--text-dim);
+    transition:background .2s ease, box-shadow .2s ease;
+  }
+  /* checking = neutral grey, gentle pulse */
+  .status-pill.state-checking .status-dot{
+    background:var(--text-dim);
+    animation:status-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes status-pulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+  /* online = green */
+  .status-pill.state-online .status-dot{
+    background:#3fbf6f; box-shadow:0 0 0 3px rgba(63,191,111,.18);
+  }
+  .status-pill.state-online{color:var(--text); border-color:var(--border-light);}
+  /* offline = red */
+  .status-pill.state-offline .status-dot{
+    background:#e05a5a; box-shadow:0 0 0 3px rgba(224,90,90,.18);
+  }
+  .status-pill.state-offline{color:var(--text); border-color:#5a2f2f;}
+  @media (prefers-reduced-motion: reduce){ .status-pill.state-checking .status-dot{animation:none;} }
+
 
   .case-file{padding:20px 44px calc(var(--player-h) + var(--player-gap));}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
@@ -457,6 +494,12 @@
   .player-title{font-size:.92rem; font-weight:600; color:var(--text); white-space:nowrap; display:block; width:max-content; cursor:pointer;}
   .player-title:hover{text-decoration:underline;}
   .player-sub{font-size:.78rem; color:var(--text-dim); white-space:nowrap; display:block;}
+  /* Only the primary artist is clickable (jumps to their sidebar tab);
+     featured artists in .player-sub-features stay plain text so clicking
+     one doesn't send you to the wrong artist's tab. Underline-on-hover
+     mirrors .player-title, which jumps to the album. */
+  .player-sub-artist{cursor:pointer;}
+  .player-sub-artist:hover{text-decoration:underline;}
   .player-links{display:flex; align-items:center; gap:11px; flex-shrink:0;}
   .player-links .link-icon svg{width:15px; height:15px;}
 
@@ -586,6 +629,120 @@
   .changelog-item-goto:hover{color:var(--stamp); background:rgba(255,255,255,.07);}
   .changelog-item-goto svg{width:15px; height:15px; display:block;}
 
+  /* ---------- queue button badge ---------- */
+  #queueBtn{position:relative;}
+  #queueBtn svg{width:17px; height:17px;}
+  .queue-badge{
+    display:none;
+    position:absolute; top:-1px; right:-1px;
+    min-width:15px; height:15px; padding:0 4px;
+    border-radius:8px; background:var(--stamp); color:#111111;
+    font-size:.58rem; font-weight:800; line-height:15px; text-align:center;
+    font-variant-numeric:tabular-nums;
+    box-shadow:0 0 0 2px var(--sidebar);
+  }
+  #queueBtn.has-queue .queue-badge{display:block;}
+
+  /* ---------- queue drawer ---------- */
+  .queue-backdrop{
+    position:fixed; inset:0; z-index:70;
+    background:rgba(0,0,0,.6);
+    opacity:0; pointer-events:none;
+    transition:opacity .22s ease;
+  }
+  .queue-backdrop.open{opacity:1; pointer-events:auto;}
+
+  .queue-drawer{
+    position:fixed; top:0; right:0; bottom:0; z-index:71;
+    width:380px; max-width:88vw;
+    background:var(--bg-elevated);
+    border-left:1px solid var(--border-light);
+    display:flex; flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .26s cubic-bezier(.25,.85,.35,1);
+    box-shadow:-14px 0 34px rgba(0,0,0,.45);
+  }
+  .queue-drawer.open{transform:translateX(0);}
+
+  .queue-header{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0; padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .queue-header-actions{display:flex; align-items:center; gap:6px;}
+  .queue-clear-btn{
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    font-family:var(--mono); font-size:.68rem; letter-spacing:.06em;
+    text-transform:uppercase; padding:5px 8px; border-radius:3px;
+    transition:color .15s ease, background .15s ease;
+  }
+  .queue-clear-btn:hover{color:var(--stamp); background:rgba(255,255,255,.05);}
+  .queue-close{
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    padding:4px; display:flex; border-radius:3px;
+    transition:color .15s ease, background .15s ease;
+  }
+  .queue-close:hover{color:var(--text); background:rgba(255,255,255,.05);}
+  .queue-close svg{width:15px; height:15px;}
+
+  .queue-list{flex:1; min-height:0; overflow-y:auto; padding:6px 0;}
+
+  .queue-empty{
+    padding:34px 20px; text-align:center; color:var(--text-dim);
+    font-size:.78rem; line-height:1.6;
+  }
+  .queue-empty b{display:block; color:var(--text); font-family:var(--display); font-size:.9rem; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+
+  .queue-item{
+    display:flex; align-items:center; gap:11px;
+    padding:9px 14px;
+    cursor:grab;
+    position:relative;
+    border-left:2px solid transparent;
+  }
+  .queue-item:active{cursor:grabbing;}
+  .queue-item.dragging{opacity:.4;}
+
+  /* insertion line while dragging */
+  .queue-item.drop-before::before,
+  .queue-item.drop-after::after{
+    content:""; position:absolute; left:8px; right:8px; height:2px;
+    background:var(--stamp); border-radius:1px;
+  }
+  .queue-item.drop-before::before{top:-1px;}
+  .queue-item.drop-after::after{bottom:-1px;}
+
+  .queue-grip{
+    color:var(--text-dim); flex-shrink:0; display:flex;
+    opacity:.5; transition:opacity .15s ease;
+  }
+  .queue-item:hover .queue-grip{opacity:1;}
+  .queue-grip svg{width:13px; height:13px;}
+
+  .queue-cover{
+    width:38px; height:38px; border-radius:4px; flex-shrink:0;
+    background:var(--sidebar); object-fit:cover;
+  }
+  .queue-item-text{min-width:0; flex:1;}
+  .queue-item-name{
+    font-size:.82rem; color:var(--text); font-weight:500;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .queue-item-name span{color:var(--text-dim); font-weight:400;}
+  .queue-item-meta{
+    font-size:.68rem; color:var(--text-dim); margin-top:2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .queue-remove{
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    padding:4px; display:flex; border-radius:3px; flex-shrink:0;
+    transition:color .15s ease, background .15s ease;
+  }
+  .queue-remove:hover{color:var(--stamp); background:rgba(255,255,255,.07);}
+  .queue-remove svg{width:13px; height:13px;}
+
   @media (max-width:820px){
     .sidebar{position:fixed; left:-280px; top:0; bottom:0;}
     .sidebar.open{left:0;}
@@ -607,6 +764,8 @@
     .changelog-btn{top:6px; right:16px; padding:8px; border-radius:50%;}
     .changelog-btn-label{display:none;}
     .changelog-panel{top:52px; right:16px; left:10px; width:auto; max-width:none;}
+    .queue-drawer{width:100%; max-width:100%;}
+    .status-pill{position:static; transform:none; margin-right:10px;}
   }
 </style>
 </head>
@@ -653,6 +812,10 @@
   <main class="main">
     <button class="menu-btn" id="menuBtn">☰ archive index</button>
     <div class="search-bar-wrap">
+      <div class="status-pill state-checking" id="statusPill" title="Checking whether the audio host (Pillowcase) is reachable…">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label" id="statusLabel">Checking…</span>
+      </div>
       <div class="search-bar" id="searchBarWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" class="search-input" id="searchInput" placeholder="Search songs…" autocomplete="off">
@@ -722,7 +885,7 @@
       <img class="player-cover" id="playerCover" alt="">
       <div class="player-text">
         <div class="marquee-mask" id="playerTitleMask"><span class="player-title" id="playerTitle">—</span></div>
-        <div class="marquee-mask" id="playerSubMask"><span class="player-sub" id="playerSub">—</span></div>
+        <div class="marquee-mask" id="playerSubMask"><span class="player-sub" id="playerSub"><span class="player-sub-artist" id="playerSubArtist">—</span><span class="player-sub-features" id="playerSubFeatures"></span></span></div>
       </div>
     </div>
     <div class="player-links">
@@ -748,11 +911,30 @@
     </div>
   </div>
   <div class="player-extra">
+    <button class="ctrl-btn" id="queueBtn" title="Up Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5H3"></path><path d="M11 12H3"></path><path d="M11 19H3"></path><path d="M21 16V5"></path><circle cx="18" cy="16" r="3"></circle></svg>
+      <span class="queue-badge" id="queueBadge"></span>
+    </button>
     <button class="ctrl-btn" id="muteBtn" title="Mute"><svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.1657 2.14424C12.8728 2.50021 13 3.27314 13 3.7446V20.2561C13 20.7286 12.8717 21.4998 12.1656 21.8554C11.416 22.2331 10.7175 21.8081 10.3623 21.4891L4.95001 16.6248H3.00001C1.89544 16.6248 1.00001 15.7293 1.00001 14.6248L1 9.43717C1 8.3326 1.89543 7.43717 3 7.43717H4.94661L10.3623 2.51158C10.7163 2.19354 11.4151 1.76635 12.1657 2.14424ZM11 4.63507L6.00618 9.17696C5.82209 9.34439 5.58219 9.43717 5.33334 9.43717H3L3.00001 14.6248H5.33334C5.58015 14.6248 5.81823 14.716 6.00179 14.881L11 19.3731V4.63507Z" fill="currentColor"></path><path d="M16.0368 4.73124C16.1852 4.19927 16.7368 3.88837 17.2688 4.03681C20.6116 4.9696 23 8.22106 23 12C23 15.779 20.6116 19.0304 17.2688 19.9632C16.7368 20.1117 16.1852 19.8007 16.0368 19.2688C15.8884 18.7368 16.1993 18.1852 16.7312 18.0368C19.1391 17.3649 21 14.9567 21 12C21 9.04332 19.1391 6.63512 16.7312 5.96321C16.1993 5.81477 15.8884 5.2632 16.0368 4.73124Z" fill="currentColor"></path><path d="M16.2865 8.04192C15.7573 7.88372 15.2001 8.18443 15.0419 8.71357C14.8837 9.24271 15.1844 9.79992 15.7136 9.95812C16.3702 10.1544 17 10.9209 17 12C17 13.0791 16.3702 13.8456 15.7136 14.0419C15.1844 14.2001 14.8837 14.7573 15.0419 15.2865C15.2001 15.8156 15.7573 16.1163 16.2865 15.9581C17.9301 15.4667 19 13.8076 19 12C19 10.1924 17.9301 8.53333 16.2865 8.04192Z" fill="currentColor"></path></svg></button>
     <input type="range" id="volume" min="0" max="1" step="0.01" value="1" title="Volume">
     <button class="ctrl-btn" id="closeBtn" title="Close player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
   </div>
 </footer>
+
+<div class="queue-backdrop" id="queueBackdrop"></div>
+<aside class="queue-drawer" id="queueDrawer" aria-hidden="true">
+  <div class="queue-header">
+    <span>Up Next</span>
+    <div class="queue-header-actions">
+      <button class="queue-clear-btn" id="queueClearBtn" type="button" title="Clear queue">Clear</button>
+      <button class="queue-close" id="queueCloseBtn" type="button" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+  <div class="queue-list" id="queueList"></div>
+</aside>
+
 <audio id="audioEl"></audio>
 <div class="toast" id="toast"></div>
 
@@ -1338,9 +1520,9 @@ function updateEditCounter(){
   requestAnimationFrame(step);
 }
 
-/* ---------------- deep linking (#Section&Artist&Album[&Song]) ----------------
+/* ---------------- deep linking (#Section/Artist/Album[/Song]) ----------------
    The URL hash mirrors whatever album is currently open, e.g.
-   "#Comps&Playboi-Carti&Music" — copying the address bar always gets you
+   "#Comps/Playboi-Carti/Music" — copying the address bar always gets you
    (or whoever you send it to) straight to that album's page instead of
    landing on the default first-artist/first-album view. Three names,
    positionally, separated by "&" — no "section=...&artist=..." clutter:
@@ -1353,9 +1535,9 @@ function updateEditCounter(){
    exactly like before, and the address bar upgrades itself to the full
    form once they load.
 
-   A song adds a fourth part: "#Comps&Playboi-Carti&Music&Some-Song" (an
+   A song adds a fourth part: "#Comps/Playboi-Carti/Music/Some-Song" (an
    album with no section uses an empty first part —
-   "#&Playboi-Carti&Music&Some-Song" — so the positions never shift).
+   "#/Playboi-Carti/Music/Some-Song" — so the positions never shift).
    Opening one lands on the album, scrolls to that song and loads it into
    the player bar PAUSED: a link never starts playing by itself (browsers
    block that anyway, and it'd be rude). The address bar picks the song up
@@ -1377,17 +1559,23 @@ function updateEditCounter(){
    loadLinkedSong().
 
    Each name is run through encodeURIComponent (so a literal
-   "&", "-", "+", "#", etc. inside a name can never be mistaken for
-   part of the URL syntax) — any real hyphen is then re-escaped to
-   "%2D" so it can't collide with the substitution below, and only
-   THEN are the now-unambiguous escaped spaces ("%20") swapped for "-",
+   "/", "-", "+", "#", etc. inside a name can never be mistaken for
+   part of the URL syntax) — any real slash is re-escaped to "%2F" and
+   any real hyphen to "%2D" so neither can collide with the
+   substitutions below, and only THEN are the now-unambiguous escaped
+   spaces ("%20") swapped for "-",
    purely so the URL reads as "Playboi-Carti" instead of
    "Playboi%20Carti" or "Playboi+Carti". Since a raw "-" only ever
-   appears where we put one, and a real "&" or "-" in a name is always
-   percent-escaped first, splitting on "&" stays unambiguous. */
+   appears where we put one, and a real "/" or "-" in a name is always
+   percent-escaped first, splitting on "/" stays unambiguous. */
 
 function encodeHashPart(s){
-  return encodeURIComponent(s).replace(/-/g, '%2D').replace(/%20/g, '-');
+  // Same trick as the hyphen below, now for the "/" separator: encodeURIComponent
+  // leaves "/" untouched, but a "/" inside a NAME (an album titled "AC/DC" etc.)
+  // must not read as part of the URL syntax — so escape any literal slash to
+  // %2F BEFORE the space→"-" substitution runs. A raw "/" in the final hash
+  // therefore only ever appears where we put one as a separator.
+  return encodeURIComponent(s).replace(/-/g, '%2D').replace(/\//g, '%2F').replace(/%20/g, '-');
 }
 function decodeHashPart(s){
   return decodeURIComponent(s.replace(/-/g, '%20'));
@@ -1415,7 +1603,7 @@ function songOccurrenceForIndex(songs, idx){
 function parseHashParams(){
   const raw = location.hash.replace(/^#/, '');
   if (!raw) return null;
-  const parts = raw.split('&');
+  const parts = raw.split('/');
   if (parts.length < 2) return null;
   try {
     // Three parts = section, artist, album. Two parts = artist, album with
@@ -1478,10 +1666,10 @@ function updateUrlHash(artistName, albumName, sectionName, songName, songOccurre
     if (songOccurrence) parts.push(String(songOccurrence));
   }
   // A song always gets the full four-part form, even for an album with no
-  // section (empty first part) — otherwise "#Artist&Album&Song" would be
+  // section (empty first part) — otherwise "#Artist/Album/Song" would be
   // read as section/artist/album.
   if (sectionName || songName) parts.unshift(sectionName ? encodeHashPart(sectionName) : '');
-  const newHash = '#' + parts.join('&');
+  const newHash = '#' + parts.join('/');
   if (location.hash !== newHash) history.replaceState(null, '', newHash);
 }
 
@@ -1495,7 +1683,7 @@ function buildSongLink(artistName, album, songName, songIdx){
   const occurrence = songOccurrenceForIndex(album.songs, songIdx);
   if (occurrence) parts.push(String(occurrence));
   parts.unshift(album.section ? encodeHashPart(album.section) : '');
-  return `${location.origin}${location.pathname}#${parts.join('&')}`;
+  return `${location.origin}${location.pathname}#${parts.join('/')}`;
 }
 
 function copySongLink(artistName, album, song, songIdx){
@@ -2297,7 +2485,10 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   // (which already remove it from songQueue themselves before calling
   // this).
   const queuedPos = songQueue.findIndex(q => q.songs === songs && q.idx === idx);
-  if (queuedPos !== -1) songQueue.splice(queuedPos, 1);
+  if (queuedPos !== -1) {
+    songQueue.splice(queuedPos, 1);
+    renderQueuePanel();
+  }
 
   // A real, explicit navigation away from whatever the queue was about to
   // resume (the user clicked a specific row/shared link rather than this
@@ -2344,7 +2535,8 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
 
   el('player').style.display = 'flex';
   el('playerTitle').textContent = song.name;
-  el('playerSub').textContent = `${currentArtistName}${song.features ? ", " + song.features : ""}`;
+  el('playerSubArtist').textContent = currentArtistName;
+  el('playerSubFeatures').textContent = song.features ? ", " + song.features : "";
   document.title = `${song.name} • ${currentArtistName}${song.features ? ", " + song.features : ""}`;
   startMarquees();
   const playerCoverEl = el('playerCover');
@@ -2361,6 +2553,29 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   else downloadBtn.style.display = 'none';
   syncUrlToPlayer();
 }
+
+// Clicking the artist name in the player bar opens that artist's album
+// pane in the sidebar — the same navigation as clicking them in the artist
+// list. Never touches playback. If the pane is already showing this
+// artist, it just re-opens it (which re-renders the album list fresh);
+// otherwise it slides in from the artist list.
+el('playerSubArtist').addEventListener('click', () => {
+  if (!currentArtistName) return;
+  if (!(DATA[currentArtistName] || []).some(a => !a.isDivider)) {
+    showToast("That artist isn't on the sheet anymore.");
+    return;
+  }
+  openArtistPane(currentArtistName);
+  // openArtistPane() slides the pane into view but doesn't itself highlight
+  // the artist row — the row's .active class is set by renderArtistList()
+  // and cleared by selectAlbum(). Re-apply it here so whichever artist was
+  // highlighted before doesn't stay lit now that a different artist's pane
+  // is open. (Only the .active class is touched; selectedArtistName stays
+  // whatever album is actually open, so nothing else desyncs.)
+  document.querySelectorAll('.artist-list-item').forEach(n =>
+    n.classList.toggle('active', n.dataset.artist === currentArtistName));
+  if (window.innerWidth <= 820) el('sidebar').classList.add('open');
+});
 
 // Clicking the song name in the player bar jumps to the album the track is
 // playing from — same navigation as the search results' "go to album" button,
@@ -2532,11 +2747,13 @@ function queueSongNext(artistName, album, idx){
   if (existingPos !== -1) {
     songQueue.splice(existingPos, 1);
     showToast("No longer queued.");
+    renderQueuePanel();
     return;
   }
 
   songQueue.push({ song, idx, songs: album.songs, artistName, albumCoverUrl: (album.cover || "").trim(), album });
   showToast(songQueue.length > 1 ? `Added to queue — ${songQueue.length} up next.` : "Added to queue.");
+  renderQueuePanel();
 }
 
 // Called right before the first queued track takes over playback, so
@@ -2591,6 +2808,7 @@ audioEl.addEventListener('ended', () => {
   if (songQueue.length > 0) {
     saveResumeContextIfNeeded();
     const next = songQueue.shift();
+    renderQueuePanel();
     playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, false, true);
     return;
   }
@@ -2659,6 +2877,7 @@ function stepTrack(dir){
   if (dir === 1 && songQueue.length > 0) {
     saveResumeContextIfNeeded();
     const next = songQueue.shift();
+    renderQueuePanel();
     playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, false, true);
     return;
   }
@@ -2846,8 +3065,107 @@ el('closeBtn').addEventListener('click', () => {
 });
 audioEl.addEventListener('error', () => {
   if (suppressNextAudioError) { suppressNextAudioError = false; return; }
-  if (audioEl.src) showToast("Couldn't load this track's audio — the source link may be broken.");
+  if (audioEl.src) {
+    showToast("Couldn't load this track's audio — the source link may be broken.");
+    // Ground-truth offline signal: a real playback attempt just failed, so
+    // flip the pill to offline right away instead of waiting for the next
+    // scheduled probe. (Still subject to the same caveats as the probe —
+    // could be the user's network — so the wording stays soft.)
+    setPillStatus('offline');
+  }
 });
+
+/* ---------------- pillowcase status indicator ----------------
+   Probes the same api.pillows.su endpoint that toStreamUrl() resolves
+   tracks to, rather than pillows.su's homepage — the API is the part
+   that actually has to respond for playback to work, and it can be down
+   while the homepage is up (or vice versa). CORS means we can't read a
+   response body or status code from this origin, so the signal is just
+   "did the request resolve or time out / error". A green light therefore
+   means "the endpoint answered our probe", not an absolute guarantee
+   that every track will stream; the audio element's own error event
+   above is the ground-truth check and flips the pill immediately if a
+   real attempt fails. */
+
+const PILL_PROBE_TIMEOUT_MS = 5000;
+const PILL_RECHECK_MS = 60000;
+let pillStatus = 'checking';   // 'checking' | 'online' | 'offline'
+let pillRecheckTimer = null;
+let pillProbeInFlight = false;
+
+function setPillStatus(status){
+  if (status === pillStatus) return;
+  pillStatus = status;
+  const pill = el('statusPill');
+  const label = el('statusLabel');
+  if (!pill || !label) return;
+  pill.classList.remove('state-checking', 'state-online', 'state-offline');
+  pill.classList.add('state-' + status);
+  if (status === 'checking') {
+    label.textContent = 'Checking…';
+    pill.title = "Checking whether the audio host (Pillowcase) is reachable…";
+  } else if (status === 'online') {
+    label.textContent = 'Pillowcase online';
+    pill.title = "Pillowcase is reachable — audio playback should work.";
+  } else {
+    label.textContent = 'Pillowcase offline';
+    pill.title = "Can't reach Pillowcase right now — playback may not work. Try again later.";
+  }
+}
+
+// A no-cors fetch can't tell us "200 OK" from "500" or "403" — but it CAN
+// tell us the difference between "the request resolved (something answered
+// at that address)" and "it timed out / DNS failed / connection refused",
+// which is what we actually care about here. The AbortController timeout
+// is the load-bearing part; without it a hung connection would leave the
+// pill stuck on "Checking…" forever.
+function probePillowcase(){
+  if (pillProbeInFlight) return;
+  pillProbeInFlight = true;
+  if (pillStatus !== 'checking') setPillStatus('checking');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PILL_PROBE_TIMEOUT_MS);
+
+  // Normal (CORS-mode) GET, not no-cors. no-cors was the original bug:
+  // it hands back an OPAQUE response, so fetch() resolves for ANY status
+  // the server returns — a "503 Backend fetch failed" from the CDN looked
+  // exactly like a healthy 200, and the pill went green while playback
+  // was actually broken. CORS mode lets us read response.status, so a
+  // 5xx (or anything that isn't 2xx/3xx) now correctly counts as offline.
+  //
+  // Assumes api.pillows.su sends Access-Control-Allow-Origin for its API
+  // — which it must for the audio element itself to stream from your
+  // origin. If CORS ever ISN'T allowed, the fetch rejects with a
+  // TypeError and we'd wrongly say offline; on a site whose whole point
+  // is streaming from this host that's a safe assumption, and the audio
+  // element's own error event is still the ground-truth override.
+  fetch('https://api.pillows.su/', { method: 'GET', signal: controller.signal })
+    .then((res) => {
+      clearTimeout(timer);
+      pillProbeInFlight = false;
+      // 5xx = the origin reachable but its backend is broken (exactly the
+      // "503 Backend fetch failed" case) — treat as offline. 2xx/3xx/4xx
+      // all count as "something real answered", so online.
+      setPillStatus(res.status >= 500 ? 'offline' : 'online');
+    })
+    .catch(() => {
+      clearTimeout(timer);
+      pillProbeInFlight = false;
+      // Includes AbortError (timeout), DNS failure, connection refused,
+      // and CORS rejection — all of which mean "can't reach it from here".
+      setPillStatus('offline');
+    })
+    .finally(() => {
+      if (pillRecheckTimer) clearTimeout(pillRecheckTimer);
+      pillRecheckTimer = setTimeout(probePillowcase, PILL_RECHECK_MS);
+    });
+}
+
+// Kick off the initial probe. Deferred slightly so it doesn't compete with
+// the sheet fetches that boot() starts around the same moment — not
+// required for correctness, just keeps the first paint's network quieter.
+setTimeout(probePillowcase, 400);
 
 /* ---------------- search bar ---------------- */
 const searchInput = el('searchInput');
@@ -3119,6 +3437,153 @@ el('changelogCloseBtn').addEventListener('click', () => closeChangelogPanel());
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.changelog-panel') && !e.target.closest('.changelog-btn')) closeChangelogPanel();
 });
+
+/* ---------------- queue drawer ---------------- */
+const queueDrawer = el('queueDrawer');
+const queueBackdrop = el('queueBackdrop');
+const queueListEl = el('queueList');
+
+function openQueueDrawer(){
+  renderQueuePanel();
+  queueDrawer.classList.add('open');
+  queueBackdrop.classList.add('open');
+  queueDrawer.setAttribute('aria-hidden', 'false');
+}
+function closeQueueDrawer(){
+  queueDrawer.classList.remove('open');
+  queueBackdrop.classList.remove('open');
+  queueDrawer.setAttribute('aria-hidden', 'true');
+}
+function toggleQueueDrawer(){
+  if (queueDrawer.classList.contains('open')) closeQueueDrawer();
+  else openQueueDrawer();
+}
+
+el('queueBtn').addEventListener('click', toggleQueueDrawer);
+el('queueCloseBtn').addEventListener('click', closeQueueDrawer);
+queueBackdrop.addEventListener('click', closeQueueDrawer);
+el('queueClearBtn').addEventListener('click', () => {
+  if (!songQueue.length) return;
+  songQueue = [];
+  renderQueuePanel();
+  showToast("Queue cleared.");
+});
+
+// Escape also closes the queue drawer (added alongside the existing
+// Escape handler for the changelog).
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && queueDrawer.classList.contains('open')) {
+    closeQueueDrawer();
+  }
+});
+
+// Refreshes the queue badge and, if the drawer is open, its contents.
+// Called from every place that mutates songQueue.
+function renderQueuePanel(){
+  const badge = el('queueBadge');
+  const btn = el('queueBtn');
+  if (badge && btn) {
+    badge.textContent = songQueue.length;
+    btn.classList.toggle('has-queue', songQueue.length > 0);
+  }
+
+  if (!queueListEl || !queueDrawer.classList.contains('open')) return;
+
+  if (!songQueue.length) {
+    queueListEl.innerHTML = `<div class="queue-empty"><b>Nothing queued</b>Use the ⋯ menu on any song row and pick "Add to Queue".</div>`;
+    return;
+  }
+
+  queueListEl.innerHTML = songQueue.map((item, i) => {
+    const coverUrl = (item.albumCoverUrl || "").trim();
+    const hasCover = /^https?:\/\//i.test(coverUrl);
+    const coverHtml = hasCover
+      ? `<img class="queue-cover" src="${esc(coverUrl)}" alt="" onerror="this.style.visibility='hidden'">`
+      : `<div class="queue-cover"></div>`;
+    const featuresHtml = item.song.features ? ` <span>(${esc(item.song.features)})</span>` : "";
+    return `
+      <div class="queue-item" draggable="true" data-idx="${i}">
+        <span class="queue-grip" title="Drag to reorder">
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+        </span>
+        ${coverHtml}
+        <div class="queue-item-text">
+          <div class="queue-item-name">${esc(item.song.name)}${featuresHtml}</div>
+          <div class="queue-item-meta">${esc(item.artistName)} — ${esc(item.album.name)}</div>
+        </div>
+        <button class="queue-remove" type="button" data-idx="${i}" title="Remove from queue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>`;
+  }).join("");
+
+  queueListEl.querySelectorAll('.queue-remove').forEach(btnEl => {
+    btnEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const i = parseInt(btnEl.dataset.idx, 10);
+      songQueue.splice(i, 1);
+      renderQueuePanel();
+    });
+  });
+
+  wireQueueDragAndDrop();
+}
+
+// Native HTML5 drag-and-drop. Each row is draggable; as the dragged row
+// passes over another, a thin accent line shows where it'll land
+// (drop-before / drop-after classes). On drop, the source item is
+// spliced out of songQueue and reinserted at the target index.
+let queueDragSrcIndex = null;
+
+function wireQueueDragAndDrop(){
+  const items = queueListEl.querySelectorAll('.queue-item');
+  items.forEach(itemEl => {
+    itemEl.addEventListener('dragstart', (e) => {
+      queueDragSrcIndex = parseInt(itemEl.dataset.idx, 10);
+      itemEl.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox requires *some* data to be set for drag to start.
+      try { e.dataTransfer.setData('text/plain', String(queueDragSrcIndex)); } catch (err) {}
+    });
+    itemEl.addEventListener('dragend', () => {
+      itemEl.classList.remove('dragging');
+      clearQueueDropMarkers();
+      queueDragSrcIndex = null;
+    });
+    itemEl.addEventListener('dragover', (e) => {
+      if (queueDragSrcIndex === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = itemEl.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height / 2;
+      clearQueueDropMarkers();
+      itemEl.classList.add(after ? 'drop-after' : 'drop-before');
+    });
+    itemEl.addEventListener('dragleave', () => {
+      itemEl.classList.remove('drop-before', 'drop-after');
+    });
+    itemEl.addEventListener('drop', (e) => {
+      if (queueDragSrcIndex === null) return;
+      e.preventDefault();
+      const targetIdx = parseInt(itemEl.dataset.idx, 10);
+      const rect = itemEl.getBoundingClientRect();
+      const after = (e.clientY - rect.top) > rect.height / 2;
+      let newIdx = after ? targetIdx + 1 : targetIdx;
+      // Splicing the source out first shifts everything after it down by one.
+      if (queueDragSrcIndex < newIdx) newIdx--;
+      if (newIdx === queueDragSrcIndex) { clearQueueDropMarkers(); return; }
+      const [moved] = songQueue.splice(queueDragSrcIndex, 1);
+      songQueue.splice(newIdx, 0, moved);
+      queueDragSrcIndex = null;
+      clearQueueDropMarkers();
+      renderQueuePanel();
+    });
+  });
+}
+function clearQueueDropMarkers(){
+  queueListEl.querySelectorAll('.drop-before, .drop-after').forEach(n =>
+    n.classList.remove('drop-before', 'drop-after'));
+}
 
 /* ---------------- mobile sidebar ---------------- */
 function closeSidebar(){ el('sidebar').classList.remove('open'); }
