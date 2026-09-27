@@ -22,6 +22,7 @@
     --text-dim:#969696;
     --stamp:#ffffff;
     --stamp-dim:#555555;
+    --stamp-fixed:#ffffff;    /* never touched by the album theme */
     --hazard:#e0e0e0;
     --border:#2a2a2a;
     --border-light:#3d3d3d;
@@ -54,7 +55,7 @@
   .header-top-row{display:flex; align-items:center; justify-content:space-between; gap:14px;}
   .edit-counter{display:flex; align-items:baseline; gap:9px;}
   .edit-counter-num{
-    font-family:var(--display); font-weight:800; font-size:1.7rem; color:var(--stamp);
+    font-family:var(--display); font-weight:800; font-size:1.7rem; color:var(--stamp-fixed);
     letter-spacing:.01em; line-height:1; font-variant-numeric:tabular-nums;
   }
   .edit-counter-label{font-size:.62rem; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase;}
@@ -110,7 +111,8 @@
     font-family:var(--mono); font-size:.72rem; letter-spacing:.02em; cursor:pointer; padding:4px 2px;
     flex-shrink:0; transition:color .15s ease, transform .15s ease;
   }
-  .pane-back-btn:hover{color:var(--stamp); transform:translateX(-2px);}
+  .pane-back-btn:hover{color:var(--stamp-fixed); transform:translateX(-2px);}
+  .pane-back-btn:hover svg{color:var(--stamp-fixed);}
   .pane-back-btn svg{width:13px; height:13px; display:block; flex-shrink:0;}
   .pane-artist-name{
     font-size:.78rem; font-weight:700; color:var(--text); text-align:right;
@@ -175,7 +177,7 @@
   }
   .search-bar:focus-within{border-color:var(--stamp);}
   .search-bar > svg{width:15px; height:15px; color:var(--text-dim); flex-shrink:0;}
-  .search-bar:focus-within > svg{color:var(--stamp);}
+  .search-bar:focus-within > svg{color:var(--stamp-fixed);}
   .search-input{
     flex:1; min-width:0; background:none; border:none; outline:none;
     color:var(--text); font-family:var(--mono); font-weight:500; font-size:.8rem;
@@ -226,7 +228,7 @@
     background:none; border:none; color:var(--text-dim); cursor:pointer;
     transition:color .15s ease, background .15s ease;
   }
-  .search-result-goto:hover{color:var(--stamp); background:rgba(255,255,255,.07);}
+  .search-result-goto:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.07);}
   .search-result-goto svg{width:15px; height:15px; display:block;}
   .search-result-empty{padding:14px 12px; font-size:.78rem; color:var(--text-dim);}
 
@@ -280,7 +282,7 @@
   }
   .stamp-title{
     display:inline-block;
-    color:var(--stamp); font-family:var(--display); font-weight:700; font-size:1.9rem;
+    color:var(--stamp-fixed); font-family:var(--display); font-weight:700; font-size:1.9rem;
     letter-spacing:.03em; padding:5px 0; line-height:1.15;
   }
   .file-meta{font-size:.74rem; color:var(--text-dim); margin-top:12px; display:flex; gap:18px; flex-wrap:wrap;}
@@ -301,7 +303,7 @@
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
     transition:color .15s ease, border-color .15s ease, transform .15s ease;
   }
-  .info-menu-btn:hover{color:var(--text); border-color:var(--stamp); transform:translateY(-1px);}
+  .info-menu-btn:hover{color:var(--stamp-fixed); border-color:var(--stamp-fixed); transform:translateY(-1px);}
   .info-menu{
     display:none; position:fixed; z-index:20;
     width:340px; max-width:80vw; max-height:280px; overflow-y:auto;
@@ -310,7 +312,7 @@
     box-shadow:0 8px 22px rgba(0,0,0,.45);
   }
   .info-menu.open{display:block;}
-  .info-menu .desc-block{color:var(--stamp); white-space:pre-line;}
+  .info-menu .desc-block{color:var(--stamp-fixed); white-space:pre-line;}
   .info-menu .update-block{color:var(--hazard); white-space:pre-line;}
   .info-menu .desc-block + .update-block{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-light);}
 
@@ -332,7 +334,7 @@
     display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
     transition:color .15s ease, border-color .15s ease, background .15s ease;
   }
-  .link-menu-btn:hover{color:var(--stamp); border-color:var(--border-light); background:var(--bg-elevated);}
+  .link-menu-btn:hover{color:var(--stamp-fixed); border-color:var(--border-light); background:var(--bg-elevated);}
   .link-menu{
     display:none; position:fixed; z-index:20; width:188px;
     background:var(--bg-elevated); border:1px solid var(--border-light); border-radius:4px;
@@ -345,9 +347,9 @@
     background:none; border:none; width:100%; text-align:left; cursor:pointer; font-family:inherit;
     transition:background .12s ease, color .12s ease;
   }
-  .link-menu-item:hover{background:var(--bg); color:var(--stamp);}
+  .link-menu-item:hover{background:var(--bg); color:var(--stamp-fixed);}
   .link-menu-item svg{width:15px; height:15px; flex-shrink:0; display:block; color:var(--text-dim);}
-  .link-menu-item:hover svg{color:var(--stamp);}
+  .link-menu-item:hover svg{color:var(--stamp-fixed);}
 
   .actions{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap;}
   .btn{
@@ -356,7 +358,7 @@
     border-radius:3px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
     transition:color .15s ease, border-color .15s ease, transform .15s ease;
   }
-  .btn:hover{border-color:var(--stamp); color:var(--stamp); transform:translateY(-1px);}
+  .btn:hover{border-color:var(--stamp-fixed); color:var(--stamp-fixed); transform:translateY(-1px);}
   .btn.primary{background:var(--stamp); border-color:var(--stamp); color:#111111;}
   .btn.primary:hover{background:var(--stamp-dim); border-color:var(--stamp-dim); color:var(--text);}
 
@@ -377,7 +379,7 @@
   .title-cell .t-name{color:var(--text); font-weight:500;}
   .title-cell .t-new-tag{
     display:inline-block; vertical-align:middle; margin-left:8px; position:relative; top:-1px;
-    padding:2px 6px; border-radius:3px; background:var(--stamp); color:var(--sidebar);
+    padding:2px 6px; border-radius:3px; background:var(--stamp-fixed); color:var(--sidebar);
     font-size:.58rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
   }
   .title-cell .t-features{color:var(--text-dim); font-size:.76rem; margin-top:2px;}
@@ -403,7 +405,7 @@
     color:var(--text-dim); text-decoration:none;
     transition:color .15s ease, transform .15s ease;
   }
-  .link-icon:hover{color:var(--stamp); transform:translateY(-1px);}
+  .link-icon:hover{color:var(--stamp-fixed); transform:translateY(-1px);}
   .link-icon svg{width:16px; height:16px; display:block;}
   .no-file{color:var(--text-dim); opacity:.5;}
 
@@ -448,7 +450,7 @@
     margin-top:9px; font-size:.78rem; font-weight:600; color:var(--text); line-height:1.3;
     overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   }
-  .more-album-card:hover .more-album-name{color:var(--stamp);}
+  .more-album-card:hover .more-album-name{color:var(--stamp-fixed);}
   .more-album-count{margin-top:2px; font-size:.68rem; color:var(--text-dim);}
 
   /* ---------- skeleton loading ---------- */
@@ -530,9 +532,9 @@
   #muteBtn.active::after{content:none;}
   #muteBtn.active{color:var(--text-dim);}
   #muteBtn.active:hover{color:var(--text);}
-  .ctrl-btn.play{color:var(--stamp); padding:0; width:46px; height:46px;}
+  .ctrl-btn.play{color:var(--stamp-fixed); padding:0; width:46px; height:46px;}
   .ctrl-btn.play svg{width:36px; height:36px;}
-  .ctrl-btn.play:hover{color:var(--stamp); transform:scale(1.06);}
+  .ctrl-btn.play:hover{color:var(--stamp-fixed); transform:scale(1.06);}
   .ctrl-btn.play:active{transform:scale(0.94);}
   .progress-row{display:flex; align-items:center; gap:8px; width:100%; max-width:460px; font-size:.68rem; color:var(--text-dim); -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;}
   #curTime, #durTime{font-variant-numeric:tabular-nums; flex-shrink:0;}
@@ -564,7 +566,7 @@
     box-shadow:0 4px 16px rgba(0,0,0,.35);
   }
   .changelog-btn svg{width:15px; height:15px; flex-shrink:0;}
-  .changelog-btn:hover, .changelog-btn.active{color:var(--text); border-color:var(--stamp);}
+  .changelog-btn:hover, .changelog-btn.active{color:var(--text); border-color:var(--stamp-fixed);}
   .changelog-btn-label{white-space:nowrap;}
   .changelog-bell{position:relative; display:flex; flex-shrink:0;}
   /* Just a dot - no count. (It used to hold the number, which needed a wide
@@ -573,7 +575,7 @@
     display:none;
     position:absolute; top:1px; right:1px;   /* on the bell's top-right shoulder, just outside its outline */
     width:4px; height:4px; border-radius:50%;
-    background:var(--stamp);
+    background:var(--stamp-fixed);
     box-shadow:0 0 0 1px var(--bg-elevated);   /* thin ring that separates the dot from the bell */
   }
 
@@ -626,7 +628,7 @@
     background:none; border:none; color:var(--text-dim); cursor:pointer;
     transition:color .15s ease, background .15s ease;
   }
-  .changelog-item-goto:hover{color:var(--stamp); background:rgba(255,255,255,.07);}
+  .changelog-item-goto:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.07);}
   .changelog-item-goto svg{width:15px; height:15px; display:block;}
 
   /* ---------- queue button badge ---------- */
@@ -636,7 +638,7 @@
     display:none;
     position:absolute; top:-1px; right:-1px;
     min-width:15px; height:15px; padding:0 4px;
-    border-radius:8px; background:var(--stamp); color:#111111;
+    border-radius:8px; background:var(--stamp-fixed); color:#111111;
     font-size:.58rem; font-weight:800; line-height:15px; text-align:center;
     font-variant-numeric:tabular-nums;
     box-shadow:0 0 0 2px var(--sidebar);
@@ -1110,10 +1112,6 @@ function fetchSheetData(sheetId, tabName){
         const cols = data.table.cols || [];
         const rows = data.table.rows || [];
 
-        console.log("RAW GVIZ TABLE:", data.table);
-        console.log("COVER CELL RAW (first album row, column F):", JSON.stringify(rows[0]?.c?.[5], null, 2));
-        console.log("FULL FIRST ALBUM ROW, ALL COLUMNS:", JSON.stringify(rows[0]?.c, null, 2));
-
         // Convert Google's cells while PRESERVING empty cells.
         const result = [];
 
@@ -1146,7 +1144,6 @@ function fetchSheetData(sheetId, tabName){
           result.push(converted);
         }
 
-        console.log("GOOGLE ROWS:", result);
         cleanup();
         resolve(result);
 
@@ -1244,7 +1241,6 @@ function buildAlbumsFromRows(rows, artistName){
     link:        col("Link(s)"),
     cover:       col("Cover & YT Link(s)")
   };
-  console.log("COLUMN LOOKUP (label -> index, -1 means \"not found - check row 1's header text\"):", idx);
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i] || [];
@@ -1312,13 +1308,6 @@ function buildAlbumsFromRows(rows, artistName){
   // in crossListAndFinalize(), after every artist tab has loaded - see
   // that function for why.
 
-  console.log(
-    "ALBUMS FOUND:",
-    albums.map(a => a.isDivider
-      ? { divider: a.label }
-      : { name: a.name, songs: a.songs.length, cover: a.cover })
-  );
-
   return albums;
 }
 
@@ -1330,7 +1319,6 @@ async function loadArtist(artist){
       artist.sheetTab
     );
 
-    console.log("SHEET ROWS:", rows);
     cacheSheetRows(artist.name, rows);
     return buildAlbumsFromRows(rows, artist.name);
 
@@ -1525,11 +1513,11 @@ function updateEditCounter(){
    "#Comps/Playboi-Carti/Music" — copying the address bar always gets you
    (or whoever you send it to) straight to that album's page instead of
    landing on the default first-artist/first-album view. Three names,
-   positionally, separated by "&" — no "section=...&artist=..." clutter:
+   positionally, separated by "/" — no "section=.../artist=..." clutter:
    the sheet section the album sits under ("Comps", "Edits", ...), then
    the artist, then the album. The section is what tells apart a comp and
    an edit that share a title. It's left off for an album that isn't
-   under any section ("#Playboi-Carti&Music"), and that same two-part
+   under any section ("#Playboi-Carti/Music"), and that same two-part
    form is what every link from before sections were in the URL looks
    like — those keep working and open the first album with that name,
    exactly like before, and the address bar upgrades itself to the full
@@ -1550,7 +1538,7 @@ function updateEditCounter(){
    A fifth part disambiguates a song name that appears more than once on
    the same album (an intro reprised, two "Interlude"s, etc): it's the
    1-based position of that track among the songs sharing its name, e.g.
-   the second "Interlude" is "...&Interlude&2". It's only ever added when
+   the second "Interlude" is ".../Interlude/2". It's only ever added when
    the album actually has a repeated name — a song with a unique name
    never grows a fifth part, so every pre-existing link keeps working
    unchanged. A link with no fifth part (old link, or a name that isn't
@@ -1673,7 +1661,7 @@ function updateUrlHash(artistName, albumName, sectionName, songName, songOccurre
   if (location.hash !== newHash) history.replaceState(null, '', newHash);
 }
 
-// Same section&artist&album&song hash format updateUrlHash() writes to the
+// Same section/artist/album/song hash format updateUrlHash() writes to the
 // address bar (see the comment there for why a song always gets the full
 // four-part form) — but built standalone, without touching the current URL
 // or browser history. Used by the "Copy Link" menu item so copying a song's
@@ -1753,7 +1741,7 @@ function loadLinkedSong(artistName, album, songNameRaw, songOccurrence){
 }
 
 // Reacts to the hash changing out from under the app — pasting a new
-// #Section&Artist&Album into the address bar while the page is already
+// #Section/Artist/Album into the address bar while the page is already
 // open, or using the browser's back/forward buttons after following a
 // couple of links. Our own updateUrlHash() calls go through
 // history.replaceState(), which never fires 'hashchange', so this can't
@@ -2921,7 +2909,7 @@ function updateRangeFill(inputEl){
   const max = parseFloat(inputEl.max) || 100;
   const val = parseFloat(inputEl.value) || 0;
   const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-  inputEl.style.background = `linear-gradient(to right, var(--stamp) ${pct}%, var(--border-light) ${pct}%)`;
+  inputEl.style.background = `linear-gradient(to right, var(--stamp-fixed) ${pct}%, var(--border-light) ${pct}%)`;
 }
 
 // Animates a range input's visual fill from one value to another (quick
@@ -2941,7 +2929,7 @@ function animateRangeFill(inputEl, fromVal, toVal, duration = 180){
     const eased = 1 - Math.pow(1 - t, 3);
     const val = fromVal + (toVal - fromVal) * eased;
     const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-    inputEl.style.background = `linear-gradient(to right, var(--stamp) ${pct}%, var(--border-light) ${pct}%)`;
+    inputEl.style.background = `linear-gradient(to right, var(--stamp-fixed) ${pct}%, var(--border-light) ${pct}%)`;
     if (t < 1) {
       rangeFillAnimations.set(inputEl, requestAnimationFrame(step));
     } else {
@@ -3113,12 +3101,18 @@ function setPillStatus(status){
   }
 }
 
-// A no-cors fetch can't tell us "200 OK" from "500" or "403" — but it CAN
-// tell us the difference between "the request resolved (something answered
-// at that address)" and "it timed out / DNS failed / connection refused",
-// which is what we actually care about here. The AbortController timeout
-// is the load-bearing part; without it a hung connection would leave the
-// pill stuck on "Checking…" forever.
+// Normal (CORS-mode) GET, not no-cors. no-cors hands back an OPAQUE
+// response, so fetch() resolves for ANY status the server returns — a
+// "503 Backend fetch failed" from the CDN would look exactly like a
+// healthy 200, and the pill would go green while playback was actually
+// broken. CORS mode lets us read response.status, so a 5xx now correctly
+// counts as offline. Assumes api.pillows.su sends
+// Access-Control-Allow-Origin for its API — which it must for the audio
+// element itself to stream from your origin. If CORS ever ISN'T allowed,
+// the fetch rejects with a TypeError and we'd wrongly say offline; on a
+// site whose whole point is streaming from this host that's a safe
+// assumption, and the audio element's own error event is still the
+// ground-truth override.
 function probePillowcase(){
   if (pillProbeInFlight) return;
   pillProbeInFlight = true;
@@ -3127,26 +3121,13 @@ function probePillowcase(){
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PILL_PROBE_TIMEOUT_MS);
 
-  // Normal (CORS-mode) GET, not no-cors. no-cors was the original bug:
-  // it hands back an OPAQUE response, so fetch() resolves for ANY status
-  // the server returns — a "503 Backend fetch failed" from the CDN looked
-  // exactly like a healthy 200, and the pill went green while playback
-  // was actually broken. CORS mode lets us read response.status, so a
-  // 5xx (or anything that isn't 2xx/3xx) now correctly counts as offline.
-  //
-  // Assumes api.pillows.su sends Access-Control-Allow-Origin for its API
-  // — which it must for the audio element itself to stream from your
-  // origin. If CORS ever ISN'T allowed, the fetch rejects with a
-  // TypeError and we'd wrongly say offline; on a site whose whole point
-  // is streaming from this host that's a safe assumption, and the audio
-  // element's own error event is still the ground-truth override.
   fetch('https://api.pillows.su/', { method: 'GET', signal: controller.signal })
     .then((res) => {
       clearTimeout(timer);
       pillProbeInFlight = false;
-      // 5xx = the origin reachable but its backend is broken (exactly the
-      // "503 Backend fetch failed" case) — treat as offline. 2xx/3xx/4xx
-      // all count as "something real answered", so online.
+      // 5xx = the origin is reachable but its backend is broken (exactly
+      // the "503 Backend fetch failed" case) — treat as offline.
+      // 2xx/3xx/4xx all count as "something real answered", so online.
       setPillStatus(res.status >= 500 ? 'offline' : 'online');
     })
     .catch(() => {
@@ -3875,6 +3856,271 @@ function positionLinkMenu(btn, menu){
   }
 })();
 
+</script>
+
+<!-- =====================================================================
+     ALBUM-DRIVEN THEME
+     When a track plays, we load its album cover into a small offscreen
+     canvas and extract a palette from it, then apply that palette as CSS
+     variable overrides on <html>. Everything fades via a CSS transition
+     on those variables.
+
+     Covers whose host doesn't send CORS headers will refuse to load with
+     crossOrigin="anonymous" — in that case we just fall back to the
+     default theme for that album. No errors, no breakage.
+
+     Only the variables in THEME_VARS are overridden, so elements that
+     read --stamp-fixed (edit counter, album title, play/pause button,
+     progress + volume fills) stay on the site's own white regardless of
+     what's playing.
+     ===================================================================== -->
+<script>
+// Downscaled canvas: 64x64 is plenty for palette work.
+const __THEME_SAMPLE = 64;
+const __themeCanvas = document.createElement('canvas');
+__themeCanvas.width = __THEME_SAMPLE;
+__themeCanvas.height = __THEME_SAMPLE;
+const __themeCtx = __themeCanvas.getContext('2d', { willReadFrequently: true });
+
+const __themeCache = new Map(); // coverUrl -> theme object | null
+
+function __rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0, s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return [h, s, l];
+}
+
+function __hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(1, s));
+  l = Math.max(0, Math.min(1, l));
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60)       { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else              { r = c; g = 0; b = x; }
+  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function __hexToRgbTriplet(hex) {
+  const m = hex.replace('#', '');
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  return `${r},${g},${b}`;
+}
+
+function __samplePalette() {
+  const { width, height } = __themeCanvas;
+  const data = __themeCtx.getImageData(0, 0, width, height).data;
+  const buckets = new Map();
+
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      const i = (y * width + x) * 4;
+      const a = data[i + 3];
+      if (a < 128) continue;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const [h, s, l] = __rgbToHsl(r, g, b);
+      // skip near-black/near-white pixels — they drown out the real color
+      if (l < 0.06 || l > 0.94) continue;
+      const hb = Math.floor(h / 45);
+      const sb = Math.min(4, Math.floor(s * 5));
+      const lb = Math.min(4, Math.floor(l * 5));
+      const key = hb + '|' + sb + '|' + lb;
+      if (!buckets.has(key)) buckets.set(key, { h, s, l, count: 0 });
+      buckets.get(key).count++;
+    }
+  }
+  return [...buckets.values()].sort((a, b) => b.count - a.count);
+}
+
+function __deriveTheme(buckets) {
+  // Score by "vibrancy" rather than raw pixel count. The key tuning
+  // here: the lightness peak sits at 0.38 (favouring deep, saturated
+  // colors like navy, deep red, dark purple) rather than mid-lightness
+  // 0.55 (which used to systematically favour skin tones and lit walls
+  // over dark-but-vivid cover colors). The penalty is also asymmetric:
+  // colors that are TOO PALE lose more points than colors that are
+  // DARK, because pale washes out to "grey" much faster than dark
+  // washes out to "black".
+  let best = null, bestScore = 0;
+  for (const b of buckets) {
+    // Below 0.38: gentle slope. Above 0.38: steeper, so pale tones fall off fast.
+    const lightnessFit = b.l <= 0.38
+      ? 1 - (0.38 - b.l) * 0.8
+      : 1 - (b.l - 0.38) * 2.2;
+    const vibrancy = b.s * Math.max(0, lightnessFit);
+    const score = vibrancy * Math.sqrt(b.count);
+    if (score > bestScore) { bestScore = score; best = b; }
+  }
+  if (!best) return null;
+
+  const H = best.h;
+  const accent     = __hslToHex(H, Math.min(0.85, Math.max(0.5, best.s + 0.15)), 0.68);
+  const bg         = __hslToHex(H, 0.18, 0.07);
+  const bgElevated = __hslToHex(H, 0.16, 0.11);
+  const sidebar    = __hslToHex(H, 0.20, 0.05);
+  const border     = __hslToHex(H, 0.16, 0.16);
+  const borderLite = __hslToHex(H, 0.18, 0.24);
+  const text       = __hslToHex(H, 0.06, 0.95);
+  const textDim    = __hslToHex(H, 0.08, 0.60);
+
+  return {
+    '--bg': bg,
+    '--bg-elevated': bgElevated,
+    '--sidebar': sidebar,
+    '--border': border,
+    '--border-light': borderLite,
+    '--stamp': accent,
+    '--stamp-dim': __hslToHex(H, 0.4, 0.45),
+    '--text': text,
+    '--text-dim': textDim,
+    '--bg-rgb': __hexToRgbTriplet(bg),
+    '--sidebar-rgb': __hexToRgbTriplet(sidebar)
+  };
+}
+
+// Loads the cover directly with crossOrigin="anonymous". If the host
+// doesn't allow CORS, the load errors and we resolve null.
+function __extractThemeFromCover(coverUrl) {
+  return new Promise((resolve) => {
+    if (!coverUrl) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        __themeCtx.clearRect(0, 0, __THEME_SAMPLE, __THEME_SAMPLE);
+        __themeCtx.drawImage(img, 0, 0, __THEME_SAMPLE, __THEME_SAMPLE);
+        resolve(__deriveTheme(__samplePalette()));
+      } catch (e) {
+        // Most likely a SecurityError because the host refused CORS.
+        console.warn('[theme] cover not CORS-readable, using default theme:', coverUrl);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      console.warn('[theme] cover failed to load with CORS:', coverUrl);
+      resolve(null);
+    };
+    img.src = coverUrl;
+  });
+}
+
+const THEME_TRANSITION_MS = 650;
+const THEME_VARS = [
+  '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
+  '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb'
+];
+
+let __defaultTheme = null;
+function __captureDefaultTheme() {
+  if (__defaultTheme) return;
+  const cs = getComputedStyle(document.documentElement);
+  __defaultTheme = {};
+  for (const v of THEME_VARS) __defaultTheme[v] = cs.getPropertyValue(v).trim();
+}
+
+let __themeCurrentCover = null;
+
+function __ensureThemeTransition() {
+  if (document.documentElement.dataset.themeTransition === 'on') return;
+  const style = document.createElement('style');
+  style.textContent = `
+    html, body, .sidebar, .player, .search-bar, .search-results,
+    .case-file, .btn, .link-menu, .info-menu, .changelog-panel,
+    .queue-drawer, .toast,
+    table.manifest tbody tr, table.manifest thead th,
+    .artist-list-item, .tree-album-item, .pane-albums-header {
+      transition: background-color ${THEME_TRANSITION_MS}ms ease,
+                  color ${THEME_TRANSITION_MS}ms ease,
+                  border-color ${THEME_TRANSITION_MS}ms ease;
+    }
+  `;
+  document.head.appendChild(style);
+  document.documentElement.dataset.themeTransition = 'on';
+}
+
+function __applyVars(theme) {
+  __ensureThemeTransition();
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(theme)) root.style.setProperty(k, v);
+}
+
+function __clearVars() {
+  __ensureThemeTransition();
+  const root = document.documentElement;
+  for (const v of THEME_VARS) {
+    if (__defaultTheme && __defaultTheme[v]) root.style.setProperty(v, __defaultTheme[v]);
+    else root.style.removeProperty(v);
+  }
+}
+
+async function applyAlbumTheme(coverUrl) {
+  __captureDefaultTheme();
+  if (!coverUrl) { clearAlbumTheme(); return; }
+  if (coverUrl === __themeCurrentCover) return;
+  __themeCurrentCover = coverUrl;
+
+  let theme = __themeCache.get(coverUrl);
+  if (theme === undefined) {
+    theme = await __extractThemeFromCover(coverUrl);
+    __themeCache.set(coverUrl, theme);
+  }
+  if (coverUrl !== __themeCurrentCover) return; // track changed mid-extract
+
+  if (!theme) { __clearVars(); return; }
+  __applyVars(theme);
+}
+
+function clearAlbumTheme() {
+  __themeCurrentCover = null;
+  __clearVars();
+}
+
+// Auto-hook: no edits to the main script needed. Watches the player
+// cover's src attribute and the player's show/hide style.
+(function __hookIntoPlayer() {
+  const playerCover = document.getElementById('playerCover');
+  const player = document.getElementById('player');
+  if (!playerCover || !player) return;
+
+  const onCoverChange = () => {
+    const src = playerCover.currentSrc || playerCover.src;
+    if (player.style.display === 'none' || !src) clearAlbumTheme();
+    else applyAlbumTheme(src);
+  };
+
+  new MutationObserver(onCoverChange).observe(playerCover, {
+    attributes: true, attributeFilter: ['src']
+  });
+  playerCover.addEventListener('load', onCoverChange);
+
+  new MutationObserver(() => {
+    if (player.style.display === 'none') clearAlbumTheme();
+    else onCoverChange();
+  }).observe(player, { attributes: true, attributeFilter: ['style'] });
+
+  onCoverChange();
+})();
 </script>
 
 </body>
