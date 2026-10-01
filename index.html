@@ -99,7 +99,7 @@
   .artist-list-item .al-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; font-weight:500;}
   .artist-list-item .al-meta{font-size:.68rem; color:var(--text-dim); flex-shrink:0;}
   .artist-list-item .al-chevron{color:var(--text-dim); font-size:.8rem; flex-shrink:0; transition:transform .15s ease, color .15s ease;}
-  .artist-list-item:hover .al-chevron{color:var(--stamp); transform:translateX(2px);}
+  .artist-list-item:hover .al-chevron{color:var(--stamp-fixed); transform:translateX(2px);}
 
   .pane-albums-header{
     display:flex; align-items:center; gap:10px; padding:13px 16px;
@@ -375,7 +375,7 @@
   .num-cell .n, .num-cell .p{display:inline-block; width:16px; text-align:left;}
   .num-cell .p{display:none;}
   tr:hover .num-cell .n{display:none;}
-  tr:hover .num-cell .p{display:inline-block; color:var(--stamp);}
+  tr:hover .num-cell .p{display:inline-block; color:var(--stamp-fixed);}
   .title-cell .t-name{color:var(--text); font-weight:500;}
   .title-cell .t-new-tag{
     display:inline-block; vertical-align:middle; margin-left:8px; position:relative; top:-1px;
@@ -391,7 +391,7 @@
     color:var(--text-dim); max-width:fit-content;
   }
   .title-cell .t-comp-tag::before{content:"◆"; font-size:.5rem; color:var(--stamp-dim);}
-  tr:hover .title-cell .t-comp-tag{border-color:var(--stamp-dim); color:var(--text);}
+  .title-cell .t-comp-tag:hover{border-color:var(--stamp-dim); color:var(--text); cursor:pointer;}
   .credit-cell{color:var(--text-dim); font-size:.76rem; max-width:280px;}
   .release-cell{color:var(--text-dim); font-size:.76rem; white-space:nowrap;}
   .notes-cell{color:var(--text-dim); font-size:.76rem; max-width:400px; line-height:1.5;}
@@ -410,7 +410,7 @@
   .no-file{color:var(--text-dim); opacity:.5;}
 
   .eq{display:inline-flex; align-items:flex-end; gap:2px; height:12px;}
-  .eq span{width:2px; background:var(--stamp); animation:eq .9s ease-in-out infinite; display:inline-block;}
+  .eq span{width:2px; background:var(--stamp-fixed); animation:eq .9s ease-in-out infinite; display:inline-block;}
   .eq span:nth-child(2){animation-delay:.2s;}
   .eq span:nth-child(3){animation-delay:.4s;}
   @keyframes eq{0%,100%{height:3px;} 50%{height:11px;}}
@@ -680,7 +680,7 @@
     text-transform:uppercase; padding:5px 8px; border-radius:3px;
     transition:color .15s ease, background .15s ease;
   }
-  .queue-clear-btn:hover{color:var(--stamp); background:rgba(255,255,255,.05);}
+  .queue-clear-btn:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.05);}
   .queue-close{
     background:none; border:none; color:var(--text-dim); cursor:pointer;
     padding:4px; display:flex; border-radius:3px;
@@ -695,7 +695,7 @@
     padding:34px 20px; text-align:center; color:var(--text-dim);
     font-size:.78rem; line-height:1.6;
   }
-  .queue-empty b{display:block; color:var(--text); font-family:var(--display); font-size:.9rem; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+  .queue-empty b{display:block; color:var(--text); font-family:var(--mono); font-size:.82rem; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.08em;}
 
   .queue-item{
     display:flex; align-items:center; gap:11px;
@@ -742,7 +742,7 @@
     padding:4px; display:flex; border-radius:3px; flex-shrink:0;
     transition:color .15s ease, background .15s ease;
   }
-  .queue-remove:hover{color:var(--stamp); background:rgba(255,255,255,.07);}
+  .queue-remove:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.07);}
   .queue-remove svg{width:13px; height:13px;}
 
   @media (max-width:820px){
@@ -2146,7 +2146,7 @@ function renderCaseFile(artistName, album){
     const crossedArtists = song.crossListed && song.fromArtist && song.fromArtist !== artistName;
     const compTagLabel = crossedArtists ? `${song.fromAlbum} — ${song.fromArtist}` : song.fromAlbum;
     const compTagHtml = (song.crossListed && song.fromAlbum)
-      ? `<div class="t-comp-tag" title="Also appears on &quot;${esc(song.fromAlbum)}&quot;${crossedArtists ? ` by ${esc(song.fromArtist)}` : ""}">${esc(compTagLabel)}</div>`
+      ? `<div class="t-comp-tag" data-from-album="${esc(song.fromAlbum)}" data-from-artist="${esc(song.fromArtist || artistName)}" data-from-section="${esc(song.fromSection || "")}" title="Also appears on &quot;${esc(song.fromAlbum)}&quot;${crossedArtists ? ` by ${esc(song.fromArtist)}` : ""}">${esc(compTagLabel)}</div>`
       : "";
     const linkMenuItems = [
       song.ytLink ? `<a class="link-menu-item" href="${esc(song.ytLink)}" target="_blank" rel="noopener">${ICONS.youtube}<span>Watch on YouTube</span></a>` : "",
@@ -2261,6 +2261,27 @@ function renderCaseFile(artistName, album){
   }
 
   const tbody = el('content').querySelector('tbody');
+  // Clicking a comp tag jumps to the album the song was originally
+  // cross-listed FROM — the origin album, not the one currently on
+  // screen. Never starts playback: stopPropagation keeps the row's own
+  // click handler (which plays the track) from also firing. The origin
+  // album is looked up by the data attributes baked into the tag; if
+  // that album no longer exists (renamed/removed on the sheet since the
+  // cross-list was written), a toast explains why nothing happened.
+  tbody.querySelectorAll('.t-comp-tag').forEach(tagEl => {
+    tagEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const fromAlbum = tagEl.dataset.fromAlbum;
+      const fromArtist = tagEl.dataset.fromArtist;
+      const fromSection = tagEl.dataset.fromSection;
+      const match = findAlbumByNames(fromArtist, fromAlbum, fromSection);
+      if (!match) {
+        showToast("That album isn't on the sheet anymore.");
+        return;
+      }
+      selectAlbum(match.artistName, match.album);
+    });
+  });
   tbody.querySelectorAll('.copy-link-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx, 10);
@@ -3425,10 +3446,10 @@ const queueBackdrop = el('queueBackdrop');
 const queueListEl = el('queueList');
 
 function openQueueDrawer(){
-  renderQueuePanel();
   queueDrawer.classList.add('open');
   queueBackdrop.classList.add('open');
   queueDrawer.setAttribute('aria-hidden', 'false');
+  renderQueuePanel();
 }
 function closeQueueDrawer(){
   queueDrawer.classList.remove('open');
