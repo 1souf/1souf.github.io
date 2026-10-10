@@ -22,6 +22,7 @@
     --text-dim:#969696;
     --stamp:#ffffff;
     --stamp-dim:#555555;
+    --active-line:#ffffff;
     --stamp-fixed:#ffffff;    /* never touched by the album theme */
     --hazard:#e0e0e0;
     --border:#2a2a2a;
@@ -88,7 +89,7 @@
     border-left:2px solid transparent;
   }
   .artist-list-item:hover{background:var(--bg-elevated);}
-  .artist-list-item.active{background:var(--bg-elevated); border-left-color:var(--stamp);}
+  .artist-list-item.active{background:var(--bg-elevated); border-left-color:var(--active-line);}
   .artist-list-item .al-avatar{
     width:28px; height:28px; border-radius:50%; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
@@ -129,7 +130,7 @@
     border-left:2px solid transparent;
   }
   .tree-album-item:hover{color:var(--text); background:var(--bg-elevated);}
-  .tree-album-item.active{color:var(--text); border-left-color:var(--stamp); background:var(--bg-elevated);}
+  .tree-album-item.active{color:var(--text); border-left-color:var(--active-line); background:var(--bg-elevated);}
   .tree-album-item .a-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1;}
   .tree-album-item .a-count{font-size:.68rem; opacity:.55; flex-shrink:0;}
   .tree-divider{
@@ -390,7 +391,7 @@
     font-size:.62rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
     color:var(--text-dim); max-width:fit-content;
   }
-  .title-cell .t-comp-tag::before{content:"◆"; font-size:.5rem; color:var(--stamp-dim);}
+  .title-cell .t-comp-tag::before{content:"◆"; font-size:.5rem; color:var(--stamp-fixed); opacity:.55;}
   .title-cell .t-comp-tag:hover{border-color:var(--stamp-dim); color:var(--text); cursor:pointer;}
   .credit-cell{color:var(--text-dim); font-size:.76rem; max-width:280px;}
   .release-cell{color:var(--text-dim); font-size:.76rem; white-space:nowrap;}
@@ -3914,7 +3915,8 @@ function positionLinkMenu(btn, menu){
 const THEME_TRANSITION_MS = 650;
 const THEME_VARS = [
   '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
-  '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb'
+  '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb',
+  '--active-line'
 ];
 
 function __hexToRgb(hex){
@@ -3969,16 +3971,39 @@ function __hexToRgbTriplet(hex){
 
 function __deriveThemeFromHex(hex){
   const { r, g, b } = __hexToRgb(hex);
-  const [H, S] = __rgbToHsl(r, g, b);
+  const [H, S, L] = __rgbToHsl(r, g, b);
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
-  const accent     = __hslToHex(H, Math.min(0.85, Math.max(0.5, S)), 0.68);
-  const bg         = __hslToHex(H, 0.18, 0.07);
-  const bgElevated = __hslToHex(H, 0.16, 0.11);
-  const sidebar    = __hslToHex(H, 0.20, 0.05);
-  const border     = __hslToHex(H, 0.16, 0.16);
-  const borderLite = __hslToHex(H, 0.18, 0.24);
-  const text       = __hslToHex(H, 0.06, 0.95);
-  const textDim    = __hslToHex(H, 0.08, 0.60);
+  // Accent is your literal hex — no remap.
+  const accent = hex;
+
+  // Keep the site firmly in its original dark register, but let each
+  // album's own lightness level nudge how dark it lands. Range is
+  // narrow on purpose (0.05–0.13-ish) so it stays a "dark site" and
+  // never turns bright, while still differing visibly between a
+  // deep-maroon album and a bright-red one.
+  const bgL         = clamp01(0.055 + L * 0.10);
+  const bgElevatedL = clamp01(0.085 + L * 0.10);
+  const sidebarL    = clamp01(0.040 + L * 0.09);
+
+  // Tint strength: how much of the album's hue bleeds into the dark
+  // surfaces. Kept low-ish so the UI reads as "dark with a red cast"
+  // rather than "red UI", and scaled by the source's own saturation so
+  // a vivid red tints more than a muted one.
+  const tint = clamp01(S);
+  const bgS         = tint * 0.30;
+  const bgElevatedS = tint * 0.28;
+  const sidebarS    = tint * 0.32;
+
+  const bg         = __hslToHex(H, bgS,         bgL);
+  const bgElevated = __hslToHex(H, bgElevatedS, bgElevatedL);
+  const sidebar    = __hslToHex(H, sidebarS,    sidebarL);
+
+  const border     = __hslToHex(H, tint * 0.25, clamp01(bgElevatedL + 0.06));
+  const borderLite = __hslToHex(H, tint * 0.30, clamp01(bgElevatedL + 0.13));
+
+  const text       = __hslToHex(H, 0.05, 0.95);
+  const textDim    = __hslToHex(H, 0.07, 0.60);
 
   return {
     '--bg': bg,
@@ -3987,7 +4012,16 @@ function __deriveThemeFromHex(hex){
     '--border': border,
     '--border-light': borderLite,
     '--stamp': accent,
-    '--stamp-dim': __hslToHex(H, 0.4, 0.45),
+    '--stamp-dim': __hslToHex(H, clamp01(S * 0.7), clamp01(L * 0.7)),
+    // The little bar next to the active artist/album row. Same hue as
+    // the accent when the accent actually has a hue, with lightness
+    // floored so it stays visible on dark picks. A greyscale pick
+    // (#000, #fff, mid-greys) has no hue to preserve, so it just
+    // becomes a neutral light bar instead of having a fake hue
+    // invented for it.
+    '--active-line': S < 0.05
+      ? __hslToHex(0, 0, Math.max(L, 0.82))
+      : __hslToHex(H, clamp01(Math.max(S, 0.55)), clamp01(Math.max(L, 0.62))),
     '--text': text,
     '--text-dim': textDim,
     '--bg-rgb': __hexToRgbTriplet(bg),
