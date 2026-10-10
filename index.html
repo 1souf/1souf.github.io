@@ -678,11 +678,12 @@
   .queue-header-actions{display:flex; align-items:center; gap:6px;}
   .queue-clear-btn{
     background:none; border:none; color:var(--text-dim); cursor:pointer;
-    font-family:var(--mono); font-size:.68rem; letter-spacing:.06em;
-    text-transform:uppercase; padding:5px 8px; border-radius:3px;
+    padding:4px; display:flex; border-radius:3px;
     transition:color .15s ease, background .15s ease;
   }
-  .queue-clear-btn:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.05);}
+  .queue-clear-btn:hover{color:var(--text); background:rgba(255,255,255,.05);}
+  .queue-clear-btn svg{width:15px; height:15px; display:block;}
+  .queue-clear-btn:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.08); opacity:1;}
   .queue-close{
     background:none; border:none; color:var(--text-dim); cursor:pointer;
     padding:4px; display:flex; border-radius:3px;
@@ -930,7 +931,11 @@
   <div class="queue-header">
     <span>Up Next</span>
     <div class="queue-header-actions">
-      <button class="queue-clear-btn" id="queueClearBtn" type="button" title="Clear queue">Clear</button>
+            <button class="queue-clear-btn" id="queueClearBtn" type="button" title="Clear queue" aria-label="Clear queue">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6M18 6V16.2C18 17.8802 18 18.7202 17.673 19.362C17.3854 19.9265 16.9265 20.3854 16.362 20.673C15.7202 21 14.8802 21 13.2 21H10.8C9.11984 21 8.27976 21 7.63803 20.673C7.07354 20.3854 6.6146 19.9265 6.32698 19.362C6 18.7202 6 17.8802 6 16.2V6M14 10V17M10 10V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</button>
       <button class="queue-close" id="queueCloseBtn" type="button" title="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
