@@ -297,6 +297,25 @@
     text-transform:uppercase; user-select:none;
   }
 
+  .album-desc-row{
+    display:flex; align-items:baseline; gap:8px;
+    margin-top:8px; min-width:0; max-width:50ch;
+    align-self:flex-start;
+  }
+  .album-desc{
+    font-size:.76rem; line-height:1.5; color:var(--text-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    min-width:0; flex:1 1 auto;
+  }
+  .album-desc-more{
+    flex:0 0 auto; padding:0; background:none; border:none;
+    color:var(--text-dim); font-family:var(--mono); font-weight:600;
+    font-size:.7rem; letter-spacing:.04em; text-transform:uppercase;
+    cursor:pointer; white-space:nowrap;
+    transition:color .15s ease;
+  }
+  .album-desc-more:hover{color:var(--stamp-fixed);}
+
   .info-menu-wrap{position:relative;}
   .info-menu-btn{
   background:var(--bg-elevated); border:1px solid var(--border-light); color:var(--text);
@@ -315,7 +334,6 @@
     box-shadow:0 8px 22px rgba(0,0,0,.45);
   }
   .info-menu.open{display:block;}
-  .info-menu .desc-block{color:var(--stamp-fixed); white-space:pre-line;}
   .info-menu .update-block{color:var(--hazard); white-space:pre-line;}
   .info-menu .desc-block + .update-block{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-light);}
 
@@ -572,6 +590,46 @@
     transition:opacity .2s ease;
   }
   .toast.show{opacity:1;}
+
+    .desc-modal-backdrop{
+    position:fixed; inset:0; z-index:80;
+    background:rgba(0,0,0,.65);
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .desc-modal-backdrop.open{opacity:1; pointer-events:auto;}
+  .desc-modal{
+    position:fixed; top:50%; left:50%; z-index:81;
+    transform:translate(-50%,-50%) scale(.97);
+    width:min(560px, 90vw); max-height:min(70vh, 560px);
+    display:flex; flex-direction:column;
+    background:var(--bg-elevated); border:1px solid var(--border-light);
+    border-radius:8px; box-shadow:0 20px 50px rgba(0,0,0,.55);
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .desc-modal.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .desc-modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0; padding:12px 16px;
+    border-bottom:1px solid var(--border);
+    font-size:.68rem; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .desc-modal-title{
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
+  }
+  .desc-modal-close{
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    padding:4px; display:flex; border-radius:3px; flex-shrink:0;
+    transition:color .15s ease, background .15s ease;
+  }
+  .desc-modal-close:hover{color:var(--text); background:rgba(255,255,255,.06);}
+  .desc-modal-close svg{width:15px; height:15px; display:block;}
+  .desc-modal-body{
+    padding:16px; overflow-y:auto;
+    font-size:.82rem; line-height:1.7; color:var(--text-dim);
+    white-space:pre-line;
+  }
 
   /* ---------- changelog / "what's new" ---------- */
   .changelog-btn{
@@ -978,6 +1036,17 @@
 
 <audio id="audioEl"></audio>
 <div class="toast" id="toast"></div>
+
+<div class="desc-modal-backdrop" id="descModalBackdrop"></div>
+<div class="desc-modal" id="descModal" aria-hidden="true">
+  <div class="desc-modal-header">
+    <span class="desc-modal-title" id="descModalTitle"></span>
+    <button class="desc-modal-close" id="descModalCloseBtn" type="button" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="desc-modal-body" id="descModalBody"></div>
+</div>
 
 <script>
 /* =====================================================================
@@ -2171,6 +2240,8 @@ function renderCaseFile(artistName, album){
   const isComp = (album.section || "").trim().toLowerCase() === "comps";
   const releaseDateHtml = album.releaseDate ? `<span>RELEASE DATE: <b>${esc(album.releaseDate)}</b></span>` : "";
   const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b></span>`;
+  const hasDesc = !!(album.description && album.description.trim());
+  const hasUpdate = !!(album.updates && album.updates.trim());
   const fileMetaHtml = isComp
     ? `${artistMetaHtml}
        ${releaseDateHtml}
@@ -2181,14 +2252,17 @@ function renderCaseFile(artistName, album){
        <span>RUNTIME: <b id="runtimeVal">${formatSeconds(totalSeconds)}</b></span>
        ${releaseDateHtml}`;
 
-  const hasDesc = !!(album.description && album.description.trim());
-  const hasUpdate = !!(album.updates && album.updates.trim());
-  const infoMenuHtml = (hasDesc || hasUpdate) ? `
+  const descHtml = hasDesc ? `
+    <div class="album-desc-row">
+      <span class="album-desc">${esc(album.description)}</span>
+      <button type="button" class="album-desc-more" id="albumDescMore">Read More</button>
+    </div>` : "";
+
+  const infoMenuHtml = hasUpdate ? `
     <div class="info-menu-wrap">
-      <button class="btn info-menu-btn" title="Description &amp; updates">⋯</button>
+      <button class="btn info-menu-btn" title="Updates">⋯</button>
       <div class="info-menu">
-        ${hasDesc ? `<div class="desc-block">${esc(album.description)}</div>` : ""}
-        ${hasUpdate ? `<div class="update-block">${esc(album.updates)}</div>` : ""}
+        <div class="update-block">${esc(album.updates)}</div>
       </div>
     </div>` : "";
 
@@ -2244,6 +2318,7 @@ function renderCaseFile(artistName, album){
         </div>
         <div class="header-col">
           <div class="stamp-title">${esc(album.name)}</div>
+          ${descHtml}
           <div class="file-meta">
             ${fileMetaHtml}
           </div>
@@ -2354,6 +2429,10 @@ function renderCaseFile(artistName, album){
       queueSongNext(artistName, album, idx);
     });
   });
+    const descMoreBtn = el('albumDescMore');
+  if (descMoreBtn) {
+    descMoreBtn.addEventListener('click', () => openDescModal(album.name, album.description));
+  }
   const runtimeEl = el('runtimeVal');
   let liveTotalSeconds = totalSeconds;
   album.songs.forEach((song, idx) => {
@@ -3519,6 +3598,26 @@ function toggleQueueDrawer(){
   if (queueDrawer.classList.contains('open')) closeQueueDrawer();
   else openQueueDrawer();
 }
+
+const descModal = el('descModal');
+const descModalBackdrop = el('descModalBackdrop');
+function openDescModal(title, text){
+  el('descModalTitle').textContent = title;
+  el('descModalBody').textContent = text;
+  descModal.classList.add('open');
+  descModalBackdrop.classList.add('open');
+  descModal.setAttribute('aria-hidden', 'false');
+}
+function closeDescModal(){
+  descModal.classList.remove('open');
+  descModalBackdrop.classList.remove('open');
+  descModal.setAttribute('aria-hidden', 'true');
+}
+el('descModalCloseBtn').addEventListener('click', closeDescModal);
+descModalBackdrop.addEventListener('click', closeDescModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && descModal.classList.contains('open')) closeDescModal();
+});
 
 el('queueBtn').addEventListener('click', toggleQueueDrawer);
 el('queueCloseBtn').addEventListener('click', closeQueueDrawer);
