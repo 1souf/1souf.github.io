@@ -387,12 +387,13 @@
   .title-cell .t-comp-tag{
     display:inline-flex; align-items:center; gap:5px;
     margin-top:5px; padding:2px 8px 2px 7px;
-    border:1px solid var(--border-light); border-radius:20px;
+    border:1px solid rgba(255,255,255,.22); border-radius:20px;
     font-size:.62rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
     color:var(--text-dim); max-width:fit-content;
   }
   .title-cell .t-comp-tag::before{content:"◆"; font-size:.5rem; color:var(--stamp-fixed); opacity:.55;}
-  .title-cell .t-comp-tag:hover{border-color:var(--stamp-dim); color:var(--text); cursor:pointer;}
+  .title-cell .t-comp-tag:hover{border-color:var(--stamp-fixed); color:var(--text); cursor:pointer;}
+  .title-cell .t-comp-tag:hover::before{opacity:1;}
   .credit-cell{color:var(--text-dim); font-size:.76rem; max-width:280px;}
   .release-cell{color:var(--text-dim); font-size:.76rem; white-space:nowrap;}
   .notes-cell{color:var(--text-dim); font-size:.76rem; max-width:400px; line-height:1.5;}
