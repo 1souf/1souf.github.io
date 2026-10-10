@@ -1221,6 +1221,21 @@ function parseOriginalEra(raw, ownArtistName){
   return { eraName: trimmed, eraArtist: ownArtistName };
 }
 
+// Accepts a hex color with or without a leading "#", in 3- or 6-digit
+// form, and returns a canonical "#rrggbb" string. Anything that doesn't
+// look like a hex color (blank cell, stray note, URL, etc.) comes back
+// as "" so the album just falls back to the site's default theme.
+function normalizeHexColor(raw){
+  const s = String(raw || "").trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(s)) {
+    return "#" + s.split("").map(c => c + c).join("").toLowerCase();
+  }
+  if (/^[0-9a-f]{6}$/i.test(s)) {
+    return "#" + s.toLowerCase();
+  }
+  return "";
+}
+
 function buildAlbumsFromRows(rows, artistName){
   const albums = [];
   let current = null;
@@ -1271,6 +1286,11 @@ function buildAlbumsFromRows(rows, artistName){
         discordLink: String(row[idx.discord] || "").trim(),
         downloadLink: String(row[idx.link] || "").trim(),
         pfpLink: extractUrl(row[idx.features]),
+        // Manual theme color: a hex code pasted into the "Original Era"
+        // column (5th column, index 4) of the album header row. That
+        // column is unused on header rows anyway (it only means
+        // something on song rows), so it's a free slot.
+        themeColor: normalizeHexColor(row[4]),
         songs: []
       };
 
@@ -3879,33 +3899,34 @@ function positionLinkMenu(btn, menu){
 
 </script>
 
-<!-- =====================================================================
-     ALBUM-DRIVEN THEME
-     When a track plays, we load its album cover into a small offscreen
-     canvas and extract a palette from it, then apply that palette as CSS
-     variable overrides on <html>. Everything fades via a CSS transition
-     on those variables.
-
-     Covers whose host doesn't send CORS headers will refuse to load with
-     crossOrigin="anonymous" — in that case we just fall back to the
-     default theme for that album. No errors, no breakage.
-
-     Only the variables in THEME_VARS are overridden, so elements that
-     read --stamp-fixed (edit counter, album title, play/pause button,
-     progress + volume fills) stay on the site's own white regardless of
-     what's playing.
-     ===================================================================== -->
 <script>
-// Downscaled canvas: 64x64 is plenty for palette work.
-const __THEME_SAMPLE = 64;
-const __themeCanvas = document.createElement('canvas');
-__themeCanvas.width = __THEME_SAMPLE;
-__themeCanvas.height = __THEME_SAMPLE;
-const __themeCtx = __themeCanvas.getContext('2d', { willReadFrequently: true });
+/* =====================================================================
+   MANUAL ALBUM THEME
+   When a track plays, we read the album's manual theme color — a hex
+   code pasted into the "Original Era" column of the album's header row
+   on the sheet — and derive a small palette from it, applied as CSS
+   variable overrides on <html>. Everything fades via a CSS transition.
 
-const __themeCache = new Map(); // coverUrl -> theme object | null
+   Albums with no color (or an invalid one) fall back to the site's
+   default theme.
+   ===================================================================== */
 
-function __rgbToHsl(r, g, b) {
+const THEME_TRANSITION_MS = 650;
+const THEME_VARS = [
+  '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
+  '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb'
+];
+
+function __hexToRgb(hex){
+  const m = hex.replace('#', '');
+  return {
+    r: parseInt(m.slice(0, 2), 16),
+    g: parseInt(m.slice(2, 4), 16),
+    b: parseInt(m.slice(4, 6), 16)
+  };
+}
+
+function __rgbToHsl(r, g, b){
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   const l = (max + min) / 2;
@@ -3923,7 +3944,7 @@ function __rgbToHsl(r, g, b) {
   return [h, s, l];
 }
 
-function __hslToHex(h, s, l) {
+function __hslToHex(h, s, l){
   h = ((h % 360) + 360) % 360;
   s = Math.max(0, Math.min(1, s));
   l = Math.max(0, Math.min(1, l));
@@ -3941,62 +3962,16 @@ function __hslToHex(h, s, l) {
   return '#' + toHex(r) + toHex(g) + toHex(b);
 }
 
-function __hexToRgbTriplet(hex) {
-  const m = hex.replace('#', '');
-  const r = parseInt(m.slice(0, 2), 16);
-  const g = parseInt(m.slice(2, 4), 16);
-  const b = parseInt(m.slice(4, 6), 16);
+function __hexToRgbTriplet(hex){
+  const { r, g, b } = __hexToRgb(hex);
   return `${r},${g},${b}`;
 }
 
-function __samplePalette() {
-  const { width, height } = __themeCanvas;
-  const data = __themeCtx.getImageData(0, 0, width, height).data;
-  const buckets = new Map();
+function __deriveThemeFromHex(hex){
+  const { r, g, b } = __hexToRgb(hex);
+  const [H, S] = __rgbToHsl(r, g, b);
 
-  for (let y = 0; y < height; y += 2) {
-    for (let x = 0; x < width; x += 2) {
-      const i = (y * width + x) * 4;
-      const a = data[i + 3];
-      if (a < 128) continue;
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const [h, s, l] = __rgbToHsl(r, g, b);
-      // skip near-black/near-white pixels — they drown out the real color
-      if (l < 0.06 || l > 0.94) continue;
-      const hb = Math.floor(h / 45);
-      const sb = Math.min(4, Math.floor(s * 5));
-      const lb = Math.min(4, Math.floor(l * 5));
-      const key = hb + '|' + sb + '|' + lb;
-      if (!buckets.has(key)) buckets.set(key, { h, s, l, count: 0 });
-      buckets.get(key).count++;
-    }
-  }
-  return [...buckets.values()].sort((a, b) => b.count - a.count);
-}
-
-function __deriveTheme(buckets) {
-  // Score by "vibrancy" rather than raw pixel count. The key tuning
-  // here: the lightness peak sits at 0.38 (favouring deep, saturated
-  // colors like navy, deep red, dark purple) rather than mid-lightness
-  // 0.55 (which used to systematically favour skin tones and lit walls
-  // over dark-but-vivid cover colors). The penalty is also asymmetric:
-  // colors that are TOO PALE lose more points than colors that are
-  // DARK, because pale washes out to "grey" much faster than dark
-  // washes out to "black".
-  let best = null, bestScore = 0;
-  for (const b of buckets) {
-    // Below 0.38: gentle slope. Above 0.38: steeper, so pale tones fall off fast.
-    const lightnessFit = b.l <= 0.38
-      ? 1 - (0.38 - b.l) * 0.8
-      : 1 - (b.l - 0.38) * 2.2;
-    const vibrancy = b.s * Math.max(0, lightnessFit);
-    const score = vibrancy * Math.sqrt(b.count);
-    if (score > bestScore) { bestScore = score; best = b; }
-  }
-  if (!best) return null;
-
-  const H = best.h;
-  const accent     = __hslToHex(H, Math.min(0.85, Math.max(0.5, best.s + 0.15)), 0.68);
+  const accent     = __hslToHex(H, Math.min(0.85, Math.max(0.5, S)), 0.68);
   const bg         = __hslToHex(H, 0.18, 0.07);
   const bgElevated = __hslToHex(H, 0.16, 0.11);
   const sidebar    = __hslToHex(H, 0.20, 0.05);
@@ -4020,49 +3995,17 @@ function __deriveTheme(buckets) {
   };
 }
 
-// Loads the cover directly with crossOrigin="anonymous". If the host
-// doesn't allow CORS, the load errors and we resolve null.
-function __extractThemeFromCover(coverUrl) {
-  return new Promise((resolve) => {
-    if (!coverUrl) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      try {
-        __themeCtx.clearRect(0, 0, __THEME_SAMPLE, __THEME_SAMPLE);
-        __themeCtx.drawImage(img, 0, 0, __THEME_SAMPLE, __THEME_SAMPLE);
-        resolve(__deriveTheme(__samplePalette()));
-      } catch (e) {
-        // Most likely a SecurityError because the host refused CORS.
-        console.warn('[theme] cover not CORS-readable, using default theme:', coverUrl);
-        resolve(null);
-      }
-    };
-    img.onerror = () => {
-      console.warn('[theme] cover failed to load with CORS:', coverUrl);
-      resolve(null);
-    };
-    img.src = coverUrl;
-  });
-}
-
-const THEME_TRANSITION_MS = 650;
-const THEME_VARS = [
-  '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
-  '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb'
-];
-
 let __defaultTheme = null;
-function __captureDefaultTheme() {
+function __captureDefaultTheme(){
   if (__defaultTheme) return;
   const cs = getComputedStyle(document.documentElement);
   __defaultTheme = {};
   for (const v of THEME_VARS) __defaultTheme[v] = cs.getPropertyValue(v).trim();
 }
 
-let __themeCurrentCover = null;
+let __themeCurrentHex = null;
 
-function __ensureThemeTransition() {
+function __ensureThemeTransition(){
   if (document.documentElement.dataset.themeTransition === 'on') return;
   const style = document.createElement('style');
   style.textContent = `
@@ -4075,20 +4018,18 @@ function __ensureThemeTransition() {
                   color ${THEME_TRANSITION_MS}ms ease,
                   border-color ${THEME_TRANSITION_MS}ms ease;
     }
-    /* .queue-drawer keeps its own transition (transform .26s) so the
-       slide-in animation isn't clobbered by the theme's blanket rule. */
   `;
   document.head.appendChild(style);
   document.documentElement.dataset.themeTransition = 'on';
 }
 
-function __applyVars(theme) {
+function __applyVars(theme){
   __ensureThemeTransition();
   const root = document.documentElement;
   for (const [k, v] of Object.entries(theme)) root.style.setProperty(k, v);
 }
 
-function __clearVars() {
+function __clearVars(){
   __ensureThemeTransition();
   const root = document.documentElement;
   for (const v of THEME_VARS) {
@@ -4097,39 +4038,38 @@ function __clearVars() {
   }
 }
 
-async function applyAlbumTheme(coverUrl) {
+function applyAlbumTheme(hexColor){
   __captureDefaultTheme();
-  if (!coverUrl) { clearAlbumTheme(); return; }
-  if (coverUrl === __themeCurrentCover) return;
-  __themeCurrentCover = coverUrl;
-
-  let theme = __themeCache.get(coverUrl);
-  if (theme === undefined) {
-    theme = await __extractThemeFromCover(coverUrl);
-    __themeCache.set(coverUrl, theme);
-  }
-  if (coverUrl !== __themeCurrentCover) return; // track changed mid-extract
-
-  if (!theme) { __clearVars(); return; }
-  __applyVars(theme);
+  if (!hexColor) { clearAlbumTheme(); return; }
+  if (hexColor === __themeCurrentHex) return;
+  __themeCurrentHex = hexColor;
+  __applyVars(__deriveThemeFromHex(hexColor));
 }
 
-function clearAlbumTheme() {
-  __themeCurrentCover = null;
+function clearAlbumTheme(){
+  __themeCurrentHex = null;
   __clearVars();
 }
 
-// Auto-hook: no edits to the main script needed. Watches the player
-// cover's src attribute and the player's show/hide style.
-(function __hookIntoPlayer() {
+function __currentAlbumThemeHex(){
+  if (typeof DATA === 'undefined' || !currentArtistName || !currentAlbumName) return "";
+  const albums = DATA[currentArtistName] || [];
+  const album =
+    albums.find(a => !a.isDivider &&
+      a.name === currentAlbumName &&
+      (a.section || "") === (currentAlbumSection || "")) ||
+    albums.find(a => !a.isDivider && a.name === currentAlbumName);
+  return album ? (album.themeColor || "") : "";
+}
+
+(function __hookIntoPlayer(){
   const playerCover = document.getElementById('playerCover');
   const player = document.getElementById('player');
   if (!playerCover || !player) return;
 
   const onCoverChange = () => {
-    const src = playerCover.currentSrc || playerCover.src;
-    if (player.style.display === 'none' || !src) clearAlbumTheme();
-    else applyAlbumTheme(src);
+    if (player.style.display === 'none') { clearAlbumTheme(); return; }
+    applyAlbumTheme(__currentAlbumThemeHex());
   };
 
   new MutationObserver(onCoverChange).observe(playerCover, {
