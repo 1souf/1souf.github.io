@@ -674,10 +674,26 @@
     border-left:1px solid var(--border-light);
     display:flex; flex-direction:column;
     transform:translateX(100%);
-    transition:transform .26s cubic-bezier(.25,.85,.35,1);
-    box-shadow:-14px 0 34px rgba(0,0,0,.45);
+    box-shadow:none;
+    visibility:hidden;
+    /* visibility flips to hidden only AFTER the slide-out ends (delay =
+       the transform duration). Opening still shows it instantly because
+       the .open rule below overrides with its own 0s delay. */
+    transition:
+      transform .26s cubic-bezier(.25,.85,.35,1),
+      box-shadow .26s ease,
+      visibility 0s linear .26s;
   }
-  .queue-drawer.open{transform:translateX(0);}
+  .queue-drawer.open{
+    transform:translateX(0);
+    box-shadow:-14px 0 34px rgba(0,0,0,.45);
+    visibility:visible;
+    /* on open, drop the delay so the drawer is visible immediately */
+    transition:
+      transform .26s cubic-bezier(.25,.85,.35,1),
+      box-shadow .26s ease,
+      visibility 0s linear 0s;
+  }
 
   .queue-header{
     display:flex; align-items:center; justify-content:space-between;
