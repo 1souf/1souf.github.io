@@ -577,6 +577,17 @@
   input[type=range]{-webkit-appearance:none; appearance:none; height:6px; background:var(--border-light); flex:1; border-radius:3px; cursor:pointer;}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:6px; height:6px; background:transparent; border-radius:50%; cursor:pointer;}
   input[type=range]::-moz-range-thumb{width:6px; height:6px; background:transparent; border:none; border-radius:50%; cursor:pointer;}
+  input[type=range]{
+    background-repeat:no-repeat;
+    background-image:linear-gradient(to right, var(--stamp-fixed) var(--fill-pct,0%), var(--border-light) var(--fill-pct,0%));
+  }
+  input[type=range].ghost-active{
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.25) 0%, rgba(255,255,255,.25) 100%),
+      linear-gradient(to right, var(--stamp-fixed) var(--fill-pct,0%), var(--border-light) var(--fill-pct,0%));
+    background-size:var(--ghost-w,0%) 100%, 100% 100%;
+    background-position:0 0, 0 0;
+  }
   .player-extra{display:flex; align-items:center; gap:10px; width:var(--player-side-w); justify-content:flex-end; flex-shrink:0;}
   #muteBtn svg{width:17px; height:17px;}
   /* flex:none overrides the input[type=range] flex:1 above — without it
@@ -3068,14 +3079,9 @@ function updateRangeFill(inputEl){
   const max = parseFloat(inputEl.max) || 100;
   const val = parseFloat(inputEl.value) || 0;
   const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-  inputEl.style.background = `linear-gradient(to right, var(--stamp-fixed) ${pct}%, var(--border-light) ${pct}%)`;
+  inputEl.style.setProperty('--fill-pct', pct + '%');
 }
 
-// Animates a range input's visual fill from one value to another (quick
-// ease-out) instead of letting it snap instantly. Used when a click/tap
-// lands somewhere on the track: the browser jumps the input's real value
-// immediately, but this makes the fill visibly catch up to it instead of
-// teleporting there.
 const rangeFillAnimations = new WeakMap();
 function animateRangeFill(inputEl, fromVal, toVal, duration = 180){
   const running = rangeFillAnimations.get(inputEl);
@@ -3088,7 +3094,7 @@ function animateRangeFill(inputEl, fromVal, toVal, duration = 180){
     const eased = 1 - Math.pow(1 - t, 3);
     const val = fromVal + (toVal - fromVal) * eased;
     const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-    inputEl.style.background = `linear-gradient(to right, var(--stamp-fixed) ${pct}%, var(--border-light) ${pct}%)`;
+    inputEl.style.setProperty('--fill-pct', pct + '%');
     if (t < 1) {
       rangeFillAnimations.set(inputEl, requestAnimationFrame(step));
     } else {
@@ -3102,6 +3108,30 @@ function animateRangeFill(inputEl, fromVal, toVal, duration = 180){
 // by watching for pointer movement past a small threshold after
 // pointerdown. A drag already tracks the pointer 1:1 (no animation
 // needed); a plain click/tap gets the catch-up animation above.
+
+function attachGhostFill(inputEl){
+  function setGhost(clientX){
+    const rect = inputEl.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    inputEl.style.setProperty('--ghost-w', pct + '%');
+  }
+  inputEl.addEventListener('pointermove', (e) => {
+    // don't ghost while actually dragging — the real fill is already chasing the pointer
+    if (inputEl.__dragState && inputEl.__dragState.active && inputEl.__dragState.moved) return;
+    inputEl.classList.add('ghost-active');
+    setGhost(e.clientX);
+  });
+  inputEl.addEventListener('pointerleave', () => {
+    inputEl.classList.remove('ghost-active');
+  });
+  // Touch: show ghost only after a real drag begins so a plain tap doesn't flash it
+  inputEl.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    inputEl.classList.add('ghost-active');
+    setGhost(e.clientX);
+  });
+}
+
 function makeDragTracker(inputEl, threshold = 4){
   const state = { active:false, moved:false, startX:null };
   inputEl.addEventListener('pointerdown', (e) => {
@@ -3160,6 +3190,10 @@ updateRangeFill(el('seek'));
 updateRangeFill(el('volume'));
 let volumeLastValue = initialVolume;
 const volumeDrag = makeDragTracker(el('volume'));
+el('seek').__dragState = seekDrag;
+el('volume').__dragState = volumeDrag;
+attachGhostFill(el('seek'));
+attachGhostFill(el('volume'));
 el('volume').addEventListener('input', (e) => {
   const v = parseFloat(e.target.value);
   audioEl.volume = v;
