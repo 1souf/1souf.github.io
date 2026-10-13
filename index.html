@@ -246,6 +246,8 @@
     font-family:var(--mono); font-weight:600; font-size:.68rem; letter-spacing:.03em;
     white-space:nowrap; cursor:default;
     transition:color .15s ease, border-color .15s ease;
+    cursor: pointer;
+    text-decoration: none;
   }
   .status-dot{
     width:7px; height:7px; border-radius:50%; flex-shrink:0;
@@ -918,10 +920,10 @@
   <main class="main">
     <button class="menu-btn" id="menuBtn">☰ archive index</button>
     <div class="search-bar-wrap">
-      <div class="status-pill state-checking" id="statusPill" title="Checking whether the audio host (Pillowcase) is reachable…">
+      <a class="status-pill state-checking" id="statusPill" href="link-checker.html" title="Checking whether the audio host (Pillowcase) is reachable…">
         <span class="status-dot" id="statusDot"></span>
         <span class="status-label" id="statusLabel">Checking…</span>
-      </div>
+      </a>
       <div class="search-bar" id="searchBarWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" class="search-input" id="searchInput" placeholder="Search songs…" autocomplete="off">
