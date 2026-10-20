@@ -751,8 +751,17 @@
   #queueBtn.has-queue .queue-badge{display:block;}
 
   /* ---------- queue drawer ---------- */
+  /* Both the dimming layer and the drawer stay inside the content area:
+     they start below the top bar, stop above the player bar, and don't
+     reach left under the sidebar, so all three stay clear (and usable)
+     while the queue is open. The three --queue-* offsets are measured at
+     open time — see updateQueueBounds(). */
   .queue-backdrop{
-    position:fixed; inset:0; z-index:70;
+    position:fixed; z-index:70;
+    top:var(--queue-top, 0px);
+    right:0;
+    bottom:var(--queue-bottom, 0px);
+    left:var(--queue-left, 0px);
     background:rgba(0,0,0,.6);
     opacity:0; pointer-events:none;
     transition:opacity .22s ease;
@@ -760,7 +769,10 @@
   .queue-backdrop.open{opacity:1; pointer-events:auto;}
 
   .queue-drawer{
-    position:fixed; top:0; right:0; bottom:0; z-index:71;
+    position:fixed; z-index:71;
+    top:var(--queue-top, 0px);
+    right:0;
+    bottom:var(--queue-bottom, 0px);
     width:380px; max-width:88vw;
     background:var(--bg-elevated);
     border-left:1px solid var(--border-light);
@@ -888,7 +900,7 @@
     .changelog-btn{top:6px; right:16px; padding:8px; border-radius:50%;}
     .changelog-btn-label{display:none;}
     .changelog-panel{top:52px; right:16px; left:10px; width:auto; max-width:none;}
-    .queue-drawer{width:100%; max-width:100%;}
+    .queue-drawer{width:100%; max-width:calc(100vw - var(--queue-left, 0px));}
     .status-pill{position:static; transform:none; margin-right:10px;}
   }
 </style>
@@ -3644,7 +3656,62 @@ const queueDrawer = el('queueDrawer');
 const queueBackdrop = el('queueBackdrop');
 const queueListEl = el('queueList');
 
+// The drawer and its dimming layer are confined to the content area —
+// below the top bar, above the player bar, right of the sidebar — so none
+// of those three get covered. Measured rather than hard-coded: the top
+// bar's height isn't fixed, the sidebar's width changes on mobile, and the
+// player bar doesn't exist until something has been played. Written onto
+// :root so both the drawer and the backdrop pick the values up from CSS.
+function updateQueueBounds(){
+  const root = document.documentElement;
+  const searchWrap = document.querySelector('.search-bar-wrap');
+  const sidebar = el('sidebar');
+  const player = el('player');
+
+  // On narrow screens the top bar stops being sticky and scrolls away with
+  // the page, so its bottom edge can land above the top of the viewport.
+  const top = searchWrap ? Math.max(0, searchWrap.getBoundingClientRect().bottom) : 0;
+
+  // No player bar showing (nothing played yet, or it's been closed) means
+  // the drawer is free to run all the way to the bottom of the window.
+  const playerVisible = player && player.style.display !== 'none';
+  const bottom = playerVisible
+    ? Math.max(0, window.innerHeight - player.getBoundingClientRect().top)
+    : 0;
+
+  // The off-canvas mobile sidebar sits entirely left of the viewport, so
+  // its right edge is 0 there and the dimming correctly starts at 0.
+  const left = sidebar
+    ? Math.max(0, Math.min(window.innerWidth, sidebar.getBoundingClientRect().right))
+    : 0;
+
+  root.style.setProperty('--queue-top', `${top}px`);
+  root.style.setProperty('--queue-bottom', `${bottom}px`);
+  root.style.setProperty('--queue-left', `${left}px`);
+}
+
+// Re-measure on the next frame, at most once per frame — resize and scroll
+// can both fire in bursts, and this only ever matters while the drawer is
+// actually on screen.
+let queueBoundsFrame = null;
+function scheduleQueueBoundsUpdate(){
+  if (queueBoundsFrame !== null) return;
+  queueBoundsFrame = requestAnimationFrame(() => {
+    queueBoundsFrame = null;
+    if (queueDrawer.classList.contains('open')) updateQueueBounds();
+  });
+}
+
+window.addEventListener('resize', scheduleQueueBoundsUpdate);
+document.querySelector('.main').addEventListener('scroll', scheduleQueueBoundsUpdate, { passive: true });
+// The player bar appearing (first play) or disappearing (close button)
+// changes how far down the drawer may run, even with no resize at all.
+new MutationObserver(scheduleQueueBoundsUpdate).observe(el('player'), {
+  attributes: true, attributeFilter: ['style']
+});
+
 function openQueueDrawer(){
+  updateQueueBounds();
   queueDrawer.classList.add('open');
   queueBackdrop.classList.add('open');
   queueDrawer.setAttribute('aria-hidden', 'false');
