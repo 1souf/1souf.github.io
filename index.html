@@ -631,22 +631,26 @@
   }
   .desc-modal-backdrop.open{opacity:1; pointer-events:auto;}
   .desc-modal{
-    position:fixed; top:50%; left:50%; z-index:81;
-    transform:translate(-50%,-50%) scale(.97);
-    width:min(560px, 90vw); max-height:min(70vh, 560px);
+    /* Centred with inset+auto margins rather than translate(-50%,-50%): in
+       Firefox a transformed ancestor makes drag-selection inside the box
+       flicker - the moving end of the selection repeatedly snaps back to the
+       start of the text mid-drag. Plain fixed positioning avoids that. */
+    position:fixed; inset:0; margin:auto; z-index:81;
+    width:min(560px, 90vw); height:max-content; max-height:min(70vh, 560px);
     display:flex; flex-direction:column;
     background:var(--bg-elevated); border:1px solid var(--border-light);
     border-radius:8px; box-shadow:0 20px 50px rgba(0,0,0,.55);
     opacity:0; pointer-events:none;
-    transition:opacity .2s ease, transform .2s ease;
+    transition:opacity .2s ease;
   }
-  .desc-modal.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .desc-modal.open{opacity:1; pointer-events:auto;}
   .desc-modal-header{
     display:flex; align-items:center; justify-content:space-between;
     flex-shrink:0; padding:12px 16px;
     border-bottom:1px solid var(--border);
     font-size:.68rem; letter-spacing:.09em; text-transform:uppercase;
     color:var(--text-dim);
+    -webkit-user-select:none; user-select:none;
   }
   .desc-modal-title{
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;
@@ -663,6 +667,15 @@
     font-size:.82rem; line-height:1.7; color:var(--text-dim);
     white-space:pre-line;
   }
+
+  /* While the description is open, only the description itself may be
+     selected. Without this the backdrop and the page behind it stayed
+     selectable, so a highlight drag that left the modal box - easy, since it
+     is only 70vh tall at most - resolved its moving end against the backdrop
+     instead of the text: the highlight collapsed to the modal title, or
+     clamped to the wrong end of the paragraph mid-drag. */
+  body.desc-modal-open{-webkit-user-select:none; user-select:none;}
+  body.desc-modal-open .desc-modal-body{-webkit-user-select:text; user-select:text;}
 
   /* ---------- changelog / "what's new" ---------- */
   .changelog-btn{
@@ -1082,7 +1095,6 @@
 <audio id="audioEl"></audio>
 <div class="toast" id="toast"></div>
 
-<div class="desc-modal-backdrop" id="descModalBackdrop"></div>
 <div class="desc-modal" id="descModal" aria-hidden="true">
   <div class="desc-modal-header">
     <span class="desc-modal-title" id="descModalTitle"></span>
@@ -1092,6 +1104,11 @@
   </div>
   <div class="desc-modal-body" id="descModalBody"></div>
 </div>
+<!-- Backdrop after the modal: when a native drag (e.g. one started with a
+     double click) leaves the text box, Firefox clamps the moving end to the
+     nearest text in document order - after the modal that is the end of the
+     description instead of back at its start. -->
+<div class="desc-modal-backdrop" id="descModalBackdrop"></div>
 
 <script>
 /* =====================================================================
@@ -3818,17 +3835,96 @@ function openDescModal(title, text){
   descModal.classList.add('open');
   descModalBackdrop.classList.add('open');
   descModal.setAttribute('aria-hidden', 'false');
+  // Keeps the backdrop and the page behind it out of text selection (see
+  // body.desc-modal-open in the stylesheet) so dragging past the edge of the
+  // box extends the highlight through the description instead of jumping.
+  document.body.classList.add('desc-modal-open');
 }
 function closeDescModal(){
   descModal.classList.remove('open');
   descModalBackdrop.classList.remove('open');
   descModal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('desc-modal-open');
 }
 el('descModalCloseBtn').addEventListener('click', closeDescModal);
 descModalBackdrop.addEventListener('click', closeDescModal);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && descModal.classList.contains('open')) closeDescModal();
 });
+
+/* ---------------- drag-selection inside the description modal ----------------
+   The description is the only selectable text while the modal is open, and the
+   box is short, so a drag regularly leaves the text before the button is
+   released. Browsers then clamp the moving end to the nearest text they can
+   find, which is not what a reader expects: Firefox resolves it through the
+   backdrop (wrong side of the anchor, and it periodically snapped back to the
+   start of the description mid-drag, which looked like the highlight
+   flickering). So the drag is driven here instead: the anchor is the caret
+   under the initial press, and the moving end follows the pointer - clamped to
+   the first character while the pointer is above the box and to the last
+   character while it is below it. Native selection is suppressed for that
+   single press only, so double/triple click and keyboard selection still work. */
+(function(){
+  const body = el('descModalBody');
+  if (!body) return;
+  let anchor = null;
+
+  const textNode = () => {
+    for (const n of body.childNodes) if (n.nodeType === 3) return n;
+    return null;
+  };
+
+  // Caret position under the pointer, as a {node, offset} pair inside `body`.
+  const caretAt = (x, y) => {
+    let node = null, offset = 0;
+    if (document.caretPositionFromPoint) {
+      const pos = document.caretPositionFromPoint(x, y);
+      if (pos) { node = pos.offsetNode; offset = pos.offset; }
+    } else if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(x, y);
+      if (range) { node = range.startContainer; offset = range.startOffset; }
+    }
+    if (node && body.contains(node) && node !== body) return { node, offset };
+
+    // Over the padding or past the text: clamp to the nearest end of the text.
+    const tn = textNode();
+    if (!tn) return null;
+    const rect = body.getBoundingClientRect();
+    return { node: tn, offset: y < rect.top + rect.height / 2 ? 0 : tn.length };
+  };
+
+  // Same, but points above/below the box always mean start/end of the text,
+  // and sideways drags still resolve against the nearest line.
+  const pointFor = (x, y) => {
+    const rect = body.getBoundingClientRect();
+    const tn = textNode();
+    if (!tn) return null;
+    if (y < rect.top) return { node: tn, offset: 0 };
+    if (y > rect.bottom) return { node: tn, offset: tn.length };
+    const cx = Math.min(Math.max(x, rect.left + 1), rect.right - 1);
+    return caretAt(cx, y) || { node: tn, offset: 0 };
+  };
+
+  body.addEventListener('mousedown', (e) => {
+    // Let the browser handle double/triple click (word/paragraph selection).
+    if (e.button !== 0 || e.detail !== 1) return;
+    const at = caretAt(e.clientX, e.clientY);
+    if (!at) return;
+    anchor = at;
+    e.preventDefault();
+    window.getSelection().setBaseAndExtent(at.node, at.offset, at.node, at.offset);
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!anchor) return;
+    const focus = pointFor(e.clientX, e.clientY);
+    if (!focus) return;
+    window.getSelection().setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+    e.preventDefault();
+  }, true);
+
+  document.addEventListener('mouseup', () => { anchor = null; }, true);
+})();
 
 el('queueBtn').addEventListener('click', toggleQueueDrawer);
 el('queueCloseBtn').addEventListener('click', closeQueueDrawer);
