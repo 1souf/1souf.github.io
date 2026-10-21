@@ -4243,6 +4243,38 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Escape closes an open row menu, like it closes the other overlays.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAllRowMenus();
+});
+
+// A song row has no actions of its own in the browser's menu, so right-clicking
+// one opens that row's own ⋯ menu (YouTube / Discord / Download / Add to Queue
+// / Copy Link) at the pointer instead. Everywhere else - including inside an
+// already-open menu, where the browser's menu is actually useful (copy link
+// address, open in new tab) - the default menu is left alone.
+document.addEventListener('contextmenu', (e) => {
+  const row = e.target.closest('tr[data-idx]');
+  if (!row) {
+    closeAllRowMenus();
+    return;
+  }
+  if (e.target.closest('.link-menu')) return;
+  const menu = row.querySelector('.link-menu');
+  if (!menu) return;
+  const btn = row.querySelector('.link-menu-btn');
+  e.preventDefault();
+  closeAllRowMenus();
+  // Menus opened from the keyboard report (0,0): anchor those to the ⋯ button
+  // rather than to the top-left corner of the window.
+  if (e.clientX || e.clientY) positionLinkMenuAt(menu, e.clientX, e.clientY);
+  else if (btn) positionLinkMenu(btn, menu);
+  else positionLinkMenuAt(menu, 10, 10);
+  menu.classList.add('open');
+  const wrap = menu.closest('.link-menu-wrap');
+  if (wrap) wrap.classList.add('force-visible');
+});
+
 function positionInfoMenu(btn, menu){
   const margin = 10;
   const btnRect = btn.getBoundingClientRect();
@@ -4298,6 +4330,31 @@ function positionLinkMenu(btn, menu){
     top = btnRect.top - menuRect.height - gap;
   }
   top = Math.max(margin, top);
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+// The same links dropdown, but opened at a point (a right-click) instead of
+// hanging off its trigger button: it opens down-right of the pointer and
+// flips/shifts when that would take it off screen.
+function positionLinkMenuAt(menu, x, y){
+  const margin = 8;
+  const gap = 2;
+
+  menu.style.left = '-9999px';
+  menu.style.top = '-9999px';
+  menu.classList.add('open');
+  const menuRect = menu.getBoundingClientRect();
+  menu.classList.remove('open');
+
+  let left = x;
+  if (left + menuRect.width + margin > window.innerWidth) left = x - menuRect.width;
+  left = Math.max(margin, Math.min(left, window.innerWidth - menuRect.width - margin));
+
+  let top = y + gap;
+  if (top + menuRect.height + margin > window.innerHeight) top = y - menuRect.height - gap;
+  top = Math.max(margin, Math.min(top, window.innerHeight - menuRect.height - margin));
 
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
