@@ -299,6 +299,10 @@
     text-transform:uppercase; user-select:none;
   }
 
+  /* The 50ch cap below is only the fallback: once the case file is on
+     screen, alignDescRowToRuntime() measures the meta line underneath and
+     sets an exact width so the end of "Read More" lands on the same edge
+     as the end of the album's runtime value. */
   .album-desc-row{
     display:flex; align-items:baseline; gap:8px;
     margin-top:8px; min-width:0; max-width:50ch;
@@ -2244,6 +2248,81 @@ function selectAlbum(artistName, album){
   if (window.innerWidth <= 820) closeSidebar();
 }
 
+/* Lines the description's "Read More" up with the end of the runtime value.
+
+   The description row and the meta line below it start at the same left
+   edge, so setting the description row's width to reach the runtime's right
+   edge makes the two meet — the end of "Read More" sits directly above the
+   end of the RUNTIME value instead of stopping at some arbitrary point.
+
+   That width can't be hard-coded, because it depends on what the meta line
+   happens to hold (a release date, a longer artist name), on where the
+   runtime value falls in it, and on how wide the value itself is — which
+   changes while the page is open, since track lengths are probed off the
+   audio files one at a time ("0:00" grows into "1:02:33"). So it's
+   measured, then re-measured whenever the runtime resizes or the meta line
+   re-wraps. */
+let descAlignObserver = null;
+let descAlignObservedRuntime = null;
+let descAlignResizeBound = false;
+
+function alignDescRowToRuntime(){
+  const row = el('albumDescRow');
+  const meta = el('fileMeta');
+  const runtime = el('runtimeVal');
+
+  // Plenty of albums have no description, and then there's no row to line up.
+  if (!row || !meta || !runtime) {
+    if (descAlignObserver) descAlignObserver.disconnect();
+    descAlignObservedRuntime = null;
+    return;
+  }
+
+  if (!descAlignObserver) {
+    descAlignObserver = new ResizeObserver(() => alignDescRowToRuntime());
+  }
+  if (!descAlignResizeBound) {
+    descAlignResizeBound = true;
+    window.addEventListener('resize', alignDescRowToRuntime);
+  }
+  // Only re-observe when renderCaseFile() has swapped in a fresh album page
+  // (the elements are new). Observing again on every call would loop
+  // forever, since ResizeObserver always fires an initial callback.
+  //
+  // The observed element is the runtime's <span> wrapper, not the <b> itself:
+  // ResizeObserver skips non-replaced inline boxes, so a resize on the inline
+  // <b> would never be reported. The wrapper is a flex item (and therefore a
+  // real block box) that grows and shrinks with the value inside it.
+  const runtimeItem = runtime.parentElement || runtime;
+  if (descAlignObservedRuntime !== runtime) {
+    descAlignObserver.disconnect();
+    descAlignObserver.observe(runtimeItem);
+    descAlignObserver.observe(meta);
+    descAlignObservedRuntime = runtime;
+  }
+
+  // On narrow windows the meta line wraps and the runtime drops onto a later
+  // line, so there's no single edge left to line up with — leave the row at
+  // its normal capped width rather than squeezing the text away.
+  const firstMetaItem = meta.firstElementChild;
+  const onSameLine = firstMetaItem &&
+    Math.abs(firstMetaItem.getBoundingClientRect().top - runtime.getBoundingClientRect().top) < 1;
+
+  if (!onSameLine) {
+    row.style.width = '';
+    row.style.maxWidth = '';
+    return;
+  }
+
+  // Measure from the untouched layout, then pin the right edge to the
+  // runtime's. (maxWidth has to be lifted first — the 50ch fallback in the
+  // stylesheet would otherwise clamp the measured width.)
+  row.style.maxWidth = 'none';
+  row.style.width = '';
+  const width = runtime.getBoundingClientRect().right - row.getBoundingClientRect().left;
+  row.style.width = `${Math.max(0, width)}px`;
+}
+
 function renderCaseFile(artistName, album){
   const totalSeconds = album.songs.reduce((acc, s) => acc + toSeconds(s.length), 0);
   const coverUrl = (album.cover || "").trim();
@@ -2294,7 +2373,7 @@ function renderCaseFile(artistName, album){
        ${releaseDateHtml}`;
 
   const descHtml = hasDesc ? `
-    <div class="album-desc-row">
+    <div class="album-desc-row" id="albumDescRow">
       <span class="album-desc">${esc(album.description)}</span>
       <button type="button" class="album-desc-more" id="albumDescMore">Read More</button>
     </div>` : "";
@@ -2360,7 +2439,7 @@ function renderCaseFile(artistName, album){
         <div class="header-col">
           <div class="stamp-title">${esc(album.name)}</div>
           ${descHtml}
-          <div class="file-meta">
+          <div class="file-meta" id="fileMeta">
             ${fileMetaHtml}
           </div>
           ${actionsHtml}
@@ -2374,6 +2453,10 @@ function renderCaseFile(artistName, album){
     </div>`;
 
   displayedAlbumSongs = album.songs;
+
+  // Puts the description's "Read More" on the same right edge as the
+  // runtime below it — no-op for albums with no description.
+  alignDescRowToRuntime();
 
   const artistAvatarEl = el('content').querySelector('.cf-artist-avatar');
   if (artistAvatarEl) applyArtistAvatar(artistAvatarEl, artistName);
