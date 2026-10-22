@@ -408,6 +408,18 @@
   table.manifest tbody tr.playing{background:var(--bg-elevated);}
   table.manifest td{padding:12px 10px; vertical-align:top; font-size:.84rem;}
   .num-cell{width:30px; color:var(--text-dim);}
+  /* The # cell is also the row's play control: it shows the track number
+     normally and a ▶ while the row is hovered (or the equaliser while this
+     track is the loaded one), and a single click on it starts the track. */
+  .row-play{
+    background:none; border:0; padding:0; margin-left:-3px;
+    width:22px; height:22px; border-radius:3px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font:inherit; color:inherit; cursor:pointer;
+    transition:color .15s ease, background .15s ease;
+  }
+  .row-play:hover{background:var(--bg); color:var(--stamp-fixed);}
+  .row-play:focus-visible{outline:1px solid var(--stamp-fixed); outline-offset:1px;}
   .num-cell .n, .num-cell .p{display:inline-block; width:16px; text-align:left;}
   .num-cell .p{display:none;}
   tr:hover .num-cell .n{display:none;}
@@ -1171,6 +1183,11 @@ let currentAlbumCover = "";
 let currentArtistName = "";
 let currentSongIndex = -1;
 let currentRowEl = null;
+// Rows play on double-click, but a comp tag navigates (and re-renders the
+// album) on a single click - if the second click of a fast double-click lands
+// on the freshly rendered page, the row under the pointer would look like it
+// was double-clicked and start playing. The timestamp suppresses that one.
+let rowPlaySuppressUntil = 0;
 // Built by a song row's "Add to Queue" menu item (see queueSongNext()).
 // A real FIFO queue now (not a single slot) — each entry holds everything
 // playSongAt() needs (its own songs array, cover, artist, album), since a
@@ -2437,7 +2454,7 @@ function renderCaseFile(artistName, album){
       : (playable ? `<span class="t-loading">…</span>` : "");
     return `
       <tr data-idx="${idx}" class="${playable ? "" : "no-file"}" title="${playable ? "" : "No source file linked yet"}">
-        <td class="num-cell"><span class="n">${song.trackNum}</span><span class="p">▶</span></td>
+        <td class="num-cell"><button type="button" class="row-play" aria-label="Play"><span class="n">${song.trackNum}</span><span class="p">▶</span></button></td>
         <td class="title-cell"><div class="t-name">${esc(song.name)}${newTagHtml}</div>${featuresHtml}${compTagHtml}</td>
         <td class="notes-cell">${esc(song.notes)}</td>
         <td class="credit-cell">${esc(song.credits)}</td>
@@ -2539,13 +2556,16 @@ function renderCaseFile(artistName, album){
   // Clicking a comp tag jumps to the album the song was originally
   // cross-listed FROM — the origin album, not the one currently on
   // screen. Never starts playback: stopPropagation keeps the row's own
-  // click handler (which plays the track) from also firing. The origin
-  // album is looked up by the data attributes baked into the tag; if
-  // that album no longer exists (renamed/removed on the sheet since the
+  // double-click handler (which plays the track) from also firing. The
+  // origin album is looked up by the data attributes baked into the tag;
+  // if that album no longer exists (renamed/removed on the sheet since the
   // cross-list was written), a toast explains why nothing happened.
   tbody.querySelectorAll('.t-comp-tag').forEach(tagEl => {
     tagEl.addEventListener('click', (e) => {
       e.stopPropagation();
+      // This click re-renders the album, so a double-click that started here
+      // must not also start a track on whatever row ends up under the pointer.
+      rowPlaySuppressUntil = performance.now() + 500;
       const fromAlbum = tagEl.dataset.fromAlbum;
       const fromArtist = tagEl.dataset.fromArtist;
       const fromSection = tagEl.dataset.fromSection;
@@ -2588,30 +2608,49 @@ function renderCaseFile(artistName, album){
       if (runtimeEl) runtimeEl.textContent = formatSeconds(liveTotalSeconds);
     });
   });
+  // Starting a track: the ▶ button in the # column does it on a single click,
+  // and a double-click anywhere else on the row does the same. A plain single
+  // click is deliberately inert so the row's text stays ordinary selectable
+  // text rather than a giant button.
+  const startRow = (tr) => {
+    const idx = parseInt(tr.dataset.idx, 10);
+    const song = album.songs[idx];
+    // Already loaded track: let playSongAt() keep/resume it, but if it's the
+    // one currently running, start it over from the top instead of ignoring
+    // the request (double-clicking the playing song = restart).
+    const wasPlaying = !!song && !!song.playLink &&
+      currentAlbumSongs === album.songs && currentSongIndex === idx && !audioEl.paused;
+    playSongAt(idx, tr, album.songs, artistName, coverUrl, album);
+    if (wasPlaying) audioEl.currentTime = 0;
+  };
+
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.row-play');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    if (tr) startRow(tr);
+  });
+
   tbody.querySelectorAll('tr').forEach(tr => {
-    let downX = 0, downY = 0;
+    // A double-click would select the word under the pointer before the row
+    // sees its dblclick, leaving a highlighted word behind every time a track
+    // is started that way. Blocking the default action of the second press
+    // stops that; the first press still starts a normal drag-selection.
     tr.addEventListener('mousedown', (e) => {
-      downX = e.clientX;
-      downY = e.clientY;
+      if (e.detail > 1) e.preventDefault();
     });
-    tr.addEventListener('click', (e) => {
-      if (e.target.closest('a')) return;
-      // The links dropdown (trigger button + its menu) lives inside this
-      // row for positioning purposes, but clicking it should open the
-      // menu, not start playback - bail out before the play logic below.
-      if (e.target.closest('.link-menu-wrap')) return;
-      // If the user has selected (highlighted) text, or dragged the mouse
-      // more than a few pixels between mousedown and this click, treat it
-      // as a text-selection gesture rather than a play request.
-      const selection = window.getSelection();
-      if (selection && selection.toString().length > 0) return;
-      const dx = Math.abs(e.clientX - downX);
-      const dy = Math.abs(e.clientY - downY);
-      if (dx > 5 || dy > 5) return;
-      const idx = parseInt(tr.dataset.idx, 10);
-      playSongAt(idx, tr, album.songs, artistName, coverUrl, album);
+    tr.addEventListener('dblclick', (e) => {
+      // Clicks that just navigated via a comp tag re-render the page; don't
+      // treat the tail of such a double-click as a play request.
+      if (performance.now() < rowPlaySuppressUntil) return;
+      // The # play button starts playback on its own single click, the links
+      // dropdown is its own control, and a comp tag is a link to another album
+      // - none of those should also start a track.
+      if (e.target.closest('.link-menu-wrap, .row-play, .t-comp-tag, a')) return;
+      startRow(tr);
     });
   });
+
   const playAllBtn = el('playAllBtn');
   if (playAllBtn) {
     playAllBtn.addEventListener('click', (e) => {
@@ -2747,15 +2786,15 @@ function resetRowVisual(rowEl){
   rowEl.classList.remove('playing');
   const cell = rowEl.querySelector('.num-cell');
   const num = currentAlbumSongs[parseInt(rowEl.dataset.idx,10)].trackNum;
-  cell.innerHTML = `<span class="n">${num}</span><span class="p">▶</span>`;
+  cell.innerHTML = `<button type="button" class="row-play" aria-label="Play"><span class="n">${num}</span><span class="p">▶</span></button>`;
 }
 
 function setRowPlayingVisual(rowEl, playing){
   const cell = rowEl.querySelector('.num-cell');
   if (playing) {
-    cell.innerHTML = `<span class="eq"><span></span><span></span><span></span></span>`;
+    cell.innerHTML = `<button type="button" class="row-play" aria-label="Restart"><span class="eq"><span></span><span></span><span></span></span></button>`;
   } else {
-    cell.innerHTML = `<span class="p" style="display:inline-block;">▶</span>`;
+    cell.innerHTML = `<button type="button" class="row-play" aria-label="Play"><span class="p" style="display:inline-block;">▶</span></button>`;
   }
 }
 
