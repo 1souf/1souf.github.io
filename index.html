@@ -410,15 +410,20 @@
   .num-cell{width:30px; color:var(--text-dim);}
   /* The # cell is also the row's play control: it shows the track number
      normally and a ▶ while the row is hovered (or the equaliser while this
-     track is the loaded one), and a single click on it starts the track. */
+     track is the loaded one), and a single click on it starts the track.
+     The padding/negative-margin pair keeps a comfortable 22x22 hit area
+     while the box still takes up the 16x16 line box the plain track number
+     used to occupy - so the numbers stay put and the title column keeps
+     its old width (no shift). */
   .row-play{
-    background:none; border:0; padding:0; margin-left:-3px;
-    width:22px; height:22px; border-radius:3px;
-    display:inline-flex; align-items:center; justify-content:center;
+    background:none; border:0;
+    padding:3px; margin:-3px;
+    width:22px; height:22px;
+    display:inline-flex; align-items:center; justify-content:flex-start;
     font:inherit; color:inherit; cursor:pointer;
-    transition:color .15s ease, background .15s ease;
+    transition:color .15s ease;
   }
-  .row-play:hover{background:var(--bg); color:var(--stamp-fixed);}
+  .row-play:hover{color:var(--stamp-fixed);}
   .row-play:focus-visible{outline:1px solid var(--stamp-fixed); outline-offset:1px;}
   .num-cell .n, .num-cell .p{display:inline-block; width:16px; text-align:left;}
   .num-cell .p{display:none;}
@@ -464,11 +469,20 @@
   .no-file{color:var(--text-dim); opacity:.5;}
 
   .eq{display:inline-flex; align-items:flex-end; gap:2px; height:12px;}
+  /* It used to sit on the line as a bare inline element; inside the row's
+     flex play button it lands 1px lower, so nudge it back to the old spot. */
+  .num-cell .eq{position:relative; top:-1px;}
   .eq span{width:2px; background:var(--stamp-fixed); animation:eq .9s ease-in-out infinite; display:inline-block;}
   .eq span:nth-child(2){animation-delay:.2s;}
   .eq span:nth-child(3){animation-delay:.4s;}
   @keyframes eq{0%,100%{height:3px;} 50%{height:11px;}}
   @media (prefers-reduced-motion: reduce){ .eq span{animation:none; height:7px;} }
+  /* Hovering a playing row swaps its animated equaliser for a pause button -
+     the same # control, so one click there stops the track (see startRow()).
+     The equaliser comes back as soon as the pointer leaves the row. */
+  .num-cell .row-pause{display:none; width:10px; height:10px; fill:var(--stamp-fixed);}
+  tr:hover .num-cell .eq{display:none;}
+  tr:hover .num-cell .row-pause{display:block;}
 
   .empty-state{padding:60px 44px; color:var(--text-dim); font-size:.86rem; max-width:50ch;}
   .empty-state b{color:var(--text); display:block; font-family:var(--display); font-size:1.1rem; margin-bottom:10px; text-transform:uppercase;}
@@ -596,6 +610,12 @@
     content:""; position:absolute; left:50%; bottom:-3px; transform:translateX(-50%);
     width:3px; height:3px; border-radius:50%; background:var(--stamp);
   }
+  /* Shuffle and repeat are plain on/off switches, not part of the album
+     palette: while they're on they stay white no matter what theme colour
+     the currently playing album has applied to --stamp. */
+  #shuffleBtn.active, #repeatBtn.active,
+  #shuffleBtn.active:hover, #repeatBtn.active:hover{color:var(--stamp-fixed);}
+  #shuffleBtn.active::after, #repeatBtn.active::after{background:var(--stamp-fixed);}
   .ctrl-btn.skip{color:var(--text-dim); padding:6px;}
   .ctrl-btn.skip:hover{color:var(--text);}
   .ctrl-btn.skip svg{width:21px; height:21px;}
@@ -2612,14 +2632,22 @@ function renderCaseFile(artistName, album){
   // and a double-click anywhere else on the row does the same. A plain single
   // click is deliberately inert so the row's text stays ordinary selectable
   // text rather than a giant button.
-  const startRow = (tr) => {
+  const startRow = (tr, pauseIfPlaying) => {
     const idx = parseInt(tr.dataset.idx, 10);
     const song = album.songs[idx];
+    const isCurrent = !!song && !!song.playLink &&
+      currentAlbumSongs === album.songs && currentSongIndex === idx;
+    // The # control doubles as a pause button: while its own track is running,
+    // a single click there stops it (the equaliser only turns into that pause
+    // button on row hover, so this never fights the double-click restart).
+    if (pauseIfPlaying && isCurrent && !audioEl.paused) {
+      audioEl.pause();
+      return;
+    }
     // Already loaded track: let playSongAt() keep/resume it, but if it's the
     // one currently running, start it over from the top instead of ignoring
     // the request (double-clicking the playing song = restart).
-    const wasPlaying = !!song && !!song.playLink &&
-      currentAlbumSongs === album.songs && currentSongIndex === idx && !audioEl.paused;
+    const wasPlaying = isCurrent && !audioEl.paused;
     playSongAt(idx, tr, album.songs, artistName, coverUrl, album);
     if (wasPlaying) audioEl.currentTime = 0;
   };
@@ -2628,7 +2656,7 @@ function renderCaseFile(artistName, album){
     const btn = e.target.closest('.row-play');
     if (!btn) return;
     const tr = btn.closest('tr');
-    if (tr) startRow(tr);
+    if (tr) startRow(tr, true);
   });
 
   tbody.querySelectorAll('tr').forEach(tr => {
@@ -2647,7 +2675,8 @@ function renderCaseFile(artistName, album){
       // dropdown is its own control, and a comp tag is a link to another album
       // - none of those should also start a track.
       if (e.target.closest('.link-menu-wrap, .row-play, .t-comp-tag, a')) return;
-      startRow(tr);
+      // A row double-click always starts over - it never toggles pause.
+      startRow(tr, false);
     });
   });
 
@@ -2792,7 +2821,8 @@ function resetRowVisual(rowEl){
 function setRowPlayingVisual(rowEl, playing){
   const cell = rowEl.querySelector('.num-cell');
   if (playing) {
-    cell.innerHTML = `<button type="button" class="row-play" aria-label="Restart"><span class="eq"><span></span><span></span><span></span></span></button>`;
+    // Equaliser normally; the pause glyph takes over on row hover via CSS.
+    cell.innerHTML = `<button type="button" class="row-play" aria-label="Pause"><span class="eq"><span></span><span></span><span></span></span><svg class="row-pause" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.7"/><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.7"/></svg></button>`;
   } else {
     cell.innerHTML = `<button type="button" class="row-play" aria-label="Play"><span class="p" style="display:inline-block;">▶</span></button>`;
   }
