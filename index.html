@@ -1672,6 +1672,18 @@ function formatSeconds(total){
   const ss = String(s).padStart(2,'0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
+// The album's RUNTIME field is spelled out instead of clock-style:
+// "49 min 50 sec", and "1 hr 46 min" once it crosses the hour (past an
+// hour the seconds are noise, so they're left off). Track lengths and the
+// player bar keep the compact form from formatSeconds() - a seek bar
+// reading "1 min 46 sec" would be worse, not better.
+function formatRuntime(total){
+  total = Math.max(0, Math.round(total));
+  const h = Math.floor(total/3600), m = Math.floor((total%3600)/60), s = total%60;
+  if (h > 0) return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+  if (m > 0) return s > 0 ? `${m} min ${s} sec` : `${m} min`;
+  return `${s} sec`;
+}
 
 // Treats a song's file/release date as "new" if it parses to a real date
 // within the last `maxDays` days — powers the NEW badge in the tracklist.
@@ -2322,7 +2334,7 @@ function selectAlbum(artistName, album){
    happens to hold (a release date, a longer artist name), on where the
    runtime value falls in it, and on how wide the value itself is — which
    changes while the page is open, since track lengths are probed off the
-   audio files one at a time ("0:00" grows into "1:02:33"). So it's
+   audio files one at a time ("0 sec" grows into "1 hr 2 min"). So it's
    measured, then re-measured whenever the runtime resizes or the meta line
    re-wraps. */
 let descAlignObserver = null;
@@ -2435,10 +2447,10 @@ function renderCaseFile(artistName, album){
     ? `${artistMetaHtml}
        ${releaseDateHtml}
        <span>TRACKS: <b>${album.songs.length}</b></span>
-       <span>RUNTIME: <b id="runtimeVal">${formatSeconds(totalSeconds)}</b></span>`
+       <span>RUNTIME: <b id="runtimeVal">${formatRuntime(totalSeconds)}</b></span>`
     : `${artistMetaHtml}
        <span>TRACKS: <b>${album.songs.length}</b></span>
-       <span>RUNTIME: <b id="runtimeVal">${formatSeconds(totalSeconds)}</b></span>
+       <span>RUNTIME: <b id="runtimeVal">${formatRuntime(totalSeconds)}</b></span>
        ${releaseDateHtml}`;
 
   const descHtml = hasDesc ? `
@@ -2651,7 +2663,7 @@ function renderCaseFile(artistName, album){
       const row = tbody.querySelectorAll('tr')[idx];
       const cell = row && row.querySelector('.time-cell');
       if (cell) cell.textContent = song.length;
-      if (runtimeEl) runtimeEl.textContent = formatSeconds(liveTotalSeconds);
+      if (runtimeEl) runtimeEl.textContent = formatRuntime(liveTotalSeconds);
     });
   });
   // Starting a track: the ▶ button in the # column does it on a single click,
