@@ -2410,11 +2410,17 @@ function renderCaseFile(artistName, album){
           const mCoverHtml = mHasCover
             ? `<img src="${esc(mCoverUrl)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;more-album-cover-fallback&quot;>NO COVER</div>'">`
             : `<div class="more-album-cover-fallback">NO COVER</div>`;
+          // "34 tracks • Comps" / "8 tracks • Edits": the divider the album
+          // sits under on the sheet tells you a comp/edit apart from a regular
+          // album, so it rides along with the track count.
+          const mSection = (a.section || "").trim();
+          const mCount = `${a.songs.length} track${a.songs.length === 1 ? "" : "s"}`;
+          const mCountText = mSection ? `${mCount} • ${mSection}` : mCount;
           return `
             <div class="more-album-card" data-idx="${i}" title="${esc(a.name)}">
               <div class="more-album-cover">${mCoverHtml}</div>
               <div class="more-album-name">${esc(a.name)}</div>
-              <div class="more-album-count">${a.songs.length} track${a.songs.length === 1 ? "" : "s"}</div>
+              <div class="more-album-count">${esc(mCountText)}</div>
             </div>`;
         }).join("")}
       </div>
