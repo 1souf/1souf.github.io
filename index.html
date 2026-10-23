@@ -322,10 +322,23 @@
   }
   .album-desc-more:hover{color:var(--stamp-fixed);}
 
-  /* The album header's ⋯ action. It opens the same dropdown the song rows
-     use (the .link-menu below), so it only needs the action-pill shape the
-     neighbouring Download / Discord buttons have. */
-  .album-menu-btn{width:44px; padding:0; border-radius:22px; font-size:1.1rem; line-height:1;}
+  /* Action pills in the album header. Download is text + icon; the Discord
+     star and the ⋯ are icon-only, so they're fixed 44x44 squares turned into
+     true circles. The .actions .btn qualification is needed because the
+     generic .btn rule further down sets its own padding/border-radius and
+     would otherwise win on source order. */
+  .actions .btn.album-menu-btn,
+  .actions .btn.album-discord-btn{width:44px; padding:0; border-radius:50%;}
+  .actions .btn.album-menu-btn{font-size:1.1rem; line-height:1;}
+  .actions .btn svg{width:16px; height:16px; display:block; flex-shrink:0;}
+  /* The download glyph only fills 16 of its 24 viewBox units, so at 16px it
+     carries ~2.7px of empty space along its left edge (and the same on its
+     right, which adds to the label gap). Stacked on the pill's 22px padding,
+     that put the icon's ink 25.7px from the left edge while the label ended
+     23px from the right - the pair read as sitting off-centre. Trimming the
+     left padding by that dead margin lines the two edges up, and a slightly
+     tighter gap keeps the icon with the word instead of floating away. */
+  .actions .btn.album-download-btn{gap:6px; padding-left:19.33px;}
 
   /* Hidden until the row is hovered/focused (or its own menu is open, via
      the .force-visible class the JS below adds/removes) so the links
@@ -1266,6 +1279,10 @@ const ICONS = {
   discord: `<svg viewBox="0 0 32 32" fill="currentColor"><path d="M20.992 20.163c-1.511-0.099-2.699-1.349-2.699-2.877 0-0.051 0.001-0.102 0.004-0.153l-0 0.007c-0.003-0.048-0.005-0.104-0.005-0.161 0-1.525 1.19-2.771 2.692-2.862l0.008-0c1.509 0.082 2.701 1.325 2.701 2.847 0 0.062-0.002 0.123-0.006 0.184l0-0.008c0.003 0.050 0.005 0.109 0.005 0.168 0 1.523-1.191 2.768-2.693 2.854l-0.008 0zM11.026 20.163c-1.511-0.099-2.699-1.349-2.699-2.877 0-0.051 0.001-0.102 0.004-0.153l-0 0.007c-0.003-0.048-0.005-0.104-0.005-0.161 0-1.525 1.19-2.771 2.692-2.862l0.008-0c1.509 0.082 2.701 1.325 2.701 2.847 0 0.062-0.002 0.123-0.006 0.184l0-0.008c0.003 0.048 0.005 0.104 0.005 0.161 0 1.525-1.19 2.771-2.692 2.862l-0.008 0zM26.393 6.465c-1.763-0.832-3.811-1.49-5.955-1.871l-0.149-0.022c-0.005-0.001-0.011-0.002-0.017-0.002-0.035 0-0.065 0.019-0.081 0.047l-0 0c-0.234 0.411-0.488 0.924-0.717 1.45l-0.043 0.111c-1.030-0.165-2.218-0.259-3.428-0.259s-2.398 0.094-3.557 0.275l0.129-0.017c-0.27-0.63-0.528-1.142-0.813-1.638l0.041 0.077c-0.017-0.029-0.048-0.047-0.083-0.047-0.005 0-0.011 0-0.016 0.001l0.001-0c-2.293 0.403-4.342 1.060-6.256 1.957l0.151-0.064c-0.017 0.007-0.031 0.019-0.040 0.034l-0 0c-2.854 4.041-4.562 9.069-4.562 14.496 0 0.907 0.048 1.802 0.141 2.684l-0.009-0.11c0.003 0.029 0.018 0.053 0.039 0.070l0 0c2.14 1.601 4.628 2.891 7.313 3.738l0.176 0.048c0.008 0.003 0.018 0.004 0.028 0.004 0.032 0 0.060-0.015 0.077-0.038l0-0c0.535-0.72 1.044-1.536 1.485-2.392l0.047-0.1c0.006-0.012 0.010-0.027 0.010-0.043 0-0.041-0.026-0.075-0.062-0.089l-0.001-0c-0.912-0.352-1.683-0.727-2.417-1.157l0.077 0.042c-0.029-0.017-0.048-0.048-0.048-0.083 0-0.031 0.015-0.059 0.038-0.076l0-0c0.157-0.118 0.315-0.24 0.465-0.364 0.016-0.013 0.037-0.021 0.059-0.021 0.014 0 0.027 0.003 0.038 0.008l-0.001-0c2.208 1.061 4.8 1.681 7.536 1.681s5.329-0.62 7.643-1.727l-0.107 0.046c0.012-0.006 0.025-0.009 0.040-0.009 0.022 0 0.043 0.008 0.059 0.021l-0-0c0.15 0.124 0.307 0.248 0.466 0.365 0.023 0.018 0.038 0.046 0.038 0.077 0 0.035-0.019 0.065-0.046 0.082l-0 0c-0.661 0.395-1.432 0.769-2.235 1.078l-0.105 0.036c-0.036 0.014-0.062 0.049-0.062 0.089 0 0.016 0.004 0.031 0.011 0.044l-0-0.001c0.501 0.96 1.009 1.775 1.571 2.548l-0.040-0.057c0.017 0.024 0.046 0.040 0.077 0.040 0.010 0 0.020-0.002 0.029-0.004l-0.001 0c2.865-0.892 5.358-2.182 7.566-3.832l-0.065 0.047c0.022-0.016 0.036-0.041 0.039-0.069l0-0c0.087-0.784 0.136-1.694 0.136-2.615 0-5.415-1.712-10.43-4.623-14.534l0.052 0.078c-0.008-0.016-0.022-0.029-0.038-0.036l-0-0z"></path></svg>`,
   youtube: `<svg viewBox="0 -3 20 20"><g fill="none" fill-rule="evenodd"><g transform="translate(-300,-7442)" fill="currentColor"><g transform="translate(56,160)"><path d="M251.988432,7291.58588 L251.988432,7285.97425 C253.980638,7286.91168 255.523602,7287.8172 257.348463,7288.79353 C255.843351,7289.62824 253.980638,7290.56468 251.988432,7291.58588 M263.090998,7283.18289 C262.747343,7282.73013 262.161634,7282.37809 261.538073,7282.26141 C259.705243,7281.91336 248.270974,7281.91237 246.439141,7282.26141 C245.939097,7282.35515 245.493839,7282.58153 245.111335,7282.93357 C243.49964,7284.42947 244.004664,7292.45151 244.393145,7293.75096 C244.556505,7294.31342 244.767679,7294.71931 245.033639,7294.98558 C245.376298,7295.33761 245.845463,7295.57995 246.384355,7295.68865 C247.893451,7296.0008 255.668037,7296.17532 261.506198,7295.73552 C262.044094,7295.64178 262.520231,7295.39147 262.895762,7295.02447 C264.385932,7293.53455 264.28433,7285.06174 263.090998,7283.18289"></path></g></g></g></svg>`,
   download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+  // The album header's Download pill uses the plainer "arrow onto a shelf"
+  // glyph rather than the tray above, which stays on the song rows' menu.
+  downloadArrow: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><polyline points="7 11 12 16 17 11"></polyline><path d="M5 20h14"></path></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
   link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
   description: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>`,
   // Material "history" glyph, from the user's changelog.svg. Its own
@@ -2508,8 +2525,8 @@ function renderCaseFile(artistName, album){
 
   const actionsHtml = `
     <div class="actions">
-      ${album.discordLink ? `<a class="btn" href="${esc(album.discordLink)}" target="_blank" rel="noopener" title="Discord Thread">★</a>` : ""}
-      ${album.downloadLink ? `<a class="btn" href="${esc(toDownloadUrl(album.downloadLink))}" target="_blank" rel="noopener">Download</a>` : ""}
+      ${album.discordLink ? `<a class="btn album-discord-btn" href="${esc(album.discordLink)}" target="_blank" rel="noopener" title="Discord Thread" aria-label="Discord Thread">${ICONS.star}</a>` : ""}
+      ${album.downloadLink ? `<a class="btn album-download-btn" href="${esc(toDownloadUrl(album.downloadLink))}" target="_blank" rel="noopener">${ICONS.downloadArrow}Download</a>` : ""}
       ${infoMenuHtml}
     </div>`;
 
