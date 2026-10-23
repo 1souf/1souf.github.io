@@ -322,26 +322,10 @@
   }
   .album-desc-more:hover{color:var(--stamp-fixed);}
 
-  .info-menu-wrap{position:relative;}
-  .info-menu-btn{
-  background:var(--bg-elevated); border:1px solid var(--border-light); color:var(--text);
-  width:44px; height:44px; padding:0; box-sizing:border-box;
-  border-radius:22px; cursor:pointer; font-size:1.1rem; line-height:1;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  box-shadow:0 4px 16px rgba(0,0,0,.35);
-  transition:border-color .15s ease, transform .15s ease;
-  }
-  .info-menu-btn:hover{border-color:var(--stamp-fixed);}
-  .info-menu{
-    display:none; position:fixed; z-index:20;
-    width:340px; max-width:80vw; max-height:280px; overflow-y:auto;
-    background:var(--bg-elevated); border:1px solid var(--border-light);
-    padding:14px 18px; font-size:.8rem; line-height:1.65;
-    box-shadow:0 8px 22px rgba(0,0,0,.45);
-  }
-  .info-menu.open{display:block;}
-  .info-menu .update-block{color:var(--hazard); white-space:pre-line;}
-  .info-menu .desc-block + .update-block{margin-top:12px; padding-top:12px; border-top:1px dashed var(--border-light);}
+  /* The album header's ⋯ action. It opens the same dropdown the song rows
+     use (the .link-menu below), so it only needs the action-pill shape the
+     neighbouring Download / Discord buttons have. */
+  .album-menu-btn{width:44px; padding:0; border-radius:22px; font-size:1.1rem; line-height:1;}
 
   /* Hidden until the row is hovered/focused (or its own menu is open, via
      the .force-visible class the JS below adds/removes) so the links
@@ -355,6 +339,8 @@
   .link-menu-wrap.force-visible{
     opacity:1; pointer-events:auto;
   }
+  /* The album header's ⋯ has no row to be revealed by, so it's always on. */
+  .link-menu-wrap.always-visible{opacity:1; pointer-events:auto;}
   .link-menu-btn{
     background:none; border:1px solid transparent; color:var(--text-dim);
     width:26px; height:24px; border-radius:3px; cursor:pointer; font-size:1rem; line-height:1;
@@ -721,6 +707,9 @@
     font-size:.82rem; line-height:1.7; color:var(--text-dim);
     white-space:pre-line;
   }
+  /* Album changelog text, shown via the same modal as a description, keeps
+     the warning colour it had in the old inline updates popover. */
+  .desc-modal-body.is-updates{color:var(--hazard);}
 
   /* While the description is open, only the description itself may be
      selected. Without this the backdrop and the page behind it stayed
@@ -1278,6 +1267,18 @@ const ICONS = {
   youtube: `<svg viewBox="0 -3 20 20"><g fill="none" fill-rule="evenodd"><g transform="translate(-300,-7442)" fill="currentColor"><g transform="translate(56,160)"><path d="M251.988432,7291.58588 L251.988432,7285.97425 C253.980638,7286.91168 255.523602,7287.8172 257.348463,7288.79353 C255.843351,7289.62824 253.980638,7290.56468 251.988432,7291.58588 M263.090998,7283.18289 C262.747343,7282.73013 262.161634,7282.37809 261.538073,7282.26141 C259.705243,7281.91336 248.270974,7281.91237 246.439141,7282.26141 C245.939097,7282.35515 245.493839,7282.58153 245.111335,7282.93357 C243.49964,7284.42947 244.004664,7292.45151 244.393145,7293.75096 C244.556505,7294.31342 244.767679,7294.71931 245.033639,7294.98558 C245.376298,7295.33761 245.845463,7295.57995 246.384355,7295.68865 C247.893451,7296.0008 255.668037,7296.17532 261.506198,7295.73552 C262.044094,7295.64178 262.520231,7295.39147 262.895762,7295.02447 C264.385932,7293.53455 264.28433,7285.06174 263.090998,7283.18289"></path></g></g></g></svg>`,
   download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
   link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
+  description: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>`,
+  // Material "history" glyph, from the user's changelog.svg. Its own
+  // #8bc34a fill is dropped for currentColor so it picks up the menu's
+  // icon colour (and its hover tint) like every other icon here.
+  //
+  // It's then scaled 1.1x about its own centre: on the 24-unit grid the
+  // artwork's circle is only 18 units across, while the icon it replaced
+  // (and the rest of this set) carries about 20 units of ink, so at the
+  // menu's 15px size it read noticeably smaller. Scaled to ~20 units and
+  // nudged to stay centred, it still fits inside the viewBox, so nothing
+  // clips - the arrow tip lands at x≈0.45 and the circle at y≈2..21.8.
+  changelog: `<svg viewBox="0 0 24 24" fill="none"><g transform="translate(-0.65 -1.3) scale(1.1)"><path fill="currentColor" d="M13 3a9 9 0 0 0-9 9H1l4 4l4-4H6c0-3.87 3.13-7 7-7s7 3.13 7 7s-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.95 8.95 0 0 0 13 21a9 9 0 0 0 0-18m-1 5v5l4.25 2.52l.77-1.28l-3.52-2.09V8z"/></g></svg>`,
   shuffle: `<svg viewBox="-2.5 0 25 25"><path fill="currentColor" fill-rule="evenodd" d="M98.343,6929.77732 L96.929,6931.33865 L100.171,6934.69955 L99,6934.69955 C95.686,6934.69955 93,6932.05533 93,6928.79287 C93,6924.44359 89.418,6920.91731 85,6920.91731 L84,6920.91731 L84,6922.8862 L85,6922.8862 C88.314,6922.8862 91,6925.53042 91,6928.79287 C91,6933.14215 94.582,6936.66844 99,6936.66844 L100.171,6936.66844 L96.929,6939.69167 L98.343,6941 C102.955,6936.40854 101.764,6937.5948 104,6935.367 C102.185,6933.56743 103.327,6934.69659 98.343,6929.77732 M93.285,6923.11754 C93.684,6923.69738 94.015,6924.40815 94.282,6925.06675 C96.188,6922.6775 98.852,6922.8862 100.171,6922.8862 L96.929,6925.90943 L98.343,6927.21776 C103.325,6922.26304 102.181,6923.40205 104,6921.58476 C101.773,6919.3796 103.009,6920.59933 98.343,6916 L96.929,6917.55838 L100.171,6920.91731 C98.759,6920.91731 95.687,6920.70171 93.285,6923.11754 M84,6934.69955 L84,6936.66844 C85.139,6936.66844 87.949,6936.91652 90.719,6934.12463 C90.321,6933.54578 89.983,6933.00925 89.716,6932.35164 C87.649,6934.94172 85.019,6934.69955 84,6934.69955" transform="translate(-84,-6916)"></path></svg>`,
   repeat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`,
   prev: `<svg viewBox="0 0 24 24" fill="none"><path d="M8.09015 14.6474C6.30328 13.4935 6.30328 10.5065 8.09015 9.35258L18.8792 2.38548C20.6158 1.26402 22.75 2.72368 22.75 5.0329V18.9671C22.75 21.2763 20.6158 22.736 18.8792 21.6145L8.09015 14.6474Z" fill="currentColor"></path><path d="M2 5C2 4.58579 2.33579 4.25 2.75 4.25C3.16421 4.25 3.5 4.58579 3.5 5V19C3.5 19.4142 3.16421 19.75 2.75 19.75C2.33579 19.75 2 19.4142 2 19V5Z" fill="currentColor"></path></svg>`,
@@ -1933,8 +1934,10 @@ function buildSongLink(artistName, album, songName, songIdx){
   return `${location.origin}${location.pathname}#${parts.join('/')}`;
 }
 
-function copySongLink(artistName, album, song, songIdx){
-  const url = buildSongLink(artistName, album, song.name, songIdx);
+// One clipboard path for every "Copy Link" item, so a song link and an
+// album link behave (and read) exactly the same way: same toasts, same
+// fallback when the Clipboard API isn't available.
+function copyLinkToClipboard(url){
   if (!navigator.clipboard || !navigator.clipboard.writeText) {
     showToast("Couldn't copy the link — clipboard access isn't available.");
     return;
@@ -1943,6 +1946,23 @@ function copySongLink(artistName, album, song, songIdx){
     () => showToast("Link copied."),
     () => showToast("Couldn't copy the link.")
   );
+}
+
+function copySongLink(artistName, album, song, songIdx){
+  copyLinkToClipboard(buildSongLink(artistName, album, song.name, songIdx));
+}
+
+// Album-only counterpart to buildSongLink(): the same hash an album page
+// writes when it's opened (see updateUrlHash), without the optional song
+// part. Built standalone so copying never navigates away from where you are.
+function buildAlbumLink(artistName, album){
+  const parts = [encodeHashPart(artistName), encodeHashPart(album.name)];
+  if (album.section) parts.unshift(encodeHashPart(album.section));
+  return `${location.origin}${location.pathname}#${parts.join('/')}`;
+}
+
+function copyAlbumLink(artistName, album){
+  copyLinkToClipboard(buildAlbumLink(artistName, album));
 }
 
 // Keeps the address bar in step with the player: while the loaded track
@@ -2470,12 +2490,20 @@ function renderCaseFile(artistName, album){
       <button type="button" class="album-desc-more" id="albumDescMore">Read More</button>
     </div>` : "";
 
-  const infoMenuHtml = hasUpdate ? `
-    <div class="info-menu-wrap">
-      <button class="btn info-menu-btn" title="Updates">⋯</button>
-      <div class="info-menu">
-        <div class="update-block">${esc(album.updates)}</div>
-      </div>
+  // The album's ⋯ opens the same dropdown the song rows use (.link-menu),
+  // with the album-level actions in it instead of the update text the old
+  // inline popover showed. An album with neither a description nor an
+  // update note has nothing to put here, so it gets no ⋯ at all.
+  const albumMenuItems = [
+    hasDesc ? `<button type="button" class="link-menu-item album-menu-desc">${ICONS.description}<span>Read Description</span></button>` : "",
+    hasUpdate ? `<button type="button" class="link-menu-item album-menu-updates">${ICONS.changelog}<span>View Changelog</span></button>` : "",
+    `<button type="button" class="link-menu-item album-menu-copy">${ICONS.link}<span>Copy Album Link</span></button>`,
+  ].filter(Boolean).join("");
+
+  const infoMenuHtml = (hasDesc || hasUpdate) ? `
+    <div class="link-menu-wrap always-visible">
+      <button class="btn album-menu-btn" type="button" title="Album options" aria-label="Album options">⋯</button>
+      <div class="link-menu">${albumMenuItems}</div>
     </div>` : "";
 
   const actionsHtml = `
@@ -2659,9 +2687,21 @@ function renderCaseFile(artistName, album){
       queueSongNext(artistName, album, idx);
     });
   });
-    const descMoreBtn = el('albumDescMore');
+  const descMoreBtn = el('albumDescMore');
   if (descMoreBtn) {
-    descMoreBtn.addEventListener('click', () => openDescModal(album.name, album.description));
+    descMoreBtn.addEventListener('click', () => openDescModal(`Description — ${album.name}`, album.description));
+  }
+  // The album header's ⋯ menu: same dropdown shell as the song rows, but its
+  // items open the description / the album's update changelog, or copy the
+  // album's own link. Each item only exists when the album has that field.
+  const albumMenu = el('content').querySelector('.link-menu-wrap.always-visible');
+  if (albumMenu) {
+    const descItem = albumMenu.querySelector('.album-menu-desc');
+    if (descItem) descItem.addEventListener('click', () => openDescModal(`Description — ${album.name}`, album.description));
+    const updatesItem = albumMenu.querySelector('.album-menu-updates');
+    if (updatesItem) updatesItem.addEventListener('click', () => openDescModal(`Changelog — ${album.name}`, album.updates, 'updates'));
+    const copyItem = albumMenu.querySelector('.album-menu-copy');
+    if (copyItem) copyItem.addEventListener('click', () => copyAlbumLink(artistName, album));
   }
   const runtimeEl = el('runtimeVal');
   let liveTotalSeconds = totalSeconds;
@@ -3943,9 +3983,13 @@ function toggleQueueDrawer(){
 
 const descModal = el('descModal');
 const descModalBackdrop = el('descModalBackdrop');
-function openDescModal(title, text){
+// `tone` is optional: "updates" tints the body like the old inline album
+// updates popover, anything else leaves it as plain description text.
+function openDescModal(title, text, tone){
   el('descModalTitle').textContent = title;
-  el('descModalBody').textContent = text;
+  const bodyEl = el('descModalBody');
+  bodyEl.textContent = text;
+  bodyEl.classList.toggle('is-updates', tone === 'updates');
   descModal.classList.add('open');
   descModalBackdrop.classList.add('open');
   descModal.setAttribute('aria-hidden', 'false');
@@ -4325,21 +4369,22 @@ el('reloadBtn').addEventListener('click', reloadData);
 // .force-visible class for as long as its menu stays open, and every
 // close path below clears it again.
 function closeAllRowMenus(){
-  document.querySelectorAll('.info-menu.open, .link-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.link-menu.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.link-menu-wrap.force-visible').forEach(w => w.classList.remove('force-visible'));
 }
 
 document.addEventListener('click', (e) => {
-  const infoBtn = e.target.closest('.info-menu-btn');
-  const linkBtn = e.target.closest('.link-menu-btn');
-  if (infoBtn || linkBtn) {
-    const btn = infoBtn || linkBtn;
+  // Both the song rows' ⋯ and the album header's ⋯ open a .link-menu sibling.
+  const btn = e.target.closest('.link-menu-btn, .album-menu-btn');
+  if (btn) {
     const menu = btn.nextElementSibling;
     const wasOpen = menu && menu.classList.contains('open');
     closeAllRowMenus();
     if (menu && !wasOpen) {
-      if (infoBtn) positionInfoMenu(btn, menu);
-      else positionLinkMenu(btn, menu);
+      // The album header's ⋯ opens rightwards from its left edge; the song
+      // rows' ⋯ keeps hanging off its right edge, since that's the edge of
+      // the table.
+      positionLinkMenu(btn, menu, btn.classList.contains('album-menu-btn') ? 'left' : 'right');
       menu.classList.add('open');
       const wrap = btn.closest('.link-menu-wrap');
       if (wrap) wrap.classList.add('force-visible');
@@ -4352,7 +4397,7 @@ document.addEventListener('click', (e) => {
     closeAllRowMenus();
     return;
   }
-  if (!e.target.closest('.info-menu') && !e.target.closest('.link-menu')) {
+  if (!e.target.closest('.link-menu')) {
     closeAllRowMenus();
   }
 });
@@ -4389,43 +4434,18 @@ document.addEventListener('contextmenu', (e) => {
   if (wrap) wrap.classList.add('force-visible');
 });
 
-function positionInfoMenu(btn, menu){
-  const margin = 10;
-  const btnRect = btn.getBoundingClientRect();
-
-  // Pick whichever side of the button has more room, then size the menu
-  // to fill exactly that much space (capped for readability) instead of
-  // assuming a fixed width - that way it never has to overlap the
-  // button to fit.
-  const spaceRight = window.innerWidth - btnRect.right - margin * 2;
-  const spaceLeft = btnRect.left - margin * 2;
-  const useRight = spaceRight >= spaceLeft;
-  const width = Math.max(160, Math.min(520, useRight ? spaceRight : spaceLeft));
-  menu.style.width = `${width}px`;
-
-  // Measure the resulting height at that width (briefly shown off-screen).
-  menu.style.left = '-9999px';
-  menu.style.top = '-9999px';
-  menu.classList.add('open');
-  const menuRect = menu.getBoundingClientRect();
-  menu.classList.remove('open');
-
-  const left = useRight ? (btnRect.right + margin) : (btnRect.left - margin - menuRect.width);
-
-  // Vertically center on the button, then clamp to the viewport.
-  let top = btnRect.top + (btnRect.height / 2) - (menuRect.height / 2);
-  top = Math.max(margin, Math.min(top, window.innerHeight - menuRect.height - margin));
-
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
-}
-
 // Compact dropdown for a song row's links (Watch on YouTube / Discord
 // Message / Download). Unlike the description panel above, this menu
 // has a fixed width - it doesn't need to fill available space - so it
-// just opens below its trigger, right-aligned to it, and flips above
-// the button if there isn't enough room underneath.
-function positionLinkMenu(btn, menu){
+// just opens below its trigger and flips above the button if there isn't
+// enough room underneath.
+//
+// `align` picks which edge the menu hangs from: song rows' ⋯ sits at the far
+// right of the table, so it hangs off the button's right edge and grows
+// leftwards (the default). The album header's ⋯ passes "left": the menu
+// starts at the button's left edge and grows rightwards, and only flips to
+// the right-aligned position when that would push it off the window.
+function positionLinkMenu(btn, menu, align){
   const margin = 8;
   const gap = 6;
   const btnRect = btn.getBoundingClientRect();
@@ -4436,7 +4456,13 @@ function positionLinkMenu(btn, menu){
   const menuRect = menu.getBoundingClientRect();
   menu.classList.remove('open');
 
-  let left = btnRect.right - menuRect.width;
+  let left;
+  if (align === 'left') {
+    left = btnRect.left;
+    if (left + menuRect.width + margin > window.innerWidth) left = btnRect.right - menuRect.width;
+  } else {
+    left = btnRect.right - menuRect.width;
+  }
   left = Math.max(margin, Math.min(left, window.innerWidth - menuRect.width - margin));
 
   let top = btnRect.bottom + gap;
@@ -4659,7 +4685,7 @@ function __ensureThemeTransition(){
   const style = document.createElement('style');
   style.textContent = `
     html, body, .sidebar, .player, .search-bar, .search-results,
-    .case-file, .btn, .link-menu, .info-menu, .changelog-panel,
+    .case-file, .btn, .link-menu, .changelog-panel,
     .toast,
     table.manifest tbody tr, table.manifest thead th,
     .artist-list-item, .tree-album-item, .pane-albums-header {
