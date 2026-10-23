@@ -421,13 +421,13 @@
     width:22px; height:22px;
     display:inline-flex; align-items:center; justify-content:flex-start;
     font:inherit; color:inherit; cursor:pointer;
-    transition:color .15s ease, transform .09s ease-out;
+    transition:color .15s ease, transform .15s ease;
   }
   .row-play:hover{color:var(--stamp-fixed);}
-  /* Press feedback, same idea as the player bar's play button: a quick pop
-     while the button is held, back on release. transform only, so the track
-     number and the columns never move. */
-  .row-play:active{transform:scale(1.22);}
+  /* Press feedback, copied from the player bar's play button: a slight
+     shrink while the button is held, back on release. transform only, so
+     the track number and the columns never move. */
+  .row-play:active{transform:scale(0.94);}
   .row-play:focus-visible{outline:1px solid var(--stamp-fixed); outline-offset:1px;}
   .num-cell .n, .num-cell .p{display:inline-block; width:16px; text-align:left;}
   .num-cell .p{display:none;}
