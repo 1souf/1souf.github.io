@@ -15,6 +15,7 @@
     --bg:#111111;
     --bg-rgb:17,17,17;
     --bg-elevated:#1b1b1b;
+    --bg-elevated-rgb:27,27,27;   /* --bg-elevated as a triplet, for translucent surfaces */
     --sidebar:#0c0c0c;
     --sidebar-rgb:12,12,12;
     --paper:#f2f2f2;
@@ -847,7 +848,12 @@
     right:0;
     bottom:var(--queue-bottom, 0px);
     width:380px; max-width:88vw;
-    background:var(--bg-elevated);
+    /* Same treatment as the search bar and player bar: the surface fades
+       from fully opaque at the window edge to ~72% toward the content, and
+       whatever is behind it is blurred, so the drawer reads as glass rather
+       than a solid slab. */
+    background:linear-gradient(to left, rgba(var(--bg-elevated-rgb),1) 0%, rgba(var(--bg-elevated-rgb),.8) 65%, rgba(var(--bg-elevated-rgb),.72) 100%);
+    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border-left:1px solid var(--border-light);
     display:flex; flex-direction:column;
     transform:translateX(100%);
@@ -4574,7 +4580,7 @@ const THEME_TRANSITION_MS = 650;
 const THEME_VARS = [
   '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
   '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb',
-  '--active-line'
+  '--bg-elevated-rgb', '--active-line'
 ];
 
 function __hexToRgb(hex){
@@ -4666,6 +4672,7 @@ function __deriveThemeFromHex(hex){
   return {
     '--bg': bg,
     '--bg-elevated': bgElevated,
+    '--bg-elevated-rgb': __hexToRgbTriplet(bgElevated),
     '--sidebar': sidebar,
     '--border': border,
     '--border-light': borderLite,
