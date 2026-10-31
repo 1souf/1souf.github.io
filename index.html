@@ -289,7 +289,12 @@
     color:var(--stamp-fixed); font-family:var(--display); font-weight:700; font-size:1.9rem;
     letter-spacing:.03em; padding:5px 0; line-height:1.15;
   }
-  .file-meta{font-size:.74rem; color:var(--text-dim); margin-top:12px; display:flex; gap:18px; flex-wrap:wrap;}
+  /* The avatar in front of ARTIST: is 16px tall, and that's what sets this
+     line's height. Giving every label the same 16px line box keeps their
+     baselines together - at "normal" the plain labels would sit on the top
+     edge of that 16px line while ARTIST: is centred against the avatar, so
+     the two rows of text end up a pixel apart. */
+  .file-meta{font-size:.74rem; color:var(--text-dim); margin-top:12px; display:flex; gap:18px; flex-wrap:wrap; line-height:16px;}
   .file-meta b{color:var(--text); font-weight:500;}
   .file-meta-artist{display:inline-flex; align-items:center; gap:5px;}
   .fm-avatar{
@@ -2460,9 +2465,13 @@ function alignDescRowToRuntime(){
   // On narrow windows the meta line wraps and the runtime drops onto a later
   // line, so there's no single edge left to line up with — leave the row at
   // its normal capped width rather than squeezing the text away.
+  // Compare the runtime's flex-item wrapper, not the inline <b> inside it:
+  // the <b> sits a fraction of a line lower than the other items' boxes
+  // (half-leading inside the 16px line), which is enough to read as "wrapped"
+  // and silently drop the alignment.
   const firstMetaItem = meta.firstElementChild;
   const onSameLine = firstMetaItem &&
-    Math.abs(firstMetaItem.getBoundingClientRect().top - runtime.getBoundingClientRect().top) < 1;
+    Math.abs(firstMetaItem.getBoundingClientRect().top - runtimeItem.getBoundingClientRect().top) < 1;
 
   if (!onSameLine) {
     row.style.width = '';
