@@ -1488,6 +1488,17 @@ function parseOriginalEra(raw, ownArtistName){
   return { eraName: trimmed, eraArtist: ownArtistName };
 }
 
+// The artist a song is actually by. A cross-listed copy (one that joined an
+// album through "Original Era") keeps the artist it came from: the album it
+// now sits in only says where the track is filed, so that copy must neither
+// take that tab's name in place of the song's own ("Trippie Redd, Trippie
+// Redd, NoCap") nor have it prefixed on ("Trippie Redd, Playboi Carti,
+// Trippie Redd, NoCap"). Cross-listing within one artist is a no-op here,
+// since fromArtist and the tab name are then the same string anyway.
+function songArtistName(song, tabArtistName){
+  return (song && song.crossListed && song.fromArtist) ? song.fromArtist : tabArtistName;
+}
+
 // Accepts a hex color with or without a leading "#", in 3- or 6-digit
 // form, and returns a canonical "#rrggbb" string. Anything that doesn't
 // look like a hex color (blank cell, stray note, URL, etc.) comes back
@@ -2557,7 +2568,7 @@ function renderCaseFile(artistName, album){
     // "YouTube Video • …" link when the track has a video (the player bar only
     // keeps the download icon now). Tracks with no features don't have an
     // artist line at all, so there the link stands on its own.
-    const artistLine = song.features ? `${esc(artistName)}, ${esc(song.features)}` : "";
+    const artistLine = song.features ? `${esc(songArtistName(song, artistName))}, ${esc(song.features)}` : "";
     const ytMark = song.ytLink
       ? `<a class="t-yt" href="${esc(song.ytLink)}" target="_blank" rel="noopener" title="Watch on YouTube"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path fill="currentColor" d="M0 4.75C0 3.784.784 3 1.75 3h20.5c.966 0 1.75.784 1.75 1.75v14.5A1.75 1.75 0 0 1 22.25 21H1.75A1.75 1.75 0 0 1 0 19.25Zm1.75-.25a.25.25 0 0 0-.25.25v14.5c0 .138.112.25.25.25h20.5a.25.25 0 0 0 .25-.25V4.75a.25.25 0 0 0-.25-.25Z"/><path fill="currentColor" d="M9 15.584V8.416a.5.5 0 0 1 .77-.42l5.576 3.583a.5.5 0 0 1 0 .842L9.77 16.005a.5.5 0 0 1-.77-.42Z"/></svg>YouTube Video</a>`
       : "";
@@ -3029,9 +3040,13 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
 
   el('player').style.display = 'flex';
   el('playerTitle').textContent = song.name;
-  el('playerSubArtist').textContent = currentArtistName;
+  // The artist line names whoever the track is really by. A cross-listed
+  // copy keeps its own artist here too (see songArtistName); the album
+  // title, cover and share link still describe the tab it's filed under.
+  const shownArtist = songArtistName(song, currentArtistName);
+  el('playerSubArtist').textContent = shownArtist;
   el('playerSubFeatures').textContent = song.features ? ", " + song.features : "";
-  document.title = `${song.name} • ${currentArtistName}${song.features ? ", " + song.features : ""}`;
+  document.title = `${song.name} • ${shownArtist}${song.features ? ", " + song.features : ""}`;
   startMarquees();
   const playerCoverEl = el('playerCover');
   if (currentAlbumCover) { playerCoverEl.src = currentAlbumCover; }
@@ -3050,12 +3065,16 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
 // artist, it just re-opens it (which re-renders the album list fresh);
 // otherwise it slides in from the artist list.
 el('playerSubArtist').addEventListener('click', () => {
-  if (!currentArtistName) return;
-  if (!(DATA[currentArtistName] || []).some(a => !a.isDivider)) {
+  // Same artist the bar is naming: for a cross-listed track that's the
+  // artist it came from, so this opens THEIR pane (where the song really
+  // lives) rather than the tab it happens to be filed under.
+  const artist = songArtistName(currentAlbumSongs[currentSongIndex], currentArtistName);
+  if (!artist) return;
+  if (!(DATA[artist] || []).some(a => !a.isDivider)) {
     showToast("That artist isn't on the sheet anymore.");
     return;
   }
-  openArtistPane(currentArtistName);
+  openArtistPane(artist);
   // openArtistPane() slides the pane into view but doesn't itself highlight
   // the artist row — the row's .active class is set by renderArtistList()
   // and cleared by selectAlbum(). Re-apply it here so whichever artist was
@@ -3063,7 +3082,7 @@ el('playerSubArtist').addEventListener('click', () => {
   // is open. (Only the .active class is touched; selectedArtistName stays
   // whatever album is actually open, so nothing else desyncs.)
   document.querySelectorAll('.artist-list-item').forEach(n =>
-    n.classList.toggle('active', n.dataset.artist === currentArtistName));
+    n.classList.toggle('active', n.dataset.artist === artist));
   if (window.innerWidth <= 820) el('sidebar').classList.add('open');
 });
 
