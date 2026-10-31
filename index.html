@@ -491,7 +491,7 @@
   .eq span:nth-child(2){animation-delay:.2s;}
   .eq span:nth-child(3){animation-delay:.4s;}
   @keyframes eq{0%,100%{height:3px;} 50%{height:11px;}}
-  @media (prefers-reduced-motion: reduce){ .eq span{animation:none; height:7px;} .row-play:active{transform:none;} }
+  @media (prefers-reduced-motion: reduce){ .eq span{animation:none; height:7px;} .row-play:active{transform:none;} .ctrl-btn.skip:active::before{transform:none;} }
   /* Hovering a playing row swaps its animated equaliser for a pause button -
      the same # control, so one click there stops the track (see startRow()).
      The equaliser comes back as soon as the pointer leaves the row.
@@ -638,9 +638,25 @@
   #shuffleBtn.active, #repeatBtn.active,
   #shuffleBtn.active:hover, #repeatBtn.active:hover{color:var(--stamp-fixed);}
   #shuffleBtn.active::after, #repeatBtn.active::after{background:var(--stamp-fixed);}
-  .ctrl-btn.skip{color:var(--text-dim); padding:6px;}
+  .ctrl-btn.skip{color:var(--text-dim); padding:6px; -webkit-tap-highlight-color:transparent;}
   .ctrl-btn.skip:hover{color:var(--text);}
-  .ctrl-btn.skip svg{width:21px; height:21px;}
+  .ctrl-btn.skip svg{width:21px; height:21px; position:relative; z-index:1;}
+  /* Apple-Music-style press disc: a soft circle blooms behind the glyph while
+     a skip button is held, then fades away on release. It's a faint grey
+     rather than a true black one - the bar behind it is #0c0c0c, so a darker
+     disc would have nothing to read against. */
+  .ctrl-btn.skip::before{
+    content:""; position:absolute; left:50%; top:50%;
+    width:36px; height:36px; margin:-18px 0 0 -18px;
+    border-radius:50%; background:rgba(255,255,255,.12);
+    opacity:0; transform:scale(1);
+    pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .ctrl-btn.skip:active::before{
+    opacity:1; transform:scale(1.08);
+    transition-duration:.09s;
+  }
   #muteBtn.active::after{content:none;}
   #muteBtn.active{color:var(--text-dim);}
   #muteBtn.active:hover{color:var(--text);}
