@@ -773,6 +773,41 @@
   body.desc-modal-open{-webkit-user-select:none; user-select:none;}
   body.desc-modal-open .desc-modal-body{-webkit-user-select:text; user-select:text;}
 
+  /* ---------- album cover viewer ----------
+     Opened by the cover at the top of the case file (never the player's
+     thumbnail). While it is up the rest of the page is desaturated and
+     dimmed, so the enlarged cover stays the only bit of colour on screen.
+     The grayscale is a real filter on the page's own elements rather than a
+     backdrop-filter on the overlay: Firefox painted the latter without
+     actually desaturating anything behind it. */
+  .cover-viewer{
+    position:fixed; inset:0; z-index:200;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:20px; padding:28px;
+    background:rgba(0,0,0,.45);
+    opacity:0; pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  .cover-viewer.open{opacity:1; pointer-events:auto;}
+  body.cover-viewer-open > *:not(.cover-viewer){filter:grayscale(1) brightness(.7);}
+  .cover-viewer-img{
+    display:block; width:auto; height:auto;
+    max-width:min(78vw, 720px); max-height:calc(100vh - 150px);
+    background:var(--bg-elevated); border-radius:4px;
+    box-shadow:0 24px 60px rgba(0,0,0,.6);
+  }
+  .cover-viewer-close{
+    background:none; border:none; padding:4px 6px;
+    font-family:var(--mono); font-size:.78rem; letter-spacing:.04em;
+    color:var(--text-dim);
+    text-decoration:underline; text-underline-offset:3px;
+    cursor:pointer; transition:color .15s ease;
+  }
+  .cover-viewer-close:hover{color:var(--stamp-fixed);}
+  /* Only a real cover is worth enlarging, so the affordance rides on the
+     image itself - the "NO COVER ON FILE" fallback keeps a normal cursor. */
+  .cover-mount img{cursor:zoom-in;}
+
   /* ---------- changelog / "what's new" ---------- */
   .changelog-btn{
     position:fixed; top:16px; right:30px; z-index:55;
@@ -1208,6 +1243,11 @@
      nearest text in document order - after the modal that is the end of the
      description instead of back at its start. -->
 <div class="desc-modal-backdrop" id="descModalBackdrop"></div>
+
+<div class="cover-viewer" id="coverViewer" aria-hidden="true" role="dialog" aria-label="Album cover">
+  <img class="cover-viewer-img" id="coverViewerImg" alt="">
+  <button class="cover-viewer-close" id="coverViewerClose" type="button">Close</button>
+</div>
 
 <script>
 /* =====================================================================
@@ -2669,6 +2709,17 @@ function renderCaseFile(artistName, album){
   const artistAvatarEl = el('content').querySelector('.cf-artist-avatar');
   if (artistAvatarEl) applyArtistAvatar(artistAvatarEl, artistName);
 
+  // The header cover opens the enlarged viewer (the player's thumbnail is a
+  // different element and stays untouched). Only a real <img> opens it - the
+  // "NO COVER ON FILE" fallback has nothing bigger to show.
+  const headerCover = el('content').querySelector('.stamp-row .cover-mount');
+  if (headerCover) {
+    headerCover.addEventListener('click', () => {
+      const coverImg = headerCover.querySelector('img');
+      if (coverImg) openCoverViewer(coverImg.src, album.name);
+    });
+  }
+
   el('content').querySelectorAll('.more-album-card').forEach((cardEl, i) => {
     cardEl.addEventListener('click', () => selectAlbum(artistName, moreAlbums[i]));
   });
@@ -4093,6 +4144,32 @@ el('descModalCloseBtn').addEventListener('click', closeDescModal);
 descModalBackdrop.addEventListener('click', closeDescModal);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && descModal.classList.contains('open')) closeDescModal();
+});
+
+/* ---------------- album cover viewer ---------------- */
+const coverViewer = el('coverViewer');
+const coverViewerImg = el('coverViewerImg');
+function openCoverViewer(src, alt){
+  if (!src) return;
+  coverViewerImg.src = src;
+  coverViewerImg.alt = alt || '';
+  coverViewer.classList.add('open');
+  coverViewer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('cover-viewer-open');
+}
+function closeCoverViewer(){
+  coverViewer.classList.remove('open');
+  coverViewer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('cover-viewer-open');
+}
+// The cover itself is the only thing that keeps it open: the Close link
+// underneath and a click anywhere on the backdrop both shut it.
+coverViewer.addEventListener('click', (e) => {
+  if (e.target === coverViewerImg) return;
+  closeCoverViewer();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && coverViewer.classList.contains('open')) closeCoverViewer();
 });
 
 /* ---------------- drag-selection inside the description modal ----------------
