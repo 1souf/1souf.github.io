@@ -784,15 +784,20 @@
     position:fixed; inset:0; z-index:200;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:20px; padding:28px;
-    background:rgba(0,0,0,.45);
+    background:rgba(0,0,0,.45); cursor:default;
     opacity:0; pointer-events:none;
     transition:opacity .18s ease;
   }
   .cover-viewer.open{opacity:1; pointer-events:auto;}
   body.cover-viewer-open > *:not(.cover-viewer){filter:grayscale(1) brightness(.7);}
   .cover-viewer-img{
-    display:block; width:auto; height:auto;
-    max-width:min(78vw, 720px); max-height:calc(100vh - 150px);
+    /* One fixed footprint for every cover, whatever the file's own pixel
+       size: a 300px scan is blown up to the same box as a 1024px one, so the
+       viewer looks the same for every album (softer for the small ones, as
+       asked). object-fit keeps a non-square cover undistorted inside it. */
+    display:block; object-fit:contain;
+    width:min(78vw, 720px, calc(100vh - 150px));
+    height:min(78vw, 720px, calc(100vh - 150px));
     background:var(--bg-elevated); border-radius:4px;
     box-shadow:0 24px 60px rgba(0,0,0,.6);
   }
@@ -809,6 +814,14 @@
   .cover-mount{transition:transform .15s ease, box-shadow .15s ease;}
   .cover-mount:has(img):hover{transform:scale(1.05); box-shadow:0 8px 22px rgba(0,0,0,.5);}
   .cover-mount img{cursor:pointer;}
+  /* A click parks the pointer on the cover, which is then covered by the
+     overlay - and the browser keeps :hover on it until the mouse moves, so
+     the thumbnail stayed lifted behind the viewer. Drop the lift outright
+     while the viewer is up; the transform/box-shadow transitions still run,
+     so it eases back down instead of snapping. */
+  body.cover-viewer-open .cover-mount:has(img){
+    transform:none; box-shadow:0 6px 20px rgba(0,0,0,.45);
+  }
 
   /* ---------- changelog / "what's new" ---------- */
   .changelog-btn{
@@ -2714,11 +2727,27 @@ function renderCaseFile(artistName, album){
   // The header cover opens the enlarged viewer (the player's thumbnail is a
   // different element and stays untouched). Only a real <img> opens it - the
   // "NO COVER ON FILE" fallback has nothing bigger to show.
+  //
+  // pointerdown rather than click on purpose: the overlay is then already on
+  // screen when the button comes back up, so that release is hit-tested
+  // against the overlay. That drops the thumbnail's :hover lift and its
+  // pointer cursor immediately instead of leaving both stuck until the next
+  // mouse move (the click event still fires, but on <body>, so it does not
+  // reach the overlay's own click-to-close handler).
   const headerCover = el('content').querySelector('.stamp-row .cover-mount');
   if (headerCover) {
-    headerCover.addEventListener('click', () => {
+    const openFromCover = () => {
       const coverImg = headerCover.querySelector('img');
       if (coverImg) openCoverViewer(coverImg.src, album.name);
+    };
+    headerCover.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button === 0) openFromCover();
+    });
+    // Touch and pen have no cursor to un-stick, so they keep the ordinary
+    // click - a press that turns into a scroll must not open the viewer.
+    headerCover.addEventListener('click', (e) => {
+      if (e.pointerType === 'mouse') return;
+      openFromCover();
     });
   }
 
