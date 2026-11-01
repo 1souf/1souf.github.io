@@ -799,14 +799,16 @@
   .cover-viewer-close{
     background:none; border:none; padding:4px 6px;
     font-family:var(--mono); font-size:.78rem; letter-spacing:.04em;
-    color:var(--text-dim);
-    text-decoration:underline; text-underline-offset:3px;
-    cursor:pointer; transition:color .15s ease;
+    color:var(--stamp-fixed);
+    text-decoration:none; text-underline-offset:3px;
+    cursor:pointer;
   }
-  .cover-viewer-close:hover{color:var(--stamp-fixed);}
-  /* Only a real cover is worth enlarging, so the affordance rides on the
-     image itself - the "NO COVER ON FILE" fallback keeps a normal cursor. */
-  .cover-mount img{cursor:zoom-in;}
+  .cover-viewer-close:hover{text-decoration:underline;}
+  /* Same lift the "More from ..." cards get: the header cover is only
+     clickable when there is a real image inside it. */
+  .cover-mount{transition:transform .15s ease, box-shadow .15s ease;}
+  .cover-mount:has(img):hover{transform:scale(1.05); box-shadow:0 8px 22px rgba(0,0,0,.5);}
+  .cover-mount img{cursor:pointer;}
 
   /* ---------- changelog / "what's new" ---------- */
   .changelog-btn{
