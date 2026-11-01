@@ -3155,7 +3155,9 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   const shownArtist = songArtistName(song, currentArtistName);
   el('playerSubArtist').textContent = shownArtist;
   el('playerSubFeatures').textContent = song.features ? ", " + song.features : "";
-  document.title = `${song.name} • ${shownArtist}${song.features ? ", " + song.features : ""}`;
+  // Tab title: the site's own title first, then what is playing.
+  // "❤︎ — Song Title • Artist Name"
+  document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownArtist}${song.features ? ", " + song.features : ""}`;
   startMarquees();
   const playerCoverEl = el('playerCover');
   if (currentAlbumCover) { playerCoverEl.src = currentAlbumCover; }
