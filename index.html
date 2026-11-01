@@ -783,24 +783,41 @@
   .cover-viewer{
     position:fixed; inset:0; z-index:200;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:20px; padding:28px;
+    /* The gap is the room the tilt needs: at full angle the nearest corner
+       leans out past the cover's own box, and it must not end up sitting on
+       the Close label. */
+    gap:56px; padding:28px;
     background:rgba(0,0,0,.45); cursor:default;
     opacity:0; pointer-events:none;
     transition:opacity .18s ease;
   }
   .cover-viewer.open{opacity:1; pointer-events:auto;}
   body.cover-viewer-open > *:not(.cover-viewer){filter:grayscale(1) brightness(.7);}
-  .cover-viewer-img{
+  /* The stage exists so the perspective sits in the middle of the cover
+     rather than of the whole viewport: it is the parent of the transformed
+     image, so its centre is the vanishing point for the hover tilt. */
+  .cover-viewer-stage{
     /* One fixed footprint for every cover, whatever the file's own pixel
        size: a 300px scan is blown up to the same box as a 1024px one, so the
        viewer looks the same for every album (softer for the small ones, as
-       asked). object-fit keeps a non-square cover undistorted inside it. */
+       asked). */
+    width:min(78vw, 700px, calc(100vh - 200px));
+    height:min(78vw, 700px, calc(100vh - 200px));
+    perspective:1000px; perspective-origin:50% 50%;
+  }
+  .cover-viewer-img{
+    /* object-fit keeps a non-square cover undistorted inside the square. */
     display:block; object-fit:contain;
-    width:min(78vw, 720px, calc(100vh - 150px));
-    height:min(78vw, 720px, calc(100vh - 150px));
+    width:100%; height:100%;
     background:var(--bg-elevated); border-radius:4px;
     box-shadow:0 24px 60px rgba(0,0,0,.6);
+    transform-origin:50% 50%;
+    /* Only ever seen on the way back from a tilt: .tilting switches it off
+       while the pointer is moving so the cover tracks it without lag. */
+    transition:transform .4s cubic-bezier(.22,.61,.36,1);
   }
+  .cover-viewer-img.tilting{transition:none; will-change:transform;}
+  @media (prefers-reduced-motion: reduce){ .cover-viewer-img{transition:none;} }
   .cover-viewer-close{
     background:none; border:none; padding:4px 6px;
     font-family:var(--mono); font-size:.78rem; letter-spacing:.04em;
@@ -1260,7 +1277,9 @@
 <div class="desc-modal-backdrop" id="descModalBackdrop"></div>
 
 <div class="cover-viewer" id="coverViewer" aria-hidden="true" role="dialog" aria-label="Album cover">
-  <img class="cover-viewer-img" id="coverViewerImg" alt="">
+  <div class="cover-viewer-stage" id="coverViewerStage">
+    <img class="cover-viewer-img" id="coverViewerImg" alt="">
+  </div>
   <button class="cover-viewer-close" id="coverViewerClose" type="button">Close</button>
 </div>
 
@@ -4182,10 +4201,41 @@ document.addEventListener('keydown', (e) => {
 /* ---------------- album cover viewer ---------------- */
 const coverViewer = el('coverViewer');
 const coverViewerImg = el('coverViewerImg');
+const coverViewerStage = el('coverViewerStage');
+
+// Spotify-style tilt: the cover behaves like a card held in space, so the
+// corner under the pointer sinks away from the viewer and the opposite corner
+// lifts towards it. There is no "where on the cover am I" without a pointer
+// that can hover, so touch and pen leave it flat.
+const COVER_TILT_MAX = 5; // degrees at the very edge, 0 dead centre
+const coverTiltReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+function resetCoverTilt(){
+  coverViewerImg.classList.remove('tilting');
+  coverViewerImg.style.transform = '';
+}
+coverViewerStage.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse' || coverTiltReducedMotion.matches) { resetCoverTilt(); return; }
+  const rect = coverViewerStage.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  // -1 at the left/top edge, 0 in the middle, +1 at the right/bottom edge.
+  const clamp = (n) => Math.max(-1, Math.min(1, n));
+  const nx = clamp((e.clientX - rect.left) / rect.width * 2 - 1);
+  const ny = clamp((e.clientY - rect.top) / rect.height * 2 - 1);
+  coverViewerImg.classList.add('tilting');
+  // Both angles take the same sign so the two axes don't cancel out at the
+  // diagonal corners: a negative rotateX sends the bottom edge back and a
+  // negative rotateY the left edge, so the corner under the pointer recedes
+  // and the far corner pops forward - bottom-left in, top-right out.
+  coverViewerImg.style.transform =
+    `rotateX(${(-ny * COVER_TILT_MAX).toFixed(2)}deg) rotateY(${(nx * COVER_TILT_MAX).toFixed(2)}deg)`;
+});
+coverViewerStage.addEventListener('pointerleave', resetCoverTilt);
+
 function openCoverViewer(src, alt){
   if (!src) return;
   coverViewerImg.src = src;
   coverViewerImg.alt = alt || '';
+  resetCoverTilt();
   coverViewer.classList.add('open');
   coverViewer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('cover-viewer-open');
@@ -4194,6 +4244,7 @@ function closeCoverViewer(){
   coverViewer.classList.remove('open');
   coverViewer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('cover-viewer-open');
+  resetCoverTilt();
 }
 // The cover itself is the only thing that keeps it open: the Close link
 // underneath and a click anywhere on the backdrop both shut it.
