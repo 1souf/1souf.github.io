@@ -129,23 +129,40 @@
     display:flex; justify-content:space-between; align-items:baseline; gap:8px;
     padding:8px 18px 8px 30px; color:var(--text-dim); cursor:pointer;
     border-left:2px solid transparent;
+    position:relative;
   }
+  /* Small outline circle in the indent gutter to the left of each album name -
+     a thin edge only, no fill, so the row shows through it. Absolutely
+     positioned so the name/count columns never move. */
+  .tree-album-item .a-dot{
+    position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    width:6px; height:6px; border-radius:50%;
+    background:none;
+    border:1px solid currentColor;
+    opacity:.42;
+    transition:opacity .15s ease;
+  }
+  .tree-album-item:hover .a-dot{opacity:.68;}
+  .tree-album-item.active .a-dot{opacity:1;}
   .tree-album-item:hover{color:var(--text); background:var(--bg-elevated);}
   .tree-album-item.active{color:var(--text); border-left-color:var(--active-line); background:var(--bg-elevated);}
   .tree-album-item .a-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1;}
   .tree-album-item .a-count{font-size:.68rem; opacity:.55; flex-shrink:0;}
+  /* Section label at the left edge, with only the collapse arrow beside it -
+     no rules on either side. */
   .tree-divider{
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; gap:6px;
     padding:6px 16px; margin:2px 0;
     user-select:none; cursor:pointer;
   }
   .tree-divider:hover{background:var(--bg-elevated);}
-  .tree-divider .chevron{flex-shrink:0;}
+  /* The section label and its collapse arrow stay pure white on every state,
+     and are never recoloured by the album theme. */
+  .tree-divider .chevron{flex-shrink:0; color:var(--stamp-fixed);}
   .tree-divider.collapsed .chevron{transform:rotate(-90deg);}
-  .tree-divider .rule{flex:1; height:1px; background:var(--border-light); opacity:.6;}
   .tree-divider .label{
     font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
-    color:var(--text-dim); opacity:.7; white-space:nowrap; flex-shrink:0;
+    color:var(--stamp-fixed); white-space:nowrap; flex-shrink:0;
   }
   .sidebar-footer{padding:12px 18px; border-top:1px solid var(--border); font-size:.65rem; color:var(--text-dim); line-height:1.5;}
 
@@ -2349,7 +2366,7 @@ function openArtistPane(artistName){
     if (album.isDivider) {
       const div = document.createElement('div');
       div.className = 'tree-divider';
-      div.innerHTML = `<span class="chevron">▾</span><span class="rule"></span><span class="label">${esc(album.label)}</span><span class="rule"></span>`;
+      div.innerHTML = `<span class="label">${esc(album.label)}</span><span class="chevron">▾</span>`;
       const sub = document.createElement('div');
       sub.className = 'tree-albums';
       // Every section starts open now — collapsing "Edits" by default was
@@ -2369,7 +2386,7 @@ function openArtistPane(artistName){
     if (artistName === selectedArtistName && album.name === selectedAlbumName && (album.section || "") === selectedAlbumSection) item.classList.add('active');
     item.dataset.album = album.name;
     item.dataset.section = album.section || "";
-    item.innerHTML = `<span class="a-name">${esc(album.name)}</span><span class="a-count">${album.songs.length}</span>`;
+    item.innerHTML = `<span class="a-dot" aria-hidden="true"></span><span class="a-name">${esc(album.name)}</span><span class="a-count">${album.songs.length}</span>`;
     item.addEventListener('click', () => selectAlbum(artistName, album));
     sectionList.appendChild(item);
   });
