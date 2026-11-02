@@ -1578,6 +1578,15 @@ function fetchSheetData(sheetId, tabName){
    sheet at all - see probeDuration(), it's detected from the audio
    file itself.
 
+   A cross-listed song can be renamed just for that second listing by
+   appending the title it should have there in curly braces to its Name
+   cell: a comp song called "Rain On Me {Rain On Me (Edits)}" stays
+   "Rain On Me" in the comp and shows up as "Rain On Me (Edits)" in
+   whichever album its Original Era points at. The braces are the same
+   convention as the artist above, and they only apply to the copy -
+   see parseSongName(). A row with no Original Era keeps its braces as
+   part of the real title, since there is no copy for them to describe.
+
    "Feature(s)" only means something on a SONG row (the featured
    artists shown under the track name). On an ALBUM HEADER row that
    column does nothing else, so it doubles as a place to drop that
@@ -1600,6 +1609,22 @@ function parseOriginalEra(raw, ownArtistName){
   const m = trimmed.match(/^(.*?)\{\s*([^}]+?)\s*\}\s*$/);
   if (m) return { eraName: m[1].trim(), eraArtist: m[2].trim() };
   return { eraName: trimmed, eraArtist: ownArtistName };
+}
+
+// Splits a song's Name cell into the title it carries in the album it is
+// actually filed in, plus - only when that same row also cross-lists itself
+// somewhere through "Original Era" - the title the COPY gets in that other
+// album: "Real Title {Title Over There}". Same curly-brace convention as the
+// artist on the Original Era cell, so one song can read differently in the
+// comp it lives in and in the edits album it also appears under. Without an
+// Original Era value the braces are left alone: there is no copy for them to
+// describe, so they must be part of the real title.
+function parseSongName(raw, crossListed){
+  const name = String(raw || "").trim();
+  if (!crossListed) return { name, crossName: "" };
+  const m = name.match(/^(.*\S)\s*\{\s*([^}]+?)\s*\}\s*$/);
+  if (!m) return { name, crossName: "" };
+  return { name: m[1].trim(), crossName: m[2].trim() };
 }
 
 // The artist a song is actually by. A cross-listed copy (one that joined an
@@ -1696,8 +1721,10 @@ function buildAlbumsFromRows(rows, artistName){
       const parsedNum = parseInt(rawNum, 10);
       const originalEraRaw = String(row[idx.originalEra] || "").trim();
       const parsedEra = originalEraRaw ? parseOriginalEra(originalEraRaw, artistName) : null;
+      const parsedName = parseSongName(b, !!parsedEra);
       current.songs.push({
-        name: b,
+        name: parsedName.name,
+        crossListName: parsedName.crossName,
         notes: String(row[idx.notes] || ""),
         credits: String(row[idx.credits] || ""),
         releaseDate: String(row[idx.releaseDate] || "").trim(),
@@ -4527,7 +4554,12 @@ function crossListAndFinalize(){
           return;
         }
         if (target === album) return;
-        target.songs.push({ ...song, trackNum: null, crossListed: true, fromAlbum: album.name, fromArtist: artistName, fromSection: album.section });
+        // A row's Name cell can give its copy a different title ("Real Title
+        // {Title In The Target Album}") - see parseSongName(). Only the copy is
+        // renamed; the song keeps its own title where it actually lives.
+        const copy = { ...song, trackNum: null, crossListed: true, fromAlbum: album.name, fromArtist: artistName, fromSection: album.section };
+        if (song.crossListName) copy.name = song.crossListName;
+        target.songs.push(copy);
       });
     });
   }
