@@ -793,6 +793,23 @@
   }
   .cover-viewer.open{opacity:1; pointer-events:auto;}
   body.cover-viewer-open > *:not(.cover-viewer){filter:grayscale(1) brightness(.7);}
+  /* <body>'s own background is the one surface that rule cannot reach, and an
+     album theme tints it - so the gaps between rows kept a coloured wash while
+     everything painted on top of them went grey. Repaint the page background
+     as its own layer, filtered exactly like the rest, and black out the
+     unfiltered one behind it. */
+  body.cover-viewer-open{background:#000; transition:none;}
+  /* Closing hands the theme background back in a single frame; this keeps the
+     theme's colour transition out of the way so the page does not fade in
+     from black behind an already-restored page. */
+  body.cover-viewer-closing{transition:none;}
+  body.cover-viewer-open::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:var(--bg); filter:grayscale(1) brightness(.7);
+  }
+  /* The viewer is the one thing the rule above does not reach, so the bars
+     around a non-square cover must not carry the theme tint either. */
+  body.cover-viewer-open .cover-viewer-img{background:#000;}
   /* The stage exists so the perspective sits in the middle of the cover
      rather than of the whole viewport: it is the parent of the transformed
      image, so its centre is the vanishing point for the hover tilt. */
@@ -829,7 +846,7 @@
   /* Same lift the "More from ..." cards get: the header cover is only
      clickable when there is a real image inside it. */
   .cover-mount{transition:transform .15s ease, box-shadow .15s ease;}
-  .cover-mount:has(img):hover{transform:scale(1.05); box-shadow:0 8px 22px rgba(0,0,0,.5);}
+  .cover-mount:has(img):hover{transform:scale(1.0375); box-shadow:0 8px 22px rgba(0,0,0,.5);}
   .cover-mount img{cursor:pointer;}
   /* A click parks the pointer on the cover, which is then covered by the
      overlay - and the browser keeps :hover on it until the mouse moves, so
@@ -4244,6 +4261,13 @@ function closeCoverViewer(){
   coverViewer.classList.remove('open');
   coverViewer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('cover-viewer-open');
+  // The background colour jumps back with the class above; hold the theme's
+  // colour transition off until that jump has been painted (two frames: the
+  // first paints the restored colour, the second hands transitions back).
+  document.body.classList.add('cover-viewer-closing');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.body.classList.remove('cover-viewer-closing');
+  }));
   resetCoverTilt();
 }
 // The cover itself is the only thing that keeps it open: the Close link
