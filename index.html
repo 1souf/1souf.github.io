@@ -2767,7 +2767,12 @@ function renderCaseFile(artistName, album){
     const newTagHtml = isRecentDate(song.releaseDate) ? `<span class="t-new-tag" title="File date within the last week">New</span>` : "";
     const crossedArtists = song.crossListed && song.fromArtist && song.fromArtist !== artistName;
     const compTagLabel = crossedArtists ? `${song.fromAlbum} — ${song.fromArtist}` : song.fromAlbum;
-    const compTagHtml = (song.crossListed && song.fromAlbum)
+    // The chip's only job is to take a comp song back to the comp it was
+    // pulled from (the Original Era cell also files it under edits). A copy
+    // that came from an EDITS album - e.g. an edit cross-listed onto another
+    // artist's edits - is not a comp listing, so it gets no chip at all.
+    const fromComp = song.crossListed && (song.fromSection || "").trim().toLowerCase() === "comps";
+    const compTagHtml = (fromComp && song.fromAlbum)
       ? `<div class="t-comp-tag" data-from-album="${esc(song.fromAlbum)}" data-from-artist="${esc(song.fromArtist || artistName)}" data-from-section="${esc(song.fromSection || "")}" title="Also appears on &quot;${esc(song.fromAlbum)}&quot;${crossedArtists ? ` by ${esc(song.fromArtist)}` : ""}">${esc(compTagLabel)}</div>`
       : "";
     const linkMenuItems = [
