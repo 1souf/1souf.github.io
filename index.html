@@ -133,17 +133,23 @@
   }
   /* Small outline circle in the indent gutter to the left of each album name -
      a thin edge only, no fill, so the row shows through it. Absolutely
-     positioned so the name/count columns never move. */
+     positioned so the name/count columns never move. Its colour is pinned to
+     the dim text grey rather than currentColor: the row it sits on turns
+     white when selected (and on hover), and the dot must stay a quiet grey
+     through all of that instead of lighting up with the name. */
   .tree-album-item .a-dot{
     position:absolute; left:13px; top:50%; transform:translateY(-50%);
     width:6px; height:6px; border-radius:50%;
     background:none;
-    border:1px solid currentColor;
+    border:1px solid var(--text-dim);
     opacity:.42;
     transition:opacity .15s ease;
   }
   .tree-album-item:hover .a-dot{opacity:.68;}
-  .tree-album-item.active .a-dot{opacity:1;}
+  /* The selected album's dot sits at that same hover grey permanently - the
+     selection reads as "a little more present", never as a white ring, and
+     hovering the row on top of it changes nothing. */
+  .tree-album-item.active .a-dot{opacity:.68;}
   .tree-album-item:hover{color:var(--text); background:var(--bg-elevated);}
   .tree-album-item.active{color:var(--text); border-left-color:var(--active-line); background:var(--bg-elevated);}
   .tree-album-item .a-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1;}
