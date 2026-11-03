@@ -1578,9 +1578,15 @@ function fetchSheetData(sheetId, tabName){
    see parseOriginalEra() and crossListAndFinalize() near the bottom of
    the data-loading section, which runs once every artist tab has
    loaded (it has to run after everything is loaded, since it may need
-   to reach across tabs). Track length is no longer read from the
-   sheet at all - see probeDuration(), it's detected from the audio
-   file itself.
+   to reach across tabs). One target per LINE, so a song can also be
+   filed into several albums at once - and since two tabs can hold an
+   album of the same name, that is how you hit both:
+
+     WE DON'T DIAL 911{Playboi Carti}
+     WE DON'T DIAL 911{Trippie Redd}
+
+   Track length is no longer read from the sheet at all - see
+   probeDuration(), it's detected from the audio file itself.
 
    A cross-listed song can be renamed just for that second listing by
    appending the title it should have there in curly braces to its Name
@@ -1590,6 +1596,11 @@ function fetchSheetData(sheetId, tabName){
    convention as the artist above, and they only apply to the copy -
    see parseSongName(). A row with no Original Era keeps its braces as
    part of the real title, since there is no copy for them to describe.
+   With several targets the braces describe the copies that leave the
+   song's own artist tab; the copy landing on that own tab keeps the
+   plain title (why rename a song on the tab it actually belongs to).
+   Only when EVERY target is on the song's own tab do the braces have
+   no copy to leave for, so they describe that copy instead.
 
    "Feature(s)" only means something on a SONG row (the featured
    artists shown under the track name). On an ALBUM HEADER row that
@@ -1611,20 +1622,37 @@ function fetchSheetData(sheetId, tabName){
    Carti, NoCap" rather than "Playboi Carti, NoCap", exactly like a
    song filed there natively. Rows without braces keep the old
    behaviour, and the braces are literal text when the row does not
-   cross-list anywhere. See parseFeatures() and songArtistName(). */
+   cross-list anywhere. With several Original Era targets the braced
+   list only describes the copies on other artists' tabs - the copy
+   staying on the song's own tab keeps the plain list (and its own
+   tab's artist). See parseFeatures() and songArtistName(). */
 
-// Parses a song's raw "Original Era" cell into a target album name and
-// target artist. Plain text ("Whole Lotta Red [V3]") targets an album
-// on the song's OWN artist tab. Text ending in "{Artist Name}"
-// ("Pink Tape [V2]{Lil Uzi Vert}") targets that album on a DIFFERENT
-// artist's tab instead - the artist name must match a CONFIG.artists
-// "name" exactly (case-insensitive, whitespace-trimmed).
+// Parses a song's raw "Original Era" cell into the list of albums it should
+// also appear in - one target per LINE, so the same song can be filed into
+// several albums at once:
+//
+//   WE DON'T DIAL 911{Playboi Carti}
+//   WE DON'T DIAL 911{Trippie Redd}
+//
+// (Two different artists' tabs can hold an album of the same name, which is
+// exactly what the artist in braces disambiguates.) Plain text ("Whole Lotta
+// Red [V3]") targets an album on the song's OWN artist tab. Text ending in
+// "{Artist Name}" ("Pink Tape [V2]{Lil Uzi Vert}") targets that album on that
+// artist's tab instead - the name must match a CONFIG.artists "name" exactly
+// (case-insensitive, whitespace-trimmed). Blank lines and lines with no album
+// name are ignored, so a stray newline in the cell is harmless.
 function parseOriginalEra(raw, ownArtistName){
-  const trimmed = String(raw || "").trim();
-  if (!trimmed) return null;
-  const m = trimmed.match(/^(.*?)\{\s*([^}]+?)\s*\}\s*$/);
-  if (m) return { eraName: m[1].trim(), eraArtist: m[2].trim() };
-  return { eraName: trimmed, eraArtist: ownArtistName };
+  return String(raw || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const m = line.match(/^(.*?)\{\s*([^}]+?)\s*\}\s*$/);
+      return m
+        ? { eraName: m[1].trim(), eraArtist: m[2].trim() }
+        : { eraName: line, eraArtist: ownArtistName };
+    })
+    .filter(target => target.eraName);
 }
 
 // Splits a song's Name cell into the title it carries in the album it is
@@ -1759,9 +1787,9 @@ function buildAlbumsFromRows(rows, artistName){
       const rawNum = String(row[idx.trackNum] || "").trim();
       const parsedNum = parseInt(rawNum, 10);
       const originalEraRaw = String(row[idx.originalEra] || "").trim();
-      const parsedEra = originalEraRaw ? parseOriginalEra(originalEraRaw, artistName) : null;
-      const parsedName = parseSongName(b, !!parsedEra);
-      const parsedFeatures = parseFeatures(String(row[idx.features] || "").trim(), !!parsedEra);
+      const parsedEras = originalEraRaw ? parseOriginalEra(originalEraRaw, artistName) : [];
+      const parsedName = parseSongName(b, parsedEras.length > 0);
+      const parsedFeatures = parseFeatures(String(row[idx.features] || "").trim(), parsedEras.length > 0);
       current.songs.push({
         name: parsedName.name,
         crossListName: parsedName.crossName,
@@ -1771,8 +1799,7 @@ function buildAlbumsFromRows(rows, artistName){
         length: "",
         trackNum: (rawNum !== "" && !isNaN(parsedNum)) ? parsedNum : null,
         originalEra: originalEraRaw,
-        originalEraName: parsedEra ? parsedEra.eraName : "",
-        originalEraArtist: parsedEra ? parsedEra.eraArtist : "",
+        originalEraTargets: parsedEras,
         ownerArtist: artistName,
         features: parsedFeatures.features,
         crossListFeatures: parsedFeatures.crossFeatures,
@@ -4583,35 +4610,54 @@ function crossListAndFinalize(){
   }
 
   // Cross-list: a song with an "Original Era" value also gets added to
-  // its target album's list (alongside wherever it already lives),
-  // with no track number in that second listing. A cross-listed copy's
-  // Original Era always resolves back to the very album it now sits
-  // in, so the "target === album" check below stops it from being
-  // cross-listed a second time when this runs again.
+  // every album that cell names (one per line), alongside wherever it
+  // already lives, with no track number in those extra listings.
+  // Copies themselves are skipped outright - a copy's target list still
+  // points at every original target, so re-walking it would fan copies
+  // out sideways from other copies.
   for (const artistName in DATA) {
     (DATA[artistName] || []).forEach(album => {
       if (album.isDivider) return;
       album.songs.slice().forEach(song => {
-        if (!song.originalEra) return;
-        const key = `${(song.originalEraArtist || artistName).trim().toLowerCase()}||${song.originalEraName.toLowerCase()}`;
-        const target = byArtistAndName.get(key);
-        if (!target) {
-          console.warn(`"Original Era" on "${song.name}" (${artistName}) says "${song.originalEra}", but no album named "${song.originalEraName}" was found on ${song.originalEraArtist ? `"${song.originalEraArtist}"'s tab (check the artist name matches a CONFIG entry exactly)` : "the same tab"}.`);
-          return;
-        }
-        if (target === album) return;
-        // A row's Name cell can give its copy a different title ("Real Title
-        // {Title In The Target Album}") - see parseSongName(). Only the copy is
-        // renamed; the song keeps its own title where it actually lives.
-        const copy = { ...song, trackNum: null, crossListed: true, fromAlbum: album.name, fromArtist: artistName, fromSection: album.section };
-        if (song.crossListName) copy.name = song.crossListName;
-        // A braced Feature(s) list is written for the tab the copy lands on, so
-        // it also flips the copy to that tab's artist (see songArtistName()).
-        if (song.crossListFeatures) {
-          copy.features = song.crossListFeatures;
-          copy.useTabArtist = true;
-        }
-        target.songs.push(copy);
+        if (song.crossListed) return;
+        const targets = song.originalEraTargets || [];
+        if (!targets.length) return;
+        const ownTab = artistName.trim().toLowerCase();
+        const isOwnTab = target => (target.eraArtist || artistName).trim().toLowerCase() === ownTab;
+        // The Name/Feature(s) braces describe the copy that LEAVES this tab.
+        // When the row also cross-lists onto its own tab, that copy is already
+        // home, so it keeps the plain values and the braces go to the copies on
+        // the other tabs. Only a row that never leaves its own tab applies them
+        // there too (the comp -> edits rename).
+        const leavesTab = targets.some(target => !isOwnTab(target));
+        const seen = new Set();
+        targets.forEach(target => {
+          const key = `${(target.eraArtist || artistName).trim().toLowerCase()}||${target.eraName.toLowerCase()}`;
+          if (seen.has(key)) return; // same album named twice
+          seen.add(key);
+          const targetAlbum = byArtistAndName.get(key);
+          if (!targetAlbum) {
+            const where = isOwnTab(target)
+              ? "the same tab"
+              : `"${target.eraArtist}"'s tab (check the artist name matches a CONFIG entry exactly)`;
+            console.warn(`"Original Era" on "${song.name}" (${artistName}) says "${target.eraName}", but no album named "${target.eraName}" was found on ${where}.`);
+            return;
+          }
+          if (targetAlbum === album) return;
+          const useAlt = !isOwnTab(target) || !leavesTab;
+          const copy = { ...song, trackNum: null, crossListed: true, fromAlbum: album.name, fromArtist: artistName, fromSection: album.section };
+          // A row's Name cell can give its copy a different title ("Real Title
+          // {Title In The Target Album}") - see parseSongName(). Only the copy is
+          // renamed; the song keeps its own title where it actually lives.
+          if (song.crossListName && useAlt) copy.name = song.crossListName;
+          // A braced Feature(s) list is written for the tab the copy lands on, so
+          // it also flips the copy to that tab's artist (see songArtistName()).
+          if (song.crossListFeatures && useAlt) {
+            copy.features = song.crossListFeatures;
+            copy.useTabArtist = true;
+          }
+          targetAlbum.songs.push(copy);
+        });
       });
     });
   }
