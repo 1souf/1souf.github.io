@@ -596,7 +596,10 @@
     background:linear-gradient(to top, rgba(var(--sidebar-rgb),1) 0%, rgba(var(--sidebar-rgb),.8) 65%, rgba(var(--sidebar-rgb),.72) 100%);
     backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border-top:1px solid var(--border);
-    display:flex; align-items:center; padding:0 20px; gap:22px; z-index:20;
+    /* Above the queue backdrop/drawer (70/71) so the playback menu that
+       opens out of the bar isn't dimmed or covered by them. The drawer
+       stops at --queue-bottom, so the bar itself never overlaps it. */
+    display:flex; align-items:center; padding:0 20px; gap:22px; z-index:72;
     transition:left .2s ease;
     /* .player-left and .player-extra both read this, so the flexible
        center column between them always lands on the true center of
@@ -942,6 +945,30 @@
   /* ---------- queue button badge ---------- */
   #queueBtn{position:relative;}
   #queueBtn svg{width:17px; height:17px;}
+  /* Same footprint as the queue button beside it (see the player-bar markup). */
+  #filterBtn svg{width:17px; height:17px;}
+
+  /* ---------- playback menu (the sliders button) ---------- */
+  .fx-wrap{position:relative; display:inline-flex; align-items:center;}
+  .fx-menu{
+    display:none; position:absolute; right:-4px; bottom:calc(100% + 12px);
+    width:196px; padding:11px 12px 13px;
+    background:var(--bg-elevated); border:1px solid var(--border-light); border-radius:4px;
+    box-shadow:0 8px 22px rgba(0,0,0,.45); z-index:25;
+  }
+  .fx-menu.open{display:block;}
+  /* Keeps the button lit while its menu is open, the same way a hover does. */
+  #filterBtn.menu-open{color:var(--text);}
+  .fx-row + .fx-row{margin-top:13px;}
+  .fx-head{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-bottom:7px; font-size:.64rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .fx-val{color:var(--text); font-size:.7rem; letter-spacing:0; text-transform:none; font-variant-numeric:tabular-nums;}
+  /* The shared range styling expects to be a flex child; inside the panel it
+     is a block, so pin the width instead of letting it grow. */
+  .fx-row input[type=range]{width:100%; flex:none; display:block;}
   .queue-badge{
     display:none;
     position:absolute; top:-1px; right:-1px;
@@ -1253,6 +1280,23 @@
     </div>
   </div>
   <div class="player-extra">
+    <!-- Sits just left of the queue button and opens a small panel above
+         itself. The wrapper gives the panel something to anchor to. -->
+    <div class="fx-wrap">
+      <button class="ctrl-btn" id="filterBtn" title="Playback" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5C12 6.88071 10.8807 8 9.5 8C8.11929 8 7 6.88071 7 5.5M12 5.5C12 4.11929 10.8807 3 9.5 3C8.11929 3 7 4.11929 7 5.5M12 5.5H21M7 5.5H3M19 12C19 13.3807 17.8807 14.5 16.5 14.5C15.1193 14.5 14 13.3807 14 12M19 12C19 10.6193 17.8807 9.5 16.5 9.5C15.1193 9.5 14 10.6193 14 12M19 12H21M14 12H3M10 18.5C10 19.8807 8.88071 21 7.5 21C6.11929 21 5 19.8807 5 18.5M10 18.5C10 17.1193 8.88071 16 7.5 16C6.11929 16 5 17.1193 5 18.5M10 18.5H21M5 18.5H3"/></svg>
+      </button>
+      <div class="fx-menu" id="fxMenu" role="dialog" aria-label="Playback">
+        <div class="fx-row">
+          <div class="fx-head"><span>Speed</span><span class="fx-val" id="speedVal">1.00×</span></div>
+          <input type="range" id="speedSlider" min="0.5" max="1.5" step="0.05" value="1" aria-label="Playback speed">
+        </div>
+        <div class="fx-row">
+          <div class="fx-head"><span>Reverb</span><span class="fx-val" id="reverbVal">0%</span></div>
+          <input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0" aria-label="Reverb">
+        </div>
+      </div>
+    </div>
     <button class="ctrl-btn" id="queueBtn" title="Up Next">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5H3"></path><path d="M11 12H3"></path><path d="M11 19H3"></path><path d="M21 16V5"></path><circle cx="18" cy="16" r="3"></circle></svg>
       <span class="queue-badge" id="queueBadge"></span>
@@ -1405,6 +1449,12 @@ const DEFAULT_TITLE = document.title; // page title before any track has played,
 
 const el = (id) => document.getElementById(id);
 const audioEl = el('audioEl');
+// The tracks come from api.pillows.su, which answers with
+// Access-Control-Allow-Origin: *, so ask for them in CORS mode. A no-CORS
+// media response plays fine on its own, but the Web Audio graph behind the
+// reverb slider is handed silence for one, so this has to be set before the
+// element ever gets a src.
+audioEl.crossOrigin = 'anonymous';
 
 function esc(s){
   if (s === null || s === undefined) return "";
@@ -4512,6 +4562,162 @@ document.addEventListener('keydown', (e) => {
 
   document.addEventListener('mouseup', () => { anchor = null; }, true);
 })();
+
+/* ---------------- playback menu (player bar) ---------------- */
+// The sliders button opens a small panel above itself. The top slider is the
+// playback speed: the audio element's pitch correction is turned OFF, so the
+// track speeds up and pitches up (or slows and drops) like a record rather
+// than staying at the same pitch. The lower one is a reverb send.
+let playbackSpeed = 1;
+const filterBtn = el('filterBtn');
+const fxMenu = el('fxMenu');
+const speedSlider = el('speedSlider');
+const reverbSlider = el('reverbSlider');
+
+function applyPlaybackSpeed(){
+  // Loading a new src resets playbackRate to defaultPlaybackRate, so keep both
+  // in step and re-apply on every load (see the loadstart listener below).
+  audioEl.defaultPlaybackRate = playbackSpeed;
+  audioEl.playbackRate = playbackSpeed;
+  // No pitch correction = vinyl behaviour. The prefixed names cover older
+  // Firefox/Chrome; assigning an unsupported property is harmless.
+  audioEl.preservesPitch = false;
+  audioEl.mozPreservesPitch = false;
+  audioEl.webkitPreservesPitch = false;
+}
+
+function setFilterMenuOpen(open){
+  fxMenu.classList.toggle('open', open);
+  filterBtn.classList.toggle('menu-open', open);
+  filterBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+filterBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setFilterMenuOpen(!fxMenu.classList.contains('open'));
+});
+// Clicks inside the panel (including on the sliders) must not reach the
+// document listener below and close it again.
+fxMenu.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => setFilterMenuOpen(false));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') setFilterMenuOpen(false);
+});
+
+speedSlider.addEventListener('input', () => {
+  playbackSpeed = parseFloat(speedSlider.value) || 1;
+  applyPlaybackSpeed();
+  el('speedVal').textContent = playbackSpeed.toFixed(2) + '×';
+  updateRangeFill(speedSlider);
+  // Remembered per browser, the same way the volume slider is.
+  try { localStorage.setItem('archivePlaybackSpeed', playbackSpeed); } catch (err) { /* storage unavailable */ }
+});
+audioEl.addEventListener('loadstart', applyPlaybackSpeed);
+
+/* ---------------- reverb (the second slider) ---------------- */
+// A dry/wet pair around a convolver. The graph is only built once the slider
+// leaves zero, so at 0% playback stays on the plain <audio> path. The
+// element's own volume/mute are applied before the source node, so the
+// player's volume and mute controls keep working either way.
+let reverbAmount = 0;
+let reverbCtx = null;
+let reverbDry = null;
+let reverbWet = null;
+
+// Decaying noise as the impulse response: a short, bright room. The two
+// channels decay at slightly different rates, which spreads the tail across
+// the stereo field instead of leaving it dead centre.
+function makeReverbImpulse(ctx){
+  const rate = ctx.sampleRate;
+  const frames = Math.floor(rate * 2.2);
+  const buffer = ctx.createBuffer(2, frames, rate);
+  for (let ch = 0; ch < 2; ch++){
+    const data = buffer.getChannelData(ch);
+    const decay = ch ? 2.6 : 2.9;
+    for (let i = 0; i < frames; i++){
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, decay);
+    }
+  }
+  return buffer;
+}
+
+function ensureReverb(){
+  if (reverbCtx) return reverbCtx;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return null;
+  try {
+    reverbCtx = new Ctx();
+    const source = reverbCtx.createMediaElementSource(audioEl);
+    const convolver = reverbCtx.createConvolver();
+    convolver.buffer = makeReverbImpulse(reverbCtx);
+    reverbDry = reverbCtx.createGain();
+    reverbWet = reverbCtx.createGain();
+    // Start on the current mix rather than the nodes' default 1, so creating
+    // the graph never flashes a full-wet tail before the ramp takes over.
+    reverbDry.gain.value = 1 - reverbAmount * 0.5;
+    reverbWet.gain.value = reverbAmount;
+    source.connect(reverbDry).connect(reverbCtx.destination);
+    source.connect(convolver).connect(reverbWet).connect(reverbCtx.destination);
+    if (reverbCtx.state === 'suspended') reverbCtx.resume().catch(() => {});
+    return reverbCtx;
+  } catch (err) {
+    reverbCtx = null;
+    return null;
+  }
+}
+
+function applyReverbMix(){
+  if (!reverbCtx) return;
+  const now = reverbCtx.currentTime;
+  reverbWet.gain.setTargetAtTime(reverbAmount, now, 0.02);
+  // Half the dry signal stays even at full wet, so the slider adds space
+  // instead of drowning the track.
+  reverbDry.gain.setTargetAtTime(1 - reverbAmount * 0.5, now, 0.02);
+}
+
+reverbSlider.addEventListener('input', () => {
+  reverbAmount = parseFloat(reverbSlider.value) || 0;
+  el('reverbVal').textContent = Math.round(reverbAmount * 100) + '%';
+  updateRangeFill(reverbSlider);
+  if (reverbAmount > 0) ensureReverb();
+  applyReverbMix();
+  try { localStorage.setItem('archiveReverb', reverbAmount); } catch (err) { /* storage unavailable */ }
+});
+
+// A graph built while the context is suspended (restored setting, first play)
+// only passes audio once it is resumed, and only a gesture can do that - so
+// resume whenever a track starts.
+audioEl.addEventListener('play', () => {
+  if (reverbAmount > 0) ensureReverb();
+  if (reverbCtx && reverbCtx.state === 'suspended') reverbCtx.resume().catch(() => {});
+});
+
+// Same idea as the volume slider above: both settings are restored on load.
+// Saved values are snapped onto the sliders' current grids so the knobs can't
+// land between stops.
+const savedSpeed = parseFloat(localStorage.getItem('archivePlaybackSpeed'));
+if (Number.isFinite(savedSpeed)) {
+  const min = parseFloat(speedSlider.min);
+  const max = parseFloat(speedSlider.max);
+  const step = parseFloat(speedSlider.step) || 1;
+  // Rounding to 2dp also clears the float dust a raw step multiply leaves.
+  const snapped = Math.round((min + Math.round((savedSpeed - min) / step) * step) * 100) / 100;
+  playbackSpeed = Math.min(max, Math.max(min, snapped));
+}
+speedSlider.value = playbackSpeed;
+applyPlaybackSpeed();
+el('speedVal').textContent = playbackSpeed.toFixed(2) + '×';
+updateRangeFill(speedSlider);
+
+const savedReverb = parseFloat(localStorage.getItem('archiveReverb'));
+if (Number.isFinite(savedReverb)) {
+  const step = parseFloat(reverbSlider.step) || 0.05;
+  const snapped = Math.round(Math.min(1, Math.max(0, savedReverb)) / step) * step;
+  reverbAmount = Math.round(snapped * 100) / 100;
+}
+reverbSlider.value = reverbAmount;
+el('reverbVal').textContent = Math.round(reverbAmount * 100) + '%';
+updateRangeFill(reverbSlider);
 
 el('queueBtn').addEventListener('click', toggleQueueDrawer);
 el('queueCloseBtn').addEventListener('click', closeQueueDrawer);
