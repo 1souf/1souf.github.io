@@ -4719,6 +4719,13 @@ reverbSlider.value = reverbAmount;
 el('reverbVal').textContent = Math.round(reverbAmount * 100) + '%';
 updateRangeFill(reverbSlider);
 
+// The same grey "where you're hovering" preview the seek and volume bars use,
+// with the matching drag tracker so it doesn't trail the pointer mid-drag.
+speedSlider.__dragState = makeDragTracker(speedSlider);
+reverbSlider.__dragState = makeDragTracker(reverbSlider);
+attachGhostFill(speedSlider);
+attachGhostFill(reverbSlider);
+
 el('queueBtn').addEventListener('click', toggleQueueDrawer);
 el('queueCloseBtn').addEventListener('click', closeQueueDrawer);
 queueBackdrop.addEventListener('click', closeQueueDrawer);
