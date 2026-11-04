@@ -1572,35 +1572,44 @@ function fetchSheetData(sheetId, tabName){
    album: type that album's exact name in and the song will also show
    up there (in addition to staying where it is), with no track number
    in that second listing. By default the target album is looked up on
-   the SAME artist tab the song itself is on. To cross-list into an
-   album on a DIFFERENT artist's tab, append that artist's exact
-   CONFIG name in curly braces, e.g. "Pink Tape [V2]{Lil Uzi Vert}" -
-   see parseOriginalEra() and crossListAndFinalize() near the bottom of
-   the data-loading section, which runs once every artist tab has
-   loaded (it has to run after everything is loaded, since it may need
-   to reach across tabs). One target per LINE, so a song can also be
-   filed into several albums at once - and since two tabs can hold an
-   album of the same name, that is how you hit both:
+   the SAME artist tab the song itself is on - that is still the
+   standard rule for an entry with no braces. To send it to an album on
+   another artist's tab, name that tab in curly braces after the album
+   (optionally wrapped in an outer pair of braces, the same shape the
+   Name/Feature(s) overrides use). One target per LINE, so a song can
+   be filed into several albums at once - and since two tabs can hold
+   an album of the same name, that is how you hit both:
 
-     WE DON'T DIAL 911{Playboi Carti}
-     WE DON'T DIAL 911{Trippie Redd}
+     {WE DON'T DIAL 911{Playboi Carti}}
+     {WE DON'T DIAL 911{Trippie Redd}}
 
+   ("WE DON'T DIAL 911{Playboi Carti}" on its own works the same.) The
+   artist must match a CONFIG.artists "name" exactly
+   (case-insensitive). See parseOriginalEra() and
+   crossListAndFinalize() near the bottom of the data-loading section,
+   which runs once every artist tab has loaded (it has to run after
+   everything is loaded, since it may need to reach across tabs).
    Track length is no longer read from the sheet at all - see
    probeDuration(), it's detected from the audio file itself.
 
-   A cross-listed song can be renamed just for that second listing by
-   appending the title it should have there in curly braces to its Name
-   cell: a comp song called "Rain On Me {Rain On Me (Edits)}" stays
-   "Rain On Me" in the comp and shows up as "Rain On Me (Edits)" in
-   whichever album its Original Era points at. The braces are the same
-   convention as the artist above, and they only apply to the copy -
-   see parseSongName(). A row with no Original Era keeps its braces as
-   part of the real title, since there is no copy for them to describe.
-   With several targets the braces describe the copies that leave the
-   song's own artist tab; the copy landing on that own tab keeps the
-   plain title (why rename a song on the tab it actually belongs to).
-   Only when EVERY target is on the song's own tab do the braces have
-   no copy to leave for, so they describe that copy instead.
+   A cross-listed song can be renamed just for the copy by appending
+   the title it should have there in curly braces to its Name cell: a
+   comp song called "Rain On Me {Rain On Me (Edits)}" stays "Rain On
+   Me" in the comp and shows up as "Rain On Me (Edits)" in whichever
+   album its Original Era points at. That plain form describes every
+   copy that leaves the song's own tab; the copy landing on that own
+   tab keeps the plain title (only a row that never leaves its tab
+   gives the braces to that copy instead). To pin a title to ONE
+   artist's tab, put that tab's exact CONFIG name in a second pair of
+   braces inside the first - all in the one cell:
+
+     Alien Autopsy (feat. Trippie Redd & NoCap){Alien Autopsy (feat. NoCap){Playboi Carti}}{Alien Autopsy (feat. NoCap){Trippie Redd}}
+
+   Each override names the tab its copy lands on, so a song can read
+   differently on as many tabs as you like, and any tab the braces do
+   not name falls back to the plain title. A row with no Original Era
+   keeps its braces as part of the real title, since there is no copy
+   for them to describe. See parseCellValue().
 
    "Feature(s)" only means something on a SONG row (the featured
    artists shown under the track name). On an ALBUM HEADER row that
@@ -1614,37 +1623,56 @@ function fetchSheetData(sheetId, tabName){
 
    On a song row that same cell takes the very same brace trick as the
    Name cell: "Trippie Redd, NoCap{NoCap}" keeps the full list on the
-   row where the song lives and gives the cross-listed copy just
-   "NoCap". Because that braced list is written for the artist line of
-   the album the copy lands in, a copy carrying one also fronts itself
-   with THAT tab's artist instead of the artist it came from - so on
+   row where the song lives and gives every copy that leaves the tab
+   just "NoCap", while "Trippie Redd, NoCap{Playboi Carti, NoCap{Trippie
+   Redd}}{Trippie Redd, NoCap{Playboi Carti}}" hands each tab its own
+   list. Because a braced list is written for the artist line of the
+   album the copy lands in, a copy carrying one also fronts itself with
+   THAT tab's artist instead of the artist it came from - so on
    "Trippie Redd, Playboi Carti" it reads "Trippie Redd, Playboi
    Carti, NoCap" rather than "Playboi Carti, NoCap", exactly like a
    song filed there natively. Rows without braces keep the old
-   behaviour, and the braces are literal text when the row does not
-   cross-list anywhere. With several Original Era targets the braced
-   list only describes the copies on other artists' tabs - the copy
-   staying on the song's own tab keeps the plain list (and its own
-   tab's artist). See parseFeatures() and songArtistName(). */
+   behaviour, the plain form only describes copies that leave the
+   song's own tab, and the braces are literal text when the row does
+   not cross-list anywhere. See parseCellValue() and
+   songArtistName(). */
+
+// If the whole string is one {...} group ("{Album{Artist}}"), returns what is
+// inside it; anything else comes back unchanged. Lets the Original Era cell be
+// written either way: "Album{Artist}" (the original form) or
+// "{Album{Artist}}" (the same shape the Name/Feature(s) overrides use).
+function unwrapBraces(raw){
+  const text = String(raw || "").trim();
+  if (text[0] !== "{") return text;
+  let depth = 0;
+  for (let i = 0; i < text.length; i++){
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}"){
+      depth--;
+      if (depth === 0) return i === text.length - 1 ? text.slice(1, -1).trim() : text;
+    }
+  }
+  return text;
+}
 
 // Parses a song's raw "Original Era" cell into the list of albums it should
 // also appear in - one target per LINE, so the same song can be filed into
 // several albums at once:
 //
-//   WE DON'T DIAL 911{Playboi Carti}
-//   WE DON'T DIAL 911{Trippie Redd}
+//   {WE DON'T DIAL 911{Playboi Carti}}
+//   {WE DON'T DIAL 911{Trippie Redd}}
 //
 // (Two different artists' tabs can hold an album of the same name, which is
-// exactly what the artist in braces disambiguates.) Plain text ("Whole Lotta
-// Red [V3]") targets an album on the song's OWN artist tab. Text ending in
-// "{Artist Name}" ("Pink Tape [V2]{Lil Uzi Vert}") targets that album on that
-// artist's tab instead - the name must match a CONFIG.artists "name" exactly
-// (case-insensitive, whitespace-trimmed). Blank lines and lines with no album
-// name are ignored, so a stray newline in the cell is harmless.
+// exactly what the artist in braces disambiguates. The outer braces are
+// optional - "WE DON'T DIAL 911{Playboi Carti}" on its own line still works.)
+// Plain text ("Whole Lotta Red [V3]") targets an album on the song's OWN
+// artist tab, the standard rule. The artist name must match a CONFIG.artists
+// "name" exactly (case-insensitive, whitespace-trimmed). Blank lines and lines
+// with no album name are ignored, so a stray newline in the cell is harmless.
 function parseOriginalEra(raw, ownArtistName){
   return String(raw || "")
     .split(/\r?\n/)
-    .map(line => line.trim())
+    .map(line => unwrapBraces(line))
     .filter(Boolean)
     .map(line => {
       const m = line.match(/^(.*?)\{\s*([^}]+?)\s*\}\s*$/);
@@ -1655,36 +1683,49 @@ function parseOriginalEra(raw, ownArtistName){
     .filter(target => target.eraName);
 }
 
-// Splits a song's Name cell into the title it carries in the album it is
-// actually filed in, plus - only when that same row also cross-lists itself
-// somewhere through "Original Era" - the title the COPY gets in that other
-// album: "Real Title {Title Over There}". Same curly-brace convention as the
-// artist on the Original Era cell, so one song can read differently in the
-// comp it lives in and in the edits album it also appears under. Without an
-// Original Era value the braces are left alone: there is no copy for them to
-// describe, so they must be part of the real title.
-function parseSongName(raw, crossListed){
-  const name = String(raw || "").trim();
-  if (!crossListed) return { name, crossName: "" };
-  const m = name.match(/^(.*\S)\s*\{\s*([^}]+?)\s*\}\s*$/);
-  if (!m) return { name, crossName: "" };
-  return { name: m[1].trim(), crossName: m[2].trim() };
-}
-
-// Same trailing-brace split for a song's Feature(s) cell, and the same rule
-// about when it applies: only a row that cross-lists itself somewhere can use
-// it. "Trippie Redd, NoCap{NoCap}" keeps the full feature list on the row where
-// the song actually lives and gives the cross-listed copy just "NoCap" - a list
-// written for the artist line of the album the copy lands in. Unlike a title,
-// the part outside the braces may be empty ("{NoCap}") for a song that only has
-// features in its other listing. See songArtistName() for the other half of
-// this: a copy carrying one of these reads like a native row on its new tab.
-function parseFeatures(raw, crossListed){
-  const features = String(raw || "").trim();
-  if (!crossListed) return { features, crossFeatures: "" };
-  const m = features.match(/^(.*?)\{\s*([^}]+?)\s*\}\s*$/);
-  if (!m) return { features, crossFeatures: "" };
-  return { features: m[1].trim(), crossFeatures: m[2].trim() };
+// Splits a song's Name or Feature(s) cell into the value the row itself shows
+// plus the per-copy overrides appended to it in curly braces. An override is
+// either
+//
+//   {Title Over There}          - the older form: describes every copy that
+//                                 leaves this tab
+//   {Title Over There{Artist}}  - names the artist tab that copy lands in, so
+//                                 the same song can read differently on any
+//                                 number of tabs
+//
+// and they can be appended back to back (all in the one cell):
+//
+//   Alien Autopsy (feat. Trippie Redd & NoCap)
+//     {Alien Autopsy (feat. NoCap){Playboi Carti}}
+//     {Alien Autopsy (feat. NoCap){Trippie Redd}}
+//
+// Everything outside the braces (the "base") is what the row itself shows, and
+// a copy falls back to it when no override names its tab. Braces that never
+// close stay part of the value. A title with nothing outside the braces is left
+// alone - there is no real title to fall back on - while a feature list may
+// have an empty base ("{NoCap}" = no features here, "NoCap" in the copy).
+function parseCellValue(raw, requireBase){
+  const text = String(raw || "").trim();
+  const overrides = [];
+  let base = text;
+  // Peel groups off the END of the cell only, so a stray pair of braces in the
+  // middle of a real title is never mistaken for an override.
+  while (base.endsWith("}")){
+    let depth = 0, start = -1;
+    for (let i = base.length - 1; i >= 0; i--){
+      if (base[i] === "}") depth++;
+      else if (base[i] === "{"){ depth--; if (depth === 0){ start = i; break; } }
+    }
+    if (start < 0) break; // unbalanced - leave the rest alone
+    const inner = base.slice(start + 1, -1);
+    const nested = inner.match(/^(.*?)\{\s*([^{}]+?)\s*\}\s*$/);
+    if (nested) overrides.push({ value: nested[1].trim(), artist: nested[2].trim() });
+    else overrides.push({ value: inner.trim(), artist: null });
+    base = base.slice(0, start).trimEnd();
+  }
+  overrides.reverse(); // back into the order they were written
+  if (requireBase && !base) return { value: text, overrides: [] };
+  return { value: base, overrides };
 }
 
 // The artist a song is actually by. A cross-listed copy (one that joined an
@@ -1696,13 +1737,26 @@ function parseFeatures(raw, crossListed){
 // since fromArtist and the tab name are then the same string anyway.
 //
 // The one exception is a copy whose Feature(s) cell carried a braced list
-// meant for its target tab (see parseFeatures()): that list was written to sit
+// meant for its target tab (see parseCellValue()): that list was written to sit
 // after the tab's own artist, so the copy uses the tab artist after all and
 // ends up reading like a native row there ("Trippie Redd, Playboi Carti,
 // NoCap") instead of "Playboi Carti, NoCap".
 function songArtistName(song, tabArtistName){
   if (song && song.crossListed && song.useTabArtist) return tabArtistName;
   return (song && song.crossListed && song.fromArtist) ? song.fromArtist : tabArtistName;
+}
+
+// Chooses what one copy gets for a cell: an override naming the artist tab the
+// copy lands on wins, then - only when this copy is "the" cross-listed one (see
+// crossListAndFinalize) - the plain "{Value}" form from before. null means
+// "keep the row's own value".
+function pickOverride(overrides, tabArtistName, allowPlain){
+  if (!overrides || !overrides.length) return null;
+  const tab = String(tabArtistName || "").trim().toLowerCase();
+  const forTab = overrides.find(o => o.artist && o.artist.trim().toLowerCase() === tab);
+  if (forTab) return forTab.value;
+  const plain = overrides.find(o => !o.artist);
+  return (plain && allowPlain) ? plain.value : null;
 }
 
 // Accepts a hex color with or without a leading "#", in 3- or 6-digit
@@ -1788,11 +1842,16 @@ function buildAlbumsFromRows(rows, artistName){
       const parsedNum = parseInt(rawNum, 10);
       const originalEraRaw = String(row[idx.originalEra] || "").trim();
       const parsedEras = originalEraRaw ? parseOriginalEra(originalEraRaw, artistName) : [];
-      const parsedName = parseSongName(b, parsedEras.length > 0);
-      const parsedFeatures = parseFeatures(String(row[idx.features] || "").trim(), parsedEras.length > 0);
+      // The brace overrides only mean anything on a row that cross-lists (there
+      // is no copy otherwise), so a plain row keeps its braces as literal text.
+      const crossLists = parsedEras.length > 0;
+      const parsedName = crossLists ? parseCellValue(b, true) : { value: b, overrides: [] };
+      const parsedFeatures = crossLists
+        ? parseCellValue(String(row[idx.features] || ""), false)
+        : { value: String(row[idx.features] || "").trim(), overrides: [] };
       current.songs.push({
-        name: parsedName.name,
-        crossListName: parsedName.crossName,
+        name: parsedName.value,
+        nameOverrides: parsedName.overrides,
         notes: String(row[idx.notes] || ""),
         credits: String(row[idx.credits] || ""),
         releaseDate: String(row[idx.releaseDate] || "").trim(),
@@ -1801,8 +1860,8 @@ function buildAlbumsFromRows(rows, artistName){
         originalEra: originalEraRaw,
         originalEraTargets: parsedEras,
         ownerArtist: artistName,
-        features: parsedFeatures.features,
-        crossListFeatures: parsedFeatures.crossFeatures,
+        features: parsedFeatures.value,
+        featuresOverrides: parsedFeatures.overrides,
         discordLink: String(row[idx.discord] || "").trim(),
         playLink: String(row[idx.link] || "").trim(),
         ytLink: String(row[idx.cover] || "").trim()
@@ -4644,16 +4703,21 @@ function crossListAndFinalize(){
             return;
           }
           if (targetAlbum === album) return;
-          const useAlt = !isOwnTab(target) || !leavesTab;
+          // The plain "{Title}" / "{Features}" form only speaks for the copy
+          // that leaves the tab - an override that names this copy's tab always
+          // wins instead.
+          const usePlainForm = !isOwnTab(target) || !leavesTab;
           const copy = { ...song, trackNum: null, crossListed: true, fromAlbum: album.name, fromArtist: artistName, fromSection: album.section };
-          // A row's Name cell can give its copy a different title ("Real Title
-          // {Title In The Target Album}") - see parseSongName(). Only the copy is
-          // renamed; the song keeps its own title where it actually lives.
-          if (song.crossListName && useAlt) copy.name = song.crossListName;
+          // A row's Name/Feature(s) cells can give a copy its own title and
+          // feature list, per target tab - see parseCellValue(). Only the copy is
+          // changed; the song keeps its own values where it actually lives.
+          const copyName = pickOverride(song.nameOverrides, target.eraArtist || artistName, usePlainForm);
+          if (copyName !== null) copy.name = copyName;
           // A braced Feature(s) list is written for the tab the copy lands on, so
           // it also flips the copy to that tab's artist (see songArtistName()).
-          if (song.crossListFeatures && useAlt) {
-            copy.features = song.crossListFeatures;
+          const copyFeatures = pickOverride(song.featuresOverrides, target.eraArtist || artistName, usePlainForm);
+          if (copyFeatures !== null) {
+            copy.features = copyFeatures;
             copy.useTabArtist = true;
           }
           targetAlbum.songs.push(copy);
