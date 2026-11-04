@@ -5104,6 +5104,34 @@ document.addEventListener('contextmenu', (e) => {
   if (wrap) wrap.classList.add('force-visible');
 });
 
+/* Downloads. api.pillows.su serves the file itself with
+   Content-Disposition: attachment, so sending the browser at it in a new tab
+   just leaves a blank tab on screen until it closes itself. Loading it in the
+   current tab instead starts the same download - a navigation that turns into
+   a download never commits, so the page stays exactly where it is and no tab
+   is created. Links to anywhere else (a Mega/MediaFire album page, say) are
+   real pages and keep their normal new-tab behaviour. */
+function isPillowsDownload(href){
+  try {
+    return new URL(href, location.href).origin === 'https://api.pillows.su';
+  } catch (err) {
+    return false;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a[href][target="_blank"]');
+  if (!link || e.defaultPrevented) return;
+  // Middle-click, cmd/ctrl-click and friends keep their usual meaning (new
+  // tab / new window), as does right-click → open in new tab.
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const href = link.getAttribute('href');
+  if (!href || !isPillowsDownload(href)) return;
+  e.preventDefault();
+  location.assign(href);
+  showToast("Download started.");
+});
+
 // Compact dropdown for a song row's links (Watch on YouTube / Discord
 // Message / Download). Unlike the description panel above, this menu
 // has a fixed width - it doesn't need to fill available space - so it
