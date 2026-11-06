@@ -1810,6 +1810,18 @@ function songArtistName(song, tabArtistName){
   return (song && song.crossListed && song.fromArtist) ? song.fromArtist : tabArtistName;
 }
 
+// The second artist named in an album header's Feature(s) cell (see
+// parseArtistCell()), looked up by names rather than by object - the same
+// reason currentAlbumName/currentAlbumSection are stored as names: a
+// background refresh rebuilds DATA with new album objects. Used for the
+// player bar when the caller didn't hand over the album itself (prev/next).
+function albumCoArtistFor(artistName, albumName, albumSection){
+  const albums = DATA[artistName] || [];
+  const hit = albums.find(a => !a.isDivider && a.name === albumName && (a.section || "") === (albumSection || ""))
+    || albums.find(a => !a.isDivider && a.name === albumName);
+  return String((hit && hit.coArtist) || "").trim();
+}
+
 // Chooses what one copy gets for a cell: an override naming the artist tab the
 // copy lands on wins, then - only when this copy is "the" cross-listed one (see
 // crossListAndFinalize) - the plain "{Value}" form from before. null means
@@ -3454,11 +3466,21 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   // copy keeps its own artist here too (see songArtistName); the album
   // title, cover and share link still describe the tab it's filed under.
   const shownArtist = songArtistName(song, currentArtistName);
-  el('playerSubArtist').textContent = shownArtist;
+  // A second artist named in the album header's Feature(s) cell (see
+  // parseArtistCell()) is credited here too, and in the tab title. Skipped
+  // only when the feature list already names them, so nothing repeats.
+  const albumCoArtist = albumCoArtistFor(currentArtistName, currentAlbumName, currentAlbumSection)
+    || String((album && album.coArtist) || "").trim();
+  const shownCoArtist = albumCoArtist
+    && albumCoArtist.toLowerCase() !== shownArtist.trim().toLowerCase()
+    && !String(song.features || "").toLowerCase().includes(albumCoArtist.toLowerCase())
+    ? albumCoArtist : "";
+  const shownCredit = shownCoArtist ? `${shownArtist}, ${shownCoArtist}` : shownArtist;
+  el('playerSubArtist').textContent = shownCredit;
   el('playerSubFeatures').textContent = song.features ? ", " + song.features : "";
   // Tab title: the site's own title first, then what is playing.
   // "❤︎ — Song Title • Artist Name"
-  document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownArtist}${song.features ? ", " + song.features : ""}`;
+  document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownCredit}${song.features ? ", " + song.features : ""}`;
   startMarquees();
   const playerCoverEl = el('playerCover');
   if (currentAlbumCover) { playerCoverEl.src = currentAlbumCover; }
