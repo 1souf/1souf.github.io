@@ -72,7 +72,9 @@
   }
   .reload-btn:hover{color:var(--text); border-color:var(--stamp-fixed);}
   .reload-btn:disabled{opacity:.5; cursor:default;}
-  .reload-btn.spinning{color:var(--stamp);}
+  /* The "Reloading…" label stays fixed white rather than picking up the album
+     theme's stamp colour. */
+  .reload-btn.spinning{color:var(--stamp-fixed);}
 
   /* .tree is the clipping viewport; .tree-panes is a 200%-wide strip holding
      the two panes side by side, and sliding it -50% swaps which one shows -
@@ -320,6 +322,9 @@
   .file-meta{font-size:.74rem; color:var(--text-dim); margin-top:12px; display:flex; gap:18px; flex-wrap:wrap; line-height:16px;}
   .file-meta b{color:var(--text); font-weight:500;}
   .file-meta-artist{display:inline-flex; align-items:center; gap:5px;}
+  /* The dot between an album's two artist names: fixed white (never themed),
+     pulled in a hair tighter than the flex gap on either side. */
+  .fm-sep{color:var(--stamp-fixed); margin:0 -1px;}
   .fm-avatar{
     width:16px; height:16px; border-radius:50%; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
@@ -1671,6 +1676,15 @@ function fetchSheetData(sheetId, tabName){
    artistProfilePic()). Leave every header's Feature(s) cell blank and
    the sidebar just falls back to a plain initial.
 
+   That same header cell can also name a SECOND artist for the album,
+   written next to the picture link - "Trippie Redd https://…/t.png"
+   (either order works). The link always starts with http(s), so the
+   two values need no separator: everything that isn't the link is the
+   name (see parseArtistCell()). The album's ARTIST line then reads
+   "Playboi Carti • Trippie Redd", and every track with features reads
+   "Playboi Carti, Trippie Redd, <features>" instead of just
+   "Playboi Carti, <features>".
+
    On a song row that same cell takes the very same brace trick as the
    Name cell: "Trippie Redd, NoCap{NoCap}" keeps the full list on the
    row where the song lives and gives every copy that leaves the tab
@@ -1864,6 +1878,9 @@ function buildAlbumsFromRows(rows, artistName){
     // A = empty
     // Name column = album name
     if (a === "" && b !== "") {
+      // The header's Feature(s) cell carries the artist picture and, if
+      // present, a second artist's name - see parseArtistCell().
+      const headerArtist = parseArtistCell(row[idx.features]);
       current = {
         name: b,
         section: currentSection,
@@ -1873,7 +1890,8 @@ function buildAlbumsFromRows(rows, artistName){
         cover: String(row[idx.cover] || ""),
         discordLink: String(row[idx.discord] || "").trim(),
         downloadLink: String(row[idx.link] || "").trim(),
-        pfpLink: extractUrl(row[idx.features]),
+        pfpLink: headerArtist.link,
+        coArtist: headerArtist.name,
         // Manual theme color: a hex code pasted into the "Original Era"
         // column (5th column, index 4) of the album header row. That
         // column is unused on header rows anyway (it only means
@@ -1956,6 +1974,27 @@ function extractUrl(raw){
   const m = String(raw || "").match(/https?:\/\/\S+/i);
   if (!m) return "";
   return m[0].replace(/[)\]}>,.;!]+$/, "");
+}
+
+// The "Feature(s)" cell of an ALBUM HEADER row can hold two things: the
+// profile-picture link described above, and - optionally - the name of a
+// second artist for that album. Links always start with http(s), so the two
+// values need no separator convention: whatever is left once the link is
+// taken out is the name. Either order works ("Trippie Redd https://…" or
+// "https://… Trippie Redd"), and separators people naturally put around the
+// link (commas, dashes, bullets, brackets) are trimmed off the name. Returns
+// { name:"", link:"" } when the cell has neither.
+function parseArtistCell(raw){
+  const text = String(raw || "").trim();
+  const link = extractUrl(text);
+  if (!text) return { name: "", link: "" };
+  let name = link ? text.replace(link, " ") : text;
+  name = name
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,|•·;:()–—-]+/, "")
+    .replace(/[\s,|•·;:()–—-]+$/, "")
+    .trim();
+  return { name, link };
 }
 
 function toStreamUrl(shareUrl){
@@ -2843,7 +2882,14 @@ function renderCaseFile(artistName, album){
 
   const isComp = (album.section || "").trim().toLowerCase() === "comps";
   const releaseDateHtml = album.releaseDate ? `<span>RELEASE DATE: <b>${esc(album.releaseDate)}</b></span>` : "";
-  const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b></span>`;
+  // The album header's Feature(s) cell can also name a second artist (see
+  // parseArtistCell()); it rides along on the ARTIST line after a dot. Skipped
+  // when it's the same name as the tab artist.
+  const coArtist = String(album.coArtist || "").trim();
+  const coArtistHtml = coArtist && coArtist.toLowerCase() !== artistName.trim().toLowerCase()
+    ? `<span class="fm-sep">•</span><b>${esc(coArtist)}</b>`
+    : "";
+  const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b>${coArtistHtml}</span>`;
   const hasDesc = !!(album.description && album.description.trim());
   const hasUpdate = !!(album.updates && album.updates.trim());
   const fileMetaHtml = isComp
@@ -2890,7 +2936,17 @@ function renderCaseFile(artistName, album){
     // "YouTube Video • …" link when the track has a video (the player bar only
     // keeps the download icon now). Tracks with no features don't have an
     // artist line at all, so there the link stands on its own.
-    const artistLine = song.features ? `${esc(songArtistName(song, artistName))}, ${esc(song.features)}` : "";
+    //
+    // When the album header named a second artist (see parseArtistCell()),
+    // they sit between the row's own artist and the feature list, unless the
+    // feature list already names them.
+    const rowArtist = songArtistName(song, artistName);
+    const extraArtist = song.features && coArtist
+      && coArtist.toLowerCase() !== rowArtist.trim().toLowerCase()
+      && !song.features.toLowerCase().includes(coArtist.toLowerCase())
+      ? coArtist : "";
+    const creditNames = extraArtist ? `${rowArtist}, ${extraArtist}` : rowArtist;
+    const artistLine = song.features ? `${esc(creditNames)}, ${esc(song.features)}` : "";
     const ytMark = song.ytLink
       ? `<a class="t-yt" href="${esc(song.ytLink)}" target="_blank" rel="noopener" title="Watch on YouTube"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path fill="currentColor" d="M0 4.75C0 3.784.784 3 1.75 3h20.5c.966 0 1.75.784 1.75 1.75v14.5A1.75 1.75 0 0 1 22.25 21H1.75A1.75 1.75 0 0 1 0 19.25Zm1.75-.25a.25.25 0 0 0-.25.25v14.5c0 .138.112.25.25.25h20.5a.25.25 0 0 0 .25-.25V4.75a.25.25 0 0 0-.25-.25Z"/><path fill="currentColor" d="M9 15.584V8.416a.5.5 0 0 1 .77-.42l5.576 3.583a.5.5 0 0 1 0 .842L9.77 16.005a.5.5 0 0 1-.77-.42Z"/></svg>YouTube Video</a>`
       : "";
