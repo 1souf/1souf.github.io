@@ -1366,41 +1366,30 @@
    2. Copy the long ID out of the sheet's URL:
       https://docs.google.com/spreadsheets/d/  <THIS PART>  /edit
    3. Paste it below as spreadsheetId.
-   4. List each artist tab you want on the site. "sheetTab" must match
-      the exact tab name at the bottom of the sheet (case-sensitive).
+   4. In the sheet itself, add a tab called "Artists" and list every
+      artist tab there: one per row in column A, matching the tab names
+      at the bottom of the sheet exactly. That tab is the artist list -
+      adding an artist later is just another row plus their own tab, with
+      no edit to this file.
    ===================================================================== */
 const CONFIG = {
   spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
-  artists: [
-    { name: "¥$, Kanye West, Ty Dolla $ign", sheetTab: "¥$, Kanye West, Ty Dolla $ign" },
-    { name: "A$AP Rocky", sheetTab: "A$AP Rocky" },
-    { name: "Destroy Lonely", sheetTab: "Destroy Lonely" },
-    { name: "Don Toliver", sheetTab: "Don Toliver" },
-    { name: "Drake", sheetTab: "Drake" },
-    { name: "Frank Ocean", sheetTab: "Frank Ocean" },
-    { name: "HXG", sheetTab: "HXG" },
-    { name: "JID", sheetTab: "JID" },
-    { name: "Future", sheetTab: "Future" },
-    { name: "Kanye West", sheetTab: "Kanye West" },
-    { name: "Ken Carson", sheetTab: "Ken Carson" },
-    { name: "Lil Uzi Vert", sheetTab: "Lil Uzi Vert" },
-    { name: "Metro Boomin", sheetTab: "Metro Boomin" },
-    { name: "Offset", sheetTab: "Offset" },
-    { name: "Playboi Carti", sheetTab: "Playboi Carti" },
-    { name: "The Weeknd", sheetTab: "The Weeknd" },
-    { name: "Travis Scott", sheetTab: "Travis Scott" },
-    { name: "Trippie Redd", sheetTab: "Trippie Redd" },
-    { name: "Tyler, The Creator", sheetTab: "Tyler, The Creator" },
-    { name: "Young Nudy", sheetTab: "Young Nudy" },
-    { name: "Young Thug", sheetTab: "Young Thug" }
-    // add more tabs here later, e.g.:
-    // { name: "Playboi Carti", sheetTab: "Playboi Carti" }
-  ]
+
+  // The tab in the same spreadsheet that lists the artist tabs. One artist
+  // per row in column A: that text is both the sheet tab name (sheet names
+  // are matched case-insensitively) and the name shown on the site. Anything
+  // in the other columns is ignored. A header row ("Artist") is fine.
+  artistIndexTab: "Artists"
 };
 
 /* Column layout: see the comment above buildAlbumsFromRows() further
    down - columns are matched by their row 1 header label, not by a
    fixed A-I position. */
+
+// The artist tabs the site currently knows about, resolved from the
+// spreadsheet's index tab at load time (see resolveArtists()). Empty until
+// then, so nothing depends on a hand-written list in this file any more.
+let ARTISTS = [];
 
 let isDemoMode = false;
 // currentAlbumSongs/currentAlbumCover/currentArtistName/currentSongIndex/currentRowEl
@@ -1639,7 +1628,7 @@ function fetchSheetData(sheetId, tabName){
      {WE DON'T DIAL 911{Trippie Redd}}
 
    ("WE DON'T DIAL 911{Playboi Carti}" on its own works the same.) The
-   artist must match a CONFIG.artists "name" exactly
+   artist must match an artist name listed on the "Artists" tab exactly
    (case-insensitive). See parseOriginalEra() and
    crossListAndFinalize() near the bottom of the data-loading section,
    which runs once every artist tab has loaded (it has to run after
@@ -1730,9 +1719,10 @@ function unwrapBraces(raw){
 // exactly what the artist in braces disambiguates. The outer braces are
 // optional - "WE DON'T DIAL 911{Playboi Carti}" on its own line still works.)
 // Plain text ("Whole Lotta Red [V3]") targets an album on the song's OWN
-// artist tab, the standard rule. The artist name must match a CONFIG.artists
-// "name" exactly (case-insensitive, whitespace-trimmed). Blank lines and lines
-// with no album name are ignored, so a stray newline in the cell is harmless.
+// artist tab, the standard rule. The artist name must match an artist listed
+// on the "Artists" tab exactly (case-insensitive, whitespace-trimmed). Blank
+// lines and lines with no album name are ignored, so a stray newline in the
+// cell is harmless.
 function parseOriginalEra(raw, ownArtistName){
   return String(raw || "")
     .split(/\r?\n/)
@@ -1958,6 +1948,114 @@ function buildAlbumsFromRows(rows, artistName){
 }
 
 
+/* ---------------- artist list (spreadsheet index tab) ----------------
+   The artist tabs the site loads are whatever CONFIG.artistIndexTab names:
+   one artist per row, so adding an artist is a row on the sheet plus their
+   own tab - nothing to edit in this file. */
+
+// The list resolveArtists() worked out last, kept in localStorage so the
+// instant paint from cached rows on the next visit already knows every
+// artist (the sheet-row cache alone is keyed by name, with no tab map).
+function getCachedArtistList(){
+  try {
+    const list = JSON.parse(localStorage.getItem('archiveArtistList') || '[]');
+    return Array.isArray(list)
+      ? list.filter(a => a && String(a.name || '').trim() && String(a.sheetTab || '').trim())
+      : [];
+  } catch { return []; }
+}
+function cacheArtistList(list){
+  try { localStorage.setItem('archiveArtistList', JSON.stringify(list)); } catch {}
+}
+// Drops one artist's cached sheet rows (used when a tab disappears from the
+// index), so a removed artist can't come back from the cache on next boot.
+function forgetSheetRows(artistName){
+  try {
+    const cache = getSheetRowsCache();
+    if (!(artistName in cache)) return;
+    delete cache[artistName];
+    localStorage.setItem('archiveSheetCache', JSON.stringify(cache));
+  } catch {}
+}
+
+// Reads the index tab's rows. The first column is the artist name, which is
+// also the sheet tab name; any other columns are ignored. Returns null when
+// the fetched table can't be that tab: gviz answers an unknown sheet name by
+// quietly serving the FIRST tab instead, so the album-tab shape is the tell.
+function parseArtistIndexRows(rows){
+  const labels = (rows[0] || []).map(v => String(v || '').trim());
+  const albumTabHeaders = /^(original era|feature\(s\)|discord link\(s\)|cover & yt link\(s\))$/i;
+  if (labels.length > 6 || labels.some(l => albumTabHeaders.test(l))) return null;
+
+  const isHeaderWord = v => /^(artist|artists|artist name|name|tab|sheet ?tab|sheet|worksheet)$/i.test(String(v || '').trim());
+
+  const data = rows.slice(1);
+  // headers=1 hands the sheet's first row over as column labels. The index
+  // tab may not have a header row at all, in which case those labels are
+  // really its first artist - so only drop them when they look like a header.
+  if (labels.length && !isHeaderWord(labels[0])) data.unshift(labels);
+
+  const out = [];
+  for (const row of data) {
+    const name = String((row || [])[0] || '').trim();
+    if (!name || isHeaderWord(name)) continue;
+    out.push(name);
+  }
+  return out;
+}
+
+async function readArtistIndex(){
+  const tabName = String(CONFIG.artistIndexTab || '').trim();
+  if (!tabName) return null;
+  try {
+    return parseArtistIndexRows(await fetchSheetData(CONFIG.spreadsheetId, tabName));
+  } catch (err) {
+    console.info(`Artist index tab "${tabName}" is unavailable.`, err);
+    return null;
+  }
+}
+
+// Builds the live artist list from the spreadsheet's index tab and leaves it
+// in ARTISTS. indexOk is false when the tab can't be used (missing,
+// unreadable, or empty), which is when nothing is pruned and the current list
+// is kept (so a dropped request can't empty the sidebar).
+async function resolveArtists(){
+  const indexed = await readArtistIndex();
+  // Missing/unreadable, or readable but empty (mid-edit on the sheet, a
+  // transient failure): keep the list already on screen instead of blanking
+  // the site.
+  if (indexed === null || !indexed.length) return { artists: ARTISTS, indexOk: false };
+
+  const merged = [];
+  const seen = new Set();
+  for (const name of indexed) {
+    // The name doubles as the tab name, so this is a duplicate-row check.
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push({ name, sheetTab: name });
+  }
+
+  ARTISTS = merged;
+  cacheArtistList(merged);
+  return { artists: merged, indexOk: true };
+}
+
+// Drops DATA entries (and their cached rows) for artists no longer on the
+// live list. Only called when the index tab was read successfully, so a
+// network hiccup can never wipe the sidebar.
+function pruneArtistData(artists){
+  const keep = new Set(artists.map(a => a.name));
+  let removed = false;
+  for (const name of Object.keys(DATA)) {
+    if (keep.has(name)) continue;
+    delete DATA[name];
+    forgetSheetRows(name);
+    removed = true;
+  }
+  return removed;
+}
+
 async function loadArtist(artist){
   try {
     const rows = await fetchSheetData(
@@ -1972,7 +2070,10 @@ async function loadArtist(artist){
   } catch (err) {
     console.error(`Failed to load "${artist.name}":`, err);
     isDemoMode = true;
-    return SAMPLE_DATA[artist.name] || [];
+    // SAMPLE_DATA is only there in a build that ships demo content; without
+    // the typeof guard a single bad/unlisted tab name used to take the whole
+    // Promise.all (and with it boot) down with a TypeError.
+    return (typeof SAMPLE_DATA !== 'undefined' && SAMPLE_DATA[artist.name]) || [];
   }
 }
 
@@ -2137,7 +2238,7 @@ let DATA = {}; // { artistName: [albums] }
 // they don't get double-counted).
 function countAllEdits(){
   let total = 0;
-  for (const artist of CONFIG.artists) {
+  for (const artist of ARTISTS) {
     const albums = DATA[artist.name] || [];
     albums.forEach(album => {
       if (album.isDivider) return;
@@ -2308,7 +2409,7 @@ function findAlbumByNames(artistNameRaw, albumNameRaw, sectionRaw){
   if (!artistNameRaw || !albumNameRaw) return null;
   const artistKey = artistNameRaw.trim().toLowerCase();
   const albumKey = albumNameRaw.trim().toLowerCase();
-  const artist = CONFIG.artists.find(a => a.name.trim().toLowerCase() === artistKey);
+  const artist = ARTISTS.find(a => a.name.trim().toLowerCase() === artistKey);
   if (!artist) return null;
   const sameName = (DATA[artist.name] || []).filter(a => !a.isDivider && a.name.trim().toLowerCase() === albumKey);
   if (!sameName.length) return null;
@@ -2488,11 +2589,11 @@ function renderAll(){
   // Default album isn't on the sheet right now (renamed, tab missing,
   // etc.) — fall back to the first album of the first artist so the
   // site still lands somewhere instead of showing nothing.
-  for (const artist of CONFIG.artists) {
+  for (const artist of ARTISTS) {
     const albums = (DATA[artist.name] || []).filter(a => !a.isDivider);
     if (albums.length) { selectAlbum(artist.name, albums[0]); return; }
   }
-  el('content').innerHTML = `<div class="empty-state"><b>Nothing filed yet</b>No albums were found on the connected sheet tab(s). Check the tab name in CONFIG matches exactly.</div>`;
+  el('content').innerHTML = `<div class="empty-state"><b>Nothing filed yet</b>No artist tabs were found. List each artist on the spreadsheet's "Artists" tab (one per row in column A, matching its sheet tab) and check the spreadsheetId in CONFIG.</div>`;
 }
 
 // Used by the background auto-refresh (see silentlyRefreshCache()) once
@@ -2549,7 +2650,6 @@ function renderTree(){
   el('treePanes').classList.remove('at-albums');
   el('paneAlbumsList').innerHTML = "";
   el('paneArtistName').textContent = "";
-  el('sidebarFooter').textContent = `${CONFIG.artists.length} artist tab(s) connected`;
 }
 
 // An artist's sidebar avatar picture is whatever extractUrl() found in
@@ -2607,12 +2707,16 @@ function renderArtistList(){
   pane.innerHTML = "";
   pane.removeAttribute('aria-hidden');
 
+  // Also covers the background refresh, which only re-renders the list (not
+  // the whole tree) after picking up a newly-added artist tab.
+  if (el('sidebarFooter')) el('sidebarFooter').textContent = `${ARTISTS.length} artist tab(s) connected`;
+
   // Most songs first; artists with the same count fall back to A-Z. The
   // counts are worked out once up front (rather than inside the sort's
   // comparator) since artistEditCount() walks every song. This only
-  // changes the DISPLAY order - CONFIG.artists itself is never reordered,
-  // so loading, caching and deep links aren't affected.
-  const ranked = CONFIG.artists
+  // changes the DISPLAY order - ARTISTS itself is never reordered, so
+  // loading, caching and deep links aren't affected.
+  const ranked = ARTISTS
     .map(artist => ({ artist, count: artistEditCount(artist.name) }))
     .sort((a, b) =>
       b.count - a.count ||
@@ -5034,7 +5138,7 @@ function crossListAndFinalize(){
   }
 }
 
-async function loadAllArtists(){
+async function loadAllArtists(artists){
   // Fetch every artist tab at once instead of one-by-one. The old
   // for-loop awaited each tab before starting the next, so total load
   // time was roughly (number of tabs) x (one tab's fetch time) - add a
@@ -5042,8 +5146,13 @@ async function loadAllArtists(){
   // the requests together, so the wait is bounded by the SLOWEST single
   // tab rather than the SUM of all of them, and stays flat as more
   // artist tabs get added later.
+  //
+  // The caller can hand over an already-resolved list (boot does); left
+  // out, the index tab is re-read here - which is how "Reload
+  // Spreadsheet" notices an artist that was just added to it.
+  if (!artists) artists = (await resolveArtists()).artists;
   const loaded = await Promise.all(
-    CONFIG.artists.map(async artist => [artist.name, await loadArtist(artist)])
+    artists.map(async artist => [artist.name, await loadArtist(artist)])
   );
   for (const [name, albums] of loaded) {
     DATA[name] = albums;
@@ -5064,7 +5173,15 @@ async function loadAllArtists(){
 async function silentlyRefreshCache(previousRowsByArtist){
   const rowsByArtist = { ...previousRowsByArtist };
   let anyChanged = false;
-  await Promise.all(CONFIG.artists.map(async artist => {
+  // Re-read the artist list first: this is what picks up a tab that was just
+  // added to the index tab since the page painted from cache.
+  const nameKey = list => list.map(a => a.name.trim().toLowerCase()).sort().join("\n");
+  const paintedKey = nameKey(ARTISTS);
+  const { artists, indexOk } = await resolveArtists();
+  // A tab added or removed since the paint still has to redraw the sidebar,
+  // even when every row it already had is unchanged.
+  if (paintedKey !== nameKey(artists)) anyChanged = true;
+  await Promise.all(artists.map(async artist => {
     try {
       const rows = await fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab);
       const prevRows = previousRowsByArtist[artist.name];
@@ -5082,10 +5199,14 @@ async function silentlyRefreshCache(previousRowsByArtist){
       console.warn(`Background refresh check failed for "${artist.name}":`, err);
     }
   }));
+  // An artist dropped from the index tab disappears here too (only when the
+  // index was actually read - see pruneArtistData()).
+  if (indexOk && pruneArtistData(artists)) anyChanged = true;
   if (!anyChanged) return;
 
   try {
-    for (const artist of CONFIG.artists) {
+    for (const artist of artists) {
+      if (!Array.isArray(rowsByArtist[artist.name])) continue;
       DATA[artist.name] = buildAlbumsFromRows(rowsByArtist[artist.name], artist.name);
     }
     crossListAndFinalize();
@@ -5291,13 +5412,18 @@ function positionLinkMenuAt(menu, x, y){
 // down, so there's no scenario where the page fails to load.
 (async function boot(){
   const cached = getSheetRowsCache();
-  const haveFullCache = CONFIG.artists.length > 0 &&
-    CONFIG.artists.every(artist => Array.isArray(cached[artist.name]));
+  // The artist list from last visit, which is how the index tab's artists
+  // paint instantly. Empty on a first visit (or after the cache was cleared),
+  // in which case the live fetch below resolves the list from the sheet.
+  const artists = getCachedArtistList();
+  const haveFullCache = artists.length > 0 &&
+    artists.every(artist => Array.isArray(cached[artist.name]));
 
   let paintedFromCache = false;
   if (haveFullCache) {
     try {
-      for (const artist of CONFIG.artists) {
+      ARTISTS = artists;
+      for (const artist of artists) {
         DATA[artist.name] = buildAlbumsFromRows(cached[artist.name], artist.name);
       }
       crossListAndFinalize();
