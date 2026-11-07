@@ -394,40 +394,28 @@
 
 <script>
 /* =====================================================================
-   Keep this CONFIG block in sync with the one in index.html — same
-   spreadsheet, same artist tabs — so the counts on this page always
-   match the archive. See index.html for the full setup instructions.
+   Same spreadsheet as the main archive site. The artist tabs come from
+   the "Artists" tab on that sheet, exactly like index.html, so the counts
+   here always match the archive. See index.html for the setup steps.
    ===================================================================== */
 const CONFIG = {
   spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
-  // Each artist's chart color (stacked bar segments + legend) is generated
-  // automatically from its name — see the color block right below — so a
-  // new tab only needs { name, sheetTab }. Optional: add a "color" (any
-  // CSS color value) to an entry to pin that one artist to a color you pick.
-  artists: [
-    { name: "¥$, Kanye West, Ty Dolla $ign", sheetTab: "¥$, Kanye West, Ty Dolla $ign" },
-    { name: "A$AP Rocky", sheetTab: "A$AP Rocky" },
-    { name: "Destroy Lonely", sheetTab: "Destroy Lonely" },
-    { name: "Don Toliver", sheetTab: "Don Toliver" },
-    { name: "Drake", sheetTab: "Drake" },
-    { name: "Frank Ocean", sheetTab: "Frank Ocean" },
-    { name: "HXG", sheetTab: "HXG" },
-    { name: "JID", sheetTab: "JID" },
-    { name: "Future", sheetTab: "Future" },
-    { name: "Kanye West", sheetTab: "Kanye West" },
-    { name: "Ken Carson", sheetTab: "Ken Carson" },
-    { name: "Lil Uzi Vert", sheetTab: "Lil Uzi Vert" },
-    { name: "Metro Boomin", sheetTab: "Metro Boomin" },
-    { name: "Offset", sheetTab: "Offset" },
-    { name: "Playboi Carti", sheetTab: "Playboi Carti" },
-    { name: "The Weeknd", sheetTab: "The Weeknd" },
-    { name: "Travis Scott", sheetTab: "Travis Scott" },
-    { name: "Trippie Redd", sheetTab: "Trippie Redd" },
-    { name: "Tyler, The Creator", sheetTab: "Tyler, The Creator" },
-    { name: "Young Nudy", sheetTab: "Young Nudy" },
-    { name: "Young Thug", sheetTab: "Young Thug" }
-  ]
+
+  // The tab in the same spreadsheet that lists the artist tabs. One artist
+  // per row in column A: that text is both the sheet tab name (sheet names
+  // are matched case-insensitively) and the name shown on this page.
+  // Anything in the other columns is ignored. A header row ("Artist") is fine.
+  artistIndexTab: "Artists",
+
+  // Optional: pin an artist to a chart color by name, e.g.
+  // { "Future": "#7ad0ff" }. Anyone not listed gets a stable color
+  // generated from their name below.
+  pinnedColors: {}
 };
+
+// The artist list resolved from the index tab at load time (see
+// resolveArtists()). Each entry is { name, sheetTab, color }.
+let ARTISTS = [];
 
 /* =====================================================================
    Automatic artist colors. An artist's color is worked out from its name
@@ -472,25 +460,40 @@ function colorForName(name){
   return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
-// Give every artist a color unless CONFIG pinned one by hand.
-CONFIG.artists.forEach(artist => {
-  if (!artist.color) artist.color = colorForName(artist.name);
-});
+// Name -> pinned color, keyed case- and space-insensitively so a pin keeps
+// working no matter how the name is written on the sheet.
+const PINNED_COLORS = new Map(
+  Object.entries(CONFIG.pinnedColors || {}).map(([name, color]) => [name.trim().toLowerCase(), color])
+);
+
+// Give every artist a color: a hand-pinned one if CONFIG has it, otherwise
+// the stable name-derived one above.
+function artistColor(name){
+  return PINNED_COLORS.get(String(name).trim().toLowerCase()) || colorForName(name);
+}
 
 /* =====================================================================
-   Legend. Hidden by default. It's built from CONFIG alone, so it works
-   right away without waiting on the sheet. The eye button in the top-left
-   corner opens it; the eye-slash button inside it (or Esc) hides it again.
-   Every page load starts hidden.
+   Legend. Hidden by default. Its list is filled in by renderLegend() once
+   the Artists tab has been read, so it always matches the chart. The eye
+   button in the top-left corner opens it; the eye-slash button inside it
+   (or Esc) hides it again. Every page load starts hidden.
    ===================================================================== */
+function esc(s){
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderLegend(){
+  document.getElementById('legendList').innerHTML = ARTISTS.map(artist =>
+    `<div class="legend-item"><span class="legend-swatch" style="background:${artist.color}"></span>${esc(artist.name)}</div>`
+  ).join('');
+}
+
 (function setupLegend(){
   const page = document.querySelector('.page');
   const toggle = document.getElementById('legendToggle');
   const close = document.getElementById('legendClose');
-
-  document.getElementById('legendList').innerHTML = CONFIG.artists.map(artist =>
-    `<div class="legend-item"><span class="legend-swatch" style="background:${artist.color}"></span>${artist.name}</div>`
-  ).join('');
 
   // Keyboard users: focus follows whichever button is showing.
   function setOpen(open){
@@ -558,6 +561,57 @@ function fetchSheetData(sheetId, tabName){
     script.onerror = () => { cleanup(); reject(new Error("Could not load Google Sheet.")); };
     document.body.appendChild(script);
   });
+}
+
+/* ---------------- artist list (same spreadsheet index tab as index.html) ----------------
+   gviz answers an unknown sheet name by quietly serving the FIRST tab, so a
+   table that looks like an album tab means the index tab wasn't found. */
+
+function parseArtistIndexRows(rows){
+  const labels = (rows[0] || []).map(v => String(v || "").trim());
+  const albumTabHeaders = /^(original era|feature\(s\)|discord link\(s\)|cover & yt link\(s\))$/i;
+  if (labels.length > 6 || labels.some(l => albumTabHeaders.test(l))) return null;
+
+  const isHeaderWord = v => /^(artist|artists|artist name|name|tab|sheet ?tab|sheet|worksheet)$/i.test(String(v || "").trim());
+
+  const data = rows.slice(1);
+  // headers=1 hands the sheet's first row over as column labels. The index
+  // tab may not have a header row at all, in which case those labels are
+  // really its first artist - so only drop them when they look like a header.
+  if (labels.length && !isHeaderWord(labels[0])) data.unshift(labels);
+
+  const out = [];
+  for (const row of data) {
+    const name = String((row || [])[0] || "").trim();
+    if (!name || isHeaderWord(name)) continue;
+    out.push(name);
+  }
+  return out;
+}
+
+// Reads the index tab and fills ARTISTS. Leaves the current list alone when
+// the tab is missing/unreadable/empty (so a dropped request can't blank the
+// page); returns the list either way.
+async function resolveArtists(){
+  const tabName = String(CONFIG.artistIndexTab || "").trim();
+  if (!tabName) return ARTISTS;
+  try {
+    const names = parseArtistIndexRows(await fetchSheetData(CONFIG.spreadsheetId, tabName));
+    if (!names || !names.length) return ARTISTS;
+    const out = [];
+    const seen = new Set();
+    for (const name of names) {
+      // The name is the tab name too, so this only guards duplicate rows.
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name, sheetTab: name, color: artistColor(name) });
+    }
+    ARTISTS = out;
+  } catch (err) {
+    console.info(`Artist index tab "${tabName}" is unavailable.`, err);
+  }
+  return ARTISTS;
 }
 
 /* Same row-parsing rules as index.html's buildAlbumsFromRows (columns
@@ -727,7 +781,7 @@ function formatTotalHours(totalSeconds){
 
 async function loadAllAlbums(){
   const results = await Promise.allSettled(
-    CONFIG.artists.map(artist =>
+    ARTISTS.map(artist =>
       fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab)
         .then(buildAlbumsFromRows)
         .then(albums => albums.map(album => ({ ...album, artist: artist.name })))
@@ -788,7 +842,7 @@ function render(stats){
 
   let html = `<div class="summary-row">
     <div class="summary-stat"><span class="summary-num">${stats.totalSongs.toLocaleString()}</span><span class="summary-label">Total Edits</span></div>
-    <div class="summary-stat"><span class="summary-num">${CONFIG.artists.length.toLocaleString()}</span><span class="summary-label">Total Artists</span></div>
+    <div class="summary-stat"><span class="summary-num">${ARTISTS.length.toLocaleString()}</span><span class="summary-label">Total Artists</span></div>
     <div class="summary-stat"><span class="summary-num" id="totalRuntimeVal"><span class="skel" style="display:inline-block;width:64px;height:24px;"></span></span><span class="summary-label">Total Runtime</span></div>
     <div class="summary-stat"><span class="summary-num">${MONTH_LABELS[stats.busiest.month]} ${stats.busiest.year}</span><span class="summary-label">Busiest Month · ${stats.busiest.count}</span></div>
   </div>`;
@@ -809,16 +863,16 @@ function render(stats){
       const pct = globalMax ? Math.max((Math.sqrt(count) / Math.sqrt(globalMax)) * 100, count > 0 ? 6 : 2) : 2;
 
       // Stack each artist's share inside the bar in a fixed order (the
-      // order artists appear in CONFIG), so a color always means the
-      // same artist and sits in the same position across every column.
+      // order artists appear on the Artists tab), so a color always means
+      // the same artist and sits in the same position across every column.
       let cumulative = 0;
-      const segments = CONFIG.artists.map(artist => {
+      const segments = ARTISTS.map(artist => {
         const artistCount = bucket[artist.name] || 0;
         if (!artistCount) return '';
         const segPct = (artistCount / count) * 100;
         const bottom = cumulative;
         cumulative += segPct;
-        return `<div class="bar-segment" style="height:${segPct}%;bottom:${bottom}%;background:${artist.color};" title="${artist.name} — ${artistCount}"></div>`;
+        return `<div class="bar-segment" style="height:${segPct}%;bottom:${bottom}%;background:${artist.color};" title="${esc(artist.name)} — ${artistCount}"></div>`;
       }).join('');
 
       return `<div class="bar-col ${count > 0 ? 'has-count' : ''}" title="${label} ${year} — ${count} song${count === 1 ? '' : 's'}">
@@ -849,6 +903,13 @@ function render(stats){
 
 (async function boot(){
   try {
+    const artists = await resolveArtists();
+    if (!artists.length) {
+      document.getElementById('statsContent').innerHTML = `<div class="stats-empty">No artist tabs were found. List each artist on the spreadsheet's "Artists" tab (one per row in column A, matching its sheet tab) and check the spreadsheetId in CONFIG.</div>`;
+      return;
+    }
+    renderLegend();
+
     const albums = await loadAllAlbums();
     const stats = aggregate(albums);
     render(stats);

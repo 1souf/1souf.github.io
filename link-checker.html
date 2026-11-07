@@ -156,35 +156,18 @@
 
 <script>
 /* =====================================================================
-   Same spreadsheet + tab list as the main archive site. If artist tabs
-   get added, renamed, or removed there, mirror the same change into
-   this CONFIG block so the two stay in sync.
+   Same spreadsheet as the main archive site. The artist tabs come from
+   the "Artists" tab on that sheet, exactly like index.html - there's no
+   list to keep in sync here any more.
    ===================================================================== */
 const CONFIG = {
   spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
-  artists: [
-    { name: "¥$, Kanye West, Ty Dolla $ign", sheetTab: "¥$, Kanye West, Ty Dolla $ign" },
-    { name: "A$AP Rocky", sheetTab: "A$AP Rocky" },
-    { name: "Destroy Lonely", sheetTab: "Destroy Lonely" },
-    { name: "Don Toliver", sheetTab: "Don Toliver" },
-    { name: "Drake", sheetTab: "Drake" },
-    { name: "Frank Ocean", sheetTab: "Frank Ocean" },
-    { name: "HXG", sheetTab: "HXG" },
-    { name: "JID", sheetTab: "JID" },
-    { name: "Future", sheetTab: "Future" },
-    { name: "Kanye West", sheetTab: "Kanye West" },
-    { name: "Ken Carson", sheetTab: "Ken Carson" },
-    { name: "Lil Uzi Vert", sheetTab: "Lil Uzi Vert" },
-    { name: "Metro Boomin", sheetTab: "Metro Boomin" },
-    { name: "Offset", sheetTab: "Offset" },
-    { name: "Playboi Carti", sheetTab: "Playboi Carti" },
-    { name: "The Weeknd", sheetTab: "The Weeknd" },
-    { name: "Travis Scott", sheetTab: "Travis Scott" },
-    { name: "Trippie Redd", sheetTab: "Trippie Redd" },
-    { name: "Tyler, The Creator", sheetTab: "Tyler, The Creator" },
-    { name: "Young Nudy", sheetTab: "Young Nudy" },
-    { name: "Young Thug", sheetTab: "Young Thug" }
-  ]
+
+  // The tab in the same spreadsheet that lists the artist tabs. One artist
+  // per row in column A: that text is both the sheet tab name (sheet names
+  // are matched case-insensitively) and the name shown in the results.
+  // Anything in the other columns is ignored. A header row ("Artist") is fine.
+  artistIndexTab: "Artists"
 };
 
 const el = (id) => document.getElementById(id);
@@ -257,6 +240,54 @@ function fetchSheetData(sheetId, tabName){
     script.onerror = () => { cleanup(); reject(new Error("Couldn't load this tab from Google Sheets.")); };
     document.body.appendChild(script);
   });
+}
+
+/* ---------------- artist list (same spreadsheet index tab as index.html) ----------------
+   gviz answers an unknown sheet name by quietly serving the FIRST tab, so a
+   table that looks like an album tab means the index tab wasn't found. */
+
+function parseArtistIndexRows(rows){
+  const labels = (rows[0] || []).map(v => String(v || "").trim());
+  const albumTabHeaders = /^(original era|feature\(s\)|discord link\(s\)|cover & yt link\(s\))$/i;
+  if (labels.length > 6 || labels.some(l => albumTabHeaders.test(l))) return null;
+
+  const isHeaderWord = v => /^(artist|artists|artist name|name|tab|sheet ?tab|sheet|worksheet)$/i.test(String(v || "").trim());
+
+  const data = rows.slice(1);
+  // headers=1 hands the sheet's first row over as column labels. The index
+  // tab may not have a header row at all, in which case those labels are
+  // really its first artist - so only drop them when they look like a header.
+  if (labels.length && !isHeaderWord(labels[0])) data.unshift(labels);
+
+  const out = [];
+  for (const row of data) {
+    const name = String((row || [])[0] || "").trim();
+    if (!name || isHeaderWord(name)) continue;
+    out.push(name);
+  }
+  return out;
+}
+
+async function resolveArtists(){
+  const tabName = String(CONFIG.artistIndexTab || "").trim();
+  if (!tabName) return [];
+  try {
+    const names = parseArtistIndexRows(await fetchSheetData(CONFIG.spreadsheetId, tabName));
+    if (!names || !names.length) return [];
+    const out = [];
+    const seen = new Set();
+    for (const name of names) {
+      // The name is the tab name too, so this only guards duplicate rows.
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name, sheetTab: name });
+    }
+    return out;
+  } catch (err) {
+    console.info(`Artist index tab "${tabName}" is unavailable.`, err);
+    return [];
+  }
 }
 
 /* ---------------- pulling pillowcase links out of a tab's raw rows ----------------
@@ -410,7 +441,18 @@ async function runScan(){
   el('brokenList').innerHTML = '';
   setProgress(0, 0, 0);
 
-  const tabResults = await Promise.all(CONFIG.artists.map(async artist => {
+  const artists = await resolveArtists();
+  if (!artists.length) {
+    el('status').classList.remove('show');
+    const summaryEl = el('summary');
+    summaryEl.classList.add('show', 'has-broken');
+    summaryEl.textContent = `No artist tabs were found - list each artist on the spreadsheet's "${CONFIG.artistIndexTab || 'Artists'}" tab (one per row in column A, matching its sheet tab) and check the spreadsheetId in CONFIG.`;
+    scanBtn.disabled = false;
+    scanBtn.textContent = 'Rescan';
+    return;
+  }
+
+  const tabResults = await Promise.all(artists.map(async artist => {
     try {
       const rows = await fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab);
       return { artist: artist.name, links: collectPillowcaseLinks(rows, artist.name), error: null };
@@ -464,11 +506,11 @@ async function runScan(){
   if (brokenEntries.length === 0) {
     summaryEl.classList.add('all-clear');
     summaryEl.textContent = uniqueUrls.length
-      ? `All clear — all ${uniqueUrls.length} pillows.su links across ${CONFIG.artists.length} tabs loaded fine.`
+      ? `All clear — all ${uniqueUrls.length} pillows.su links across ${artists.length} tabs loaded fine.`
       : `No pillows.su links were found on any connected tab.`;
   } else {
     summaryEl.classList.add('has-broken');
-    summaryEl.innerHTML = `<b>${brokenEntries.length}</b> of ${uniqueUrls.length} pillows.su links didn't load, out of ${CONFIG.artists.length} tabs checked.`;
+    summaryEl.innerHTML = `<b>${brokenEntries.length}</b> of ${uniqueUrls.length} pillows.su links didn't load, out of ${artists.length} tabs checked.`;
     el('copyBtn').style.display = 'inline-flex';
     el('copyBtn').dataset.payload = brokenEntries
       .map(e => `${e.artistName} — ${e.albumName}${e.songName ? " — " + e.songName : ""}: ${e.link}`)
