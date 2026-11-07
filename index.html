@@ -262,19 +262,31 @@
   /* ---------- pillowcase status pill ---------- */
   /* Absolutely positioned on the hard left of the search bar row (mirrors
      the changelog "Updates" pill on the hard right), so the search bar
-     itself stays perfectly centered regardless of this pill's width. */
+     itself stays perfectly centered regardless of this pill's width.
+     Collapsed it keeps its own chip - border, background and all - but
+     squeezed down around the status dot alone, so it still reads as a
+     button sitting there rather than a bare dot floating on the
+     background. Hovering (or tabbing to it) widens the chip and slides
+     the label out beside the dot. */
   .status-pill{
     position:absolute; left:18px; top:50%; transform:translateY(-50%);
-    display:flex; align-items:center; gap:7px;
+    display:flex; align-items:center; gap:0;
+    height:30px;
     background:var(--bg-elevated); color:var(--text-dim);
     border:1px solid var(--border-light); border-radius:20px;
-    padding:6px 12px 6px 10px;
+    padding:0 10px;
     font-family:var(--mono); font-weight:600; font-size:.68rem; letter-spacing:.03em;
     white-space:nowrap; cursor:default;
-    transition:color .15s ease, border-color .15s ease;
+    transition:color .15s ease, border-color .15s ease, background .18s ease,
+               padding .22s ease, gap .22s ease;
     cursor: pointer;
     text-decoration: none;
   }
+  .status-pill:hover, .status-pill:focus-visible{
+    gap:7px;
+    padding:0 12px 0 10px;
+  }
+
   .status-dot{
     width:7px; height:7px; border-radius:50%; flex-shrink:0;
     background:var(--text-dim);
@@ -290,12 +302,35 @@
   .status-pill.state-online .status-dot{
     background:#3fbf6f; box-shadow:0 0 0 3px rgba(63,191,111,.18);
   }
-  .status-pill.state-online{color:var(--text); border-color:var(--border-light);}
+  .status-pill.state-online{color:var(--text);}
   /* offline = red */
   .status-pill.state-offline .status-dot{
     background:#e05a5a; box-shadow:0 0 0 3px rgba(224,90,90,.18);
   }
+  /* The red edge rides along on the collapsed chip too, so the state is
+     readable before the pointer ever gets there. */
   .status-pill.state-offline{color:var(--text); border-color:#5a2f2f;}
+
+  /* The label is clipped to nothing while collapsed; hovering/focusing the
+     pill lets it out from under the dot. */
+  .status-label-wrap{
+    display:block; min-width:0; max-width:0; overflow:hidden;
+    opacity:0;
+    transition:max-width .25s ease, opacity .12s ease;
+  }
+  .status-label{display:block; white-space:nowrap;}
+  .status-pill:hover .status-label-wrap,
+  .status-pill:focus-visible .status-label-wrap{
+    max-width:160px; opacity:1;
+  }
+
+  /* A touch screen has no hover, so the label would never get its chance to
+     slide out - there the pill just stays open instead. */
+  @media (hover:none){
+    .status-pill{gap:7px; padding:0 12px 0 10px;}
+    .status-label-wrap{max-width:160px; opacity:1;}
+  }
+
   @media (prefers-reduced-motion: reduce){ .status-pill.state-checking .status-dot{animation:none;} }
 
 
@@ -1190,7 +1225,7 @@
     <div class="search-bar-wrap">
       <a class="status-pill state-checking" id="statusPill" href="link-checker.html" title="Checking whether the audio host (Pillowcase) is reachable…">
         <span class="status-dot" id="statusDot"></span>
-        <span class="status-label" id="statusLabel">Checking…</span>
+        <span class="status-label-wrap"><span class="status-label" id="statusLabel">Checking…</span></span>
       </a>
       <div class="search-bar" id="searchBarWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
