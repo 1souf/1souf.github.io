@@ -3620,6 +3620,12 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   // Tab title: the site's own title first, then what is playing.
   // "❤︎ — Song Title • Artist Name"
   document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownCredit}${song.features ? ", " + song.features : ""}`;
+  // Same title/artist/cover the player bar just took, handed to the OS -
+  // this is what a phone's lock screen and a desktop's "now playing" panel
+  // actually display.
+  updateMediaSessionMetadata(song, shownCredit, currentAlbumName, currentAlbumCover);
+  syncMediaSessionState();
+  syncMediaSessionPosition(true);
   startMarquees();
   const playerCoverEl = el('playerCover');
   if (currentAlbumCover) { playerCoverEl.src = currentAlbumCover; }
@@ -3776,10 +3782,13 @@ document.addEventListener('keydown', (e) => {
 audioEl.addEventListener('play', () => {
   el('playPauseBtn').innerHTML = ICONS.pause;
   if (currentRowEl) setRowPlayingVisual(currentRowEl, true);
+  syncMediaSessionState();
+  syncMediaSessionPosition(true);
 });
 audioEl.addEventListener('pause', () => {
   el('playPauseBtn').innerHTML = ICONS.play;
   if (currentRowEl) setRowPlayingVisual(currentRowEl, false);
+  syncMediaSessionState();
 });
 
 // Playable-track lookup used by shuffle/repeat below.
@@ -4102,9 +4111,14 @@ audioEl.addEventListener('timeupdate', () => {
   seekLastValue = parseFloat(el('seek').value) || 0;
   if (!rangeFillAnimations.has(el('seek'))) updateRangeFill(el('seek'));
   el('curTime').textContent = formatSeconds(audioEl.currentTime);
+  // Keeps the lock-screen / OS progress bar in step with the page's own.
+  syncMediaSessionPosition();
 });
 audioEl.addEventListener('loadedmetadata', () => {
   el('durTime').textContent = formatSeconds(audioEl.duration);
+  // The duration only becomes known here, so this is the first moment the
+  // OS can be given a position at all.
+  syncMediaSessionPosition(true);
 });
 const savedVolume = localStorage.getItem('archiveVolume');
 const initialVolume = savedVolume !== null ? parseFloat(savedVolume) : 1;
@@ -4166,6 +4180,9 @@ el('closeBtn').addEventListener('click', () => {
   currentSongIndex = -1;
   syncUrlToPlayer();
   document.title = DEFAULT_TITLE;
+  // Hand the audio session back to the OS too, or the lock screen keeps
+  // showing a track that's no longer loaded anywhere.
+  clearMediaSession();
   setTimeout(() => { suppressNextAudioError = false; }, 300);
 });
 audioEl.addEventListener('error', () => {
@@ -4179,6 +4196,147 @@ audioEl.addEventListener('error', () => {
     setPillStatus('offline');
   }
 });
+
+/* ---------------- OS media controls (Media Session API) ----------------
+   Wires the player into navigator.mediaSession so the browser can hand the
+   loaded track to the OS: the lock-screen / notification controls on a
+   phone, the Windows volume overlay, the macOS "Now Playing" panel, and
+   the play/pause keys on a desktop keyboard. Without this the OS only
+   knows "a tab is making noise" and shows the site title and favicon
+   instead of the track.
+
+   All of it is best-effort and feature-detected: Safari only shipped Media
+   Session in 15, and a browser that doesn't recognise an action just
+   ignores setActionHandler, so anything missing degrades to the old
+   behaviour rather than breaking the player. */
+
+const MEDIA_SESSION_SEEK_STEP = 10; // seconds, for the OS's -10s / +10s buttons
+
+// The OS artwork slot wants a URL it can fetch by itself, so this is only
+// ever an absolute http(s) cover. A blank cover (or anything that isn't a
+// URL, like a data: URI) falls back to the site icon rather than leaving
+// the lock screen with no picture at all.
+function mediaSessionArtwork(coverUrl){
+  const cover = String(coverUrl || "").trim();
+  if (/^https?:\/\//i.test(cover)) return [{ src: cover, sizes: "512x512" }];
+  return [{ src: new URL('img/favicon.png', location.href).href, sizes: "512x512" }];
+}
+
+// song is the track object; artistLine is the same credit the player bar
+// shows (tab artist, or the copy's own artist for a cross-listed track),
+// with the album's co-artist already folded in by playSongAt().
+function updateMediaSessionMetadata(song, artistLine, albumName, coverUrl){
+  if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+  const features = String(song.features || "").trim();
+  const artist = features ? `${artistLine}, ${features}` : artistLine;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: song.name,
+      artist,
+      album: albumName || "",
+      artwork: mediaSessionArtwork(coverUrl)
+    });
+  } catch (err) {
+    // A browser that has mediaSession but rejects the metadata (or a cover
+    // URL it can't parse) shouldn't take playback down with it.
+    console.warn("Couldn't set media session metadata:", err);
+  }
+}
+
+function syncMediaSessionState(){
+  if (!('mediaSession' in navigator)) return;
+  if (!audioEl.src || currentSongIndex < 0) {
+    navigator.mediaSession.playbackState = 'none';
+    return;
+  }
+  navigator.mediaSession.playbackState = audioEl.paused ? 'paused' : 'playing';
+}
+
+// The lock-screen progress bar. Only meaningful once the file has told us
+// its duration, and it must never be handed a NaN/Infinity duration or a
+// position past the end - setPositionState throws on those, and Chrome
+// logs a warning for every bad call.
+let mediaPositionSyncedAt = 0;
+function syncMediaSessionPosition(force){
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  const now = performance.now();
+  // timeupdate fires roughly 4x/s while the OS redraws its progress about
+  // once a second, so throttling this keeps it off the main thread's back
+  // without the bar visibly lagging behind.
+  if (!force && now - mediaPositionSyncedAt < 900) return;
+  mediaPositionSyncedAt = now;
+
+  const duration = audioEl.duration;
+  if (!Number.isFinite(duration) || duration <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration,
+      playbackRate: audioEl.playbackRate > 0 ? audioEl.playbackRate : 1,
+      position: Math.min(Math.max(audioEl.currentTime, 0), duration)
+    });
+  } catch (err) {
+    // Nothing to do about it - the bar just won't move.
+  }
+}
+
+function clearMediaSession(){
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.playbackState = 'none';
+}
+
+function setupMediaSession(){
+  if (!('mediaSession' in navigator)) return;
+  const ms = navigator.mediaSession;
+
+  // Each handler is wrapped because an unsupported action name throws a
+  // TypeError in some browsers, and one bad action shouldn't cost us the
+  // rest of the wiring.
+  const set = (action, handler) => {
+    try { ms.setActionHandler(action, handler); } catch (err) { /* not supported */ }
+  };
+
+  set('play', () => audioEl.play().catch(() => {}));
+  set('pause', () => audioEl.pause());
+  // Next/prev go through the very same stepTrack() the player bar's own
+  // buttons use, so shuffle, repeat and the queue behave identically
+  // whether the track changed on the page or from a headset button.
+  set('previoustrack', () => stepTrack(-1));
+  set('nexttrack', () => stepTrack(1));
+  set('seekbackward', (details) => {
+    const offset = (details && details.seekOffset) || MEDIA_SESSION_SEEK_STEP;
+    audioEl.currentTime = Math.max(0, audioEl.currentTime - offset);
+  });
+  set('seekforward', (details) => {
+    const offset = (details && details.seekOffset) || MEDIA_SESSION_SEEK_STEP;
+    const ceiling = Number.isFinite(audioEl.duration) ? audioEl.duration : audioEl.currentTime + offset;
+    audioEl.currentTime = Math.min(ceiling, audioEl.currentTime + offset);
+  });
+  // Dragging the lock-screen scrubber. seekTime is absolute seconds; this
+  // only moves the element - the 'seeked' listener below is what pushes
+  // the new position back out to the OS.
+  set('seekto', (details) => {
+    if (!details || !Number.isFinite(details.seekTime)) return;
+    const ceiling = Number.isFinite(audioEl.duration) ? audioEl.duration : details.seekTime;
+    audioEl.currentTime = Math.max(0, Math.min(details.seekTime, ceiling));
+  });
+  // "Stop" is only offered by some platforms (Android's notification
+  // dismiss, a few car head units). It rewinds and pauses rather than
+  // closing the player, so the track is still there if the stop was a
+  // mis-tap.
+  set('stop', () => {
+    audioEl.pause();
+    audioEl.currentTime = 0;
+    syncMediaSessionPosition(true);
+  });
+
+  // Both of these change where the track is without a timeupdate, so they
+  // force a position push instead of waiting for the throttle window.
+  audioEl.addEventListener('seeked', () => syncMediaSessionPosition(true));
+  audioEl.addEventListener('ratechange', () => syncMediaSessionPosition(true));
+}
+
+setupMediaSession();
 
 /* ---------------- pillowcase status indicator ----------------
    Probes the same api.pillows.su endpoint that toStreamUrl() resolves
