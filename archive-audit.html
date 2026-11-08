@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>❤︎ — Archive Audit</title>
+<link rel="icon" href="img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#111111;
+    --bg-elevated:#1b1b1b;
+    --text:#f2f2f2;
+    --text-dim:#969696;
+    --stamp:#ffffff;
+    --stamp-dim:#555555;
+    --hazard:#e0a03c;
+    --bad:#e05c4c;
+    --good:#5cc98a;
+    --border:#2a2a2a;
+    --border-light:#3d3d3d;
+    --mono:-apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--mono); font-weight:500; -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  :focus-visible{outline:2px solid var(--stamp); outline-offset:2px;}
+  a{color:inherit;}
+
+  .wrap{max-width:760px; margin:0 auto; padding:56px 24px 90px;}
+
+  .title-row{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  h1{font-size:1.5rem; font-weight:800; margin:0; letter-spacing:.01em;}
+  .subtitle{color:var(--text-dim); font-size:.85rem; margin:10px 0 0; max-width:62ch;}
+  .subtitle b{color:var(--text); font-weight:600;}
+
+  .controls{display:flex; align-items:center; gap:10px; margin:26px 0 0; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono); font-weight:600; font-size:.8rem; letter-spacing:.01em;
+    padding:10px 18px; border:1px solid var(--border-light); background:var(--bg-elevated);
+    color:var(--text); border-radius:4px; cursor:pointer; transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .btn:hover{border-color:var(--stamp); color:var(--stamp);}
+  .btn:disabled{opacity:.4; cursor:default; border-color:var(--border-light); color:var(--text);}
+  .btn.primary{background:var(--bg-elevated); border-color:var(--stamp); color:var(--stamp);}
+  .btn.primary:hover{background:var(--stamp); border-color:var(--stamp); color:#111111;}
+  .btn.primary:disabled:hover{background:var(--bg-elevated); color:var(--text); border-color:var(--border-light);}
+  .btn.small{padding:6px 12px; font-size:.7rem;}
+
+  .title-links{margin-left:auto; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .home-link{
+  font-size:.78rem; font-weight:600; color:var(--text-dim); text-decoration:none;
+  border-bottom:1px dashed var(--border-light); padding-bottom:1px;
+  transition:color .15s ease, border-color .15s ease;
+  }
+  .home-link:hover{color:var(--stamp); border-color:var(--stamp);}
+
+  /* ---------- options ---------- */
+  .opts{display:flex; flex-direction:column; gap:9px; margin-top:16px;}
+  .opt{display:flex; align-items:flex-start; gap:9px; font-size:.76rem; color:var(--text-dim); cursor:pointer;}
+  .opt input{
+    appearance:none; -webkit-appearance:none; width:15px; height:15px; margin:2px 0 0;
+    flex-shrink:0; border:1px solid var(--border-light); border-radius:3px;
+    background:var(--bg-elevated); cursor:pointer; position:relative;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .opt input:hover{border-color:var(--stamp);}
+  .opt input:checked{background:var(--stamp); border-color:var(--stamp);}
+  .opt input:checked::after{
+    content:""; position:absolute; left:4px; top:1px; width:5px; height:9px;
+    border:solid #111111; border-width:0 2px 2px 0; transform:rotate(42deg);
+  }
+  .opt input:disabled{cursor:default; opacity:.5;}
+  .opt span{line-height:1.45;}
+  .opt b{color:var(--text); font-weight:600;}
+
+  /* ---------- progress ---------- */
+  .status{margin-top:22px; display:none;}
+  .status.show{display:block;}
+  .status-line{font-size:.78rem; color:var(--text-dim); display:flex; justify-content:space-between; gap:12px;}
+  .status-line b{color:var(--text); font-weight:600; font-variant-numeric:tabular-nums;}
+  .bar{height:5px; background:var(--border); border-radius:3px; margin-top:8px; overflow:hidden;}
+  .bar-fill{height:100%; width:0%; background:var(--stamp); transition:width .25s ease;}
+
+  /* ---------- summary + filter tiles ---------- */
+  .results{margin-top:34px;}
+  .summary{
+    font-size:.86rem; padding:14px 16px; border-radius:5px; border:1px solid var(--border-light);
+    background:var(--bg-elevated); display:none;
+  }
+  .summary.show{display:block;}
+  .summary.all-clear{border-color:var(--good); color:var(--good);}
+  .summary.has-broken{border-color:var(--border-light); color:var(--text);}
+  .summary.has-broken b{color:var(--text);}
+  .summary-detail{color:var(--text-dim); font-size:.79rem; margin-top:5px; line-height:1.55;}
+  .summary-detail .bad{color:var(--bad);}
+  .summary-detail .warn{color:var(--hazard);}
+
+  .tiles{
+    display:none; grid-template-columns:repeat(auto-fill, minmax(114px, 1fr));
+    gap:8px; margin-top:16px;
+  }
+  .tiles.show{display:grid;}
+  .tile{
+    font-family:var(--mono); text-align:left; cursor:pointer;
+    border:1px solid var(--border-light); background:var(--bg-elevated);
+    border-radius:5px; padding:10px 12px; color:var(--text-dim);
+    transition:border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  .tile:hover{border-color:var(--stamp);}
+  .tile-n{font-size:1.15rem; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; color:var(--text);}
+  .tile-label{font-size:.64rem; letter-spacing:.04em; margin-top:3px; text-transform:uppercase;}
+  .tile[data-tone="bad"] .tile-n{color:var(--bad);}
+  .tile[data-tone="warn"] .tile-n{color:var(--hazard);}
+  .tile.active{border-color:var(--stamp); background:rgba(255,255,255,.07); color:var(--text);}
+
+  /* ---------- grouped issue list ---------- */
+  .group{margin-top:26px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:8px;
+    border-bottom:1px solid var(--border); padding-bottom:7px; margin-bottom:10px;
+  }
+  .group-title{font-size:.78rem; font-weight:700; letter-spacing:.02em;}
+  .group-count{font-size:.7rem; color:var(--text-dim); font-variant-numeric:tabular-nums;}
+  .rows{display:flex; flex-direction:column; gap:10px;}
+
+  .issue{
+    border:1px solid var(--border-light); border-left:3px solid var(--bad);
+    background:var(--bg-elevated); border-radius:4px; padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
+  }
+  .issue[data-tone="warn"]{border-left-color:var(--hazard);}
+  .issue.resolved{border-left-color:var(--good); opacity:.55;}
+  .issue-meta{min-width:0;}
+  .issue-path{font-size:.7rem; color:var(--text-dim); letter-spacing:.01em;}
+  .issue-path .sep{color:var(--stamp-dim);}
+  .row-num{color:var(--stamp-dim); font-size:.66rem; margin-left:7px; font-variant-numeric:tabular-nums;}
+  .issue-name{font-size:.88rem; font-weight:600; margin-top:3px; word-break:break-word;}
+  .issue-link{
+    font-size:.72rem; color:var(--text-dim); word-break:break-all; margin-top:6px; display:block;
+    text-decoration:none; border-bottom:1px dashed var(--border-light);
+  }
+  .issue-link:hover{color:var(--stamp); border-color:var(--stamp);}
+  .issue-reason{font-size:.7rem; color:var(--bad); margin-top:6px; line-height:1.5;}
+  .issue[data-tone="warn"] .issue-reason{color:var(--hazard);}
+  .issue.resolved .issue-reason{color:var(--good);}
+  .issue-actions{flex-shrink:0; display:flex; flex-direction:column; align-items:flex-end; gap:8px;}
+  .tag{
+    font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;
+    padding:3px 7px; border-radius:3px; border:1px solid #5a2f2f; color:var(--bad);
+  }
+  .issue[data-tone="warn"] .tag{border-color:#5a4a2f; color:var(--hazard);}
+  .issue.resolved .tag{border-color:#2f5a42; color:var(--good);}
+
+  /* ---------- notes ---------- */
+  .hint{margin-top:34px; border-top:1px solid var(--border); padding-top:16px;}
+  .hint summary{
+    font-size:.78rem; font-weight:600; color:var(--text-dim); cursor:pointer;
+    list-style:none; display:inline-flex; align-items:center; gap:7px;
+  }
+  .hint summary::-webkit-details-marker{display:none;}
+  .hint summary::before{content:"+"; color:var(--stamp-dim); font-weight:700; width:9px;}
+  .hint[open] summary::before{content:"–";}
+  .hint summary:hover{color:var(--stamp);}
+  .hint ul{margin:12px 0 0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:9px;}
+  .hint li{font-size:.76rem; color:var(--text-dim); line-height:1.55; padding-left:14px; position:relative;}
+  .hint li::before{content:""; position:absolute; left:0; top:8px; width:5px; height:1px; background:var(--stamp-dim);}
+  .hint b{color:var(--text); font-weight:600;}
+  .hint code{background:var(--bg-elevated); padding:1px 5px; border-radius:3px; font-size:.72rem; color:var(--text);}
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
+    background:var(--text); color:#111111; font-size:.78rem; padding:10px 18px;
+    border-radius:4px; z-index:60; opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .toast.show{opacity:1;}
+
+  @media (max-width:520px){
+    .wrap{padding:38px 16px 70px;}
+    .issue{flex-direction:column; gap:10px;}
+    .issue-actions{flex-direction:row; align-items:center; justify-content:space-between; width:100%;}
+    .tiles{grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="title-row">
+    <h1>Archive Audit</h1>
+    <div class="title-links">
+      <a class="home-link" href="https://docs.google.com/spreadsheets/d/1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0/edit" target="_blank" rel="noopener">Open sheet ↗</a>
+      <a class="home-link" href="index.html">← Back to archive</a>
+    </div>
+  </div>
+  <p class="subtitle">
+    Reads every artist tab on the same spreadsheet the archive reads from and
+    audits it: whether each <b>pillows.su</b> file still loads, whether every
+    song and album actually has a link, and whether every album has cover art
+    and a working artist photo.
+  </p>
+
+  <div class="controls">
+    <button class="btn primary" id="scanBtn">Run scan</button>
+    <button class="btn small" id="copyBtn" style="display:none;">Copy report</button>
+  </div>
+
+  <div class="opts">
+    <label class="opt">
+      <input type="checkbox" id="audioCheck" checked>
+      <span><b>Load-test audio files.</b> Points a silent audio element at every <b>pillows.su</b> link to see if the file is really still there. This is the only way to catch deleted uploads — it's also the slowest part, since there are a few hundred of them.</span>
+    </label>
+    <label class="opt">
+      <input type="checkbox" id="imageCheck" checked>
+      <span><b>Load-test cover images.</b> Same idea with a hidden image, for every album cover and artist photo link.</span>
+    </label>
+    <label class="opt">
+      <input type="checkbox" id="optCheck">
+      <span><b>Also flag optional gaps.</b> Songs with no YouTube link, and albums with no download link. Off by default — most of the archive legitimately has neither, so listing them would bury the things that are actually broken.</span>
+    </label>
+  </div>
+
+  <div class="status" id="status">
+    <div class="status-line">
+      <span id="statusText">Starting…</span>
+      <span><b id="statusCount">0</b> issues so far</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="summary" id="summary"></div>
+    <div class="tiles" id="tiles"></div>
+    <div id="issueList"></div>
+  </div>
+
+  <details class="hint" id="hint">
+    <summary>What each check means</summary>
+    <ul>
+      <li><b>Audio broken</b> — the file didn't load. Either it 404s or nothing came back within 10 seconds. A very slow connection can cause a false flag, so recheck before editing the sheet.</li>
+      <li><b>Audio missing</b> — a song row with an empty <code>Link(s)</code> cell, so it can't be played at all.</li>
+      <li><b>Cover missing</b> — the <code>Cover &amp; YT Link(s)</code> cell on an album header is empty, or doesn't contain a plain <code>http(s)</code> URL. The site shows "NO COVER ON FILE" either way.</li>
+      <li><b>Cover broken</b> — there's a cover URL but the image itself won't load. Some hosts block hotlinking, which looks identical from here.</li>
+      <li><b>Photo missing</b> — an artist has no image URL in any album header's <code>Feature(s)</code> cell, so the sidebar falls back to a plain initial. This is checked per artist, not per album, because the site only ever uses the first one it finds.</li>
+      <li><b>Album empty</b> — an album header with no song rows beneath it and nothing cross-listing into it through <code>Original Era</code>.</li>
+      <li><b>Download missing</b> / <b>YouTube missing</b> — optional gaps, only counted when you tick the second box.</li>
+      <li><b>Tab problem</b> — the tab couldn't be read at all, a required column header is missing from row 1 (Google hides any column whose header cell is blank), or a song row sits above the first album header where the site will never show it.</li>
+      <li>Files are only checked with a metadata request, so nothing is fully downloaded. The row number on each issue is the sheet row, if you need to go and fix it. A link that fails is retried once before it's reported — hosts like imgur throttle bursts, and a throttled image looks exactly like a deleted one.</li>
+    </ul>
+  </details>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Same spreadsheet as the main archive site. The artist tabs come from
+   the "Artists" tab on that sheet, exactly like index.html - there's no
+   list to keep in sync here any more.
+   ===================================================================== */
+const CONFIG = {
+  spreadsheetId: "1XOsx3BjLw7Lkb6GfvGaE0TUaRh2fYjklSr87f4_AhE0",
+
+  // The tab in the same spreadsheet that lists the artist tabs. One artist
+  // per row in column A: that text is both the sheet tab name (sheet names
+  // are matched case-insensitively) and the name shown in the results.
+  artistIndexTab: "Artists",
+
+  audioConcurrency: 8,
+  imageConcurrency: 2,
+  // imgur (where nearly every cover lives) starts answering 429 if a
+  // hundred images are asked for in one burst, which is indistinguishable
+  // from a deleted file. Spacing the requests out is what keeps the
+  // results honest; the whole image pass still finishes in well under
+  // half a minute.
+  imageGapMs: 180,
+  timeoutMs: 10000,
+  // A dead image fails on the first request, so this only ever bites on a
+  // slow CDN - and a cold connection to one can genuinely take a while.
+  imageTimeoutMs: 15000
+};
+
+/* Every problem this page can report. `order` is the order groups are
+   listed in - structural and broken things first, soft omissions last.
+   The last two are opt-in: most of the archive legitimately has neither an
+   album download link nor a per-song YouTube link, so they're off by
+   default and would otherwise drown out the things that are actually wrong. */
+const ISSUES = {
+  tabProblem:      { label: 'Tab problem',      tone: 'bad',  order: 0, one: 'tab problem',                     many: 'tab problems' },
+  audioBroken:     { label: 'Audio broken',     tone: 'bad',  order: 1, one: 'audio file that won\'t load',     many: 'audio files that won\'t load' },
+  audioMissing:    { label: 'Audio missing',    tone: 'bad',  order: 2, one: 'song with no link',                many: 'songs with no link' },
+  coverBroken:     { label: 'Cover broken',     tone: 'bad',  order: 3, one: 'broken cover',                     many: 'broken covers' },
+  coverMissing:    { label: 'Cover missing',    tone: 'warn', order: 4, one: 'album without cover art',          many: 'albums without cover art' },
+  pfpBroken:       { label: 'Photo broken',     tone: 'bad',  order: 5, one: 'broken artist photo',              many: 'broken artist photos' },
+  pfpMissing:      { label: 'Photo missing',    tone: 'warn', order: 6, one: 'artist without a photo',           many: 'artists without a photo' },
+  albumEmpty:      { label: 'Album empty',      tone: 'warn', order: 7, one: 'empty album',                      many: 'empty albums' },
+  downloadMissing: { label: 'Download missing', tone: 'warn', order: 8, one: 'album with no download link',      many: 'albums with no download link' },
+  ytMissing:       { label: 'YouTube missing',  tone: 'warn', order: 9, one: 'song without a YouTube link',      many: 'songs without a YouTube link' }
+};
+
+const el = (id) => document.getElementById(id);
+
+function esc(s){
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function showToast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------------- sheet fetching (same JSONP technique as the main site) ---------------- */
+
+let fetchCallbackCounter = 0;
+function fetchSheetData(sheetId, tabName){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'auditCallback_' + Date.now() + '_' + (fetchCallbackCounter++);
+    const url =
+      `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq` +
+      `?tqx=out:json;responseHandler:${callbackName}` +
+      `&headers=1` +
+      `&sheet=${encodeURIComponent(tabName)}`;
+
+    const script = document.createElement('script');
+    script.src = url;
+
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Request to Google Sheets timed out."));
+    }, 12000);
+
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      try {
+        if (!data?.table) throw new Error("Google returned no table for this tab.");
+        const cols = data.table.cols || [];
+        const rows = data.table.rows || [];
+        const result = [cols.map(c => c?.label || "")];
+        for (const row of rows) {
+          const cells = row.c || [];
+          const converted = [];
+          for (let i = 0; i < cols.length; i++) {
+            const cell = cells[i];
+            if (!cell) converted.push("");
+            else if (cell.v !== null && cell.v !== undefined && cell.v !== "") converted.push(String(cell.v));
+            else if (cell.f) converted.push(String(cell.f));
+            else converted.push("");
+          }
+          result.push(converted);
+        }
+        cleanup();
+        resolve(result);
+      } catch (err) {
+        cleanup();
+        reject(err);
+      }
+    };
+
+    script.onerror = () => { cleanup(); reject(new Error("Couldn't load this tab from Google Sheets.")); };
+    document.body.appendChild(script);
+  });
+}
+
+/* ---------------- artist list (same spreadsheet index tab as index.html) ----------------
+   gviz answers an unknown sheet name by quietly serving the FIRST tab, so a
+   table that looks like an album tab means the index tab wasn't found. */
+
+function parseArtistIndexRows(rows){
+  const labels = (rows[0] || []).map(v => String(v || "").trim());
+  const albumTabHeaders = /^(original era|feature\(s\)|discord link\(s\)|cover & yt link\(s\))$/i;
+  if (labels.length > 6 || labels.some(l => albumTabHeaders.test(l))) return null;
+
+  const isHeaderWord = v => /^(artist|artists|artist name|name|tab|sheet ?tab|sheet|worksheet)$/i.test(String(v || "").trim());
+
+  const data = rows.slice(1);
+  // headers=1 hands the sheet's first row over as column labels. The index
+  // tab may not have a header row at all, in which case those labels are
+  // really its first artist - so only drop them when they look like a header.
+  if (labels.length && !isHeaderWord(labels[0])) data.unshift(labels);
+
+  const out = [];
+  for (const row of data) {
+    const name = String((row || [])[0] || "").trim();
+    if (!name || isHeaderWord(name)) continue;
+    out.push(name);
+  }
+  return out;
+}
+
+async function resolveArtists(){
+  const tabName = String(CONFIG.artistIndexTab || "").trim();
+  if (!tabName) return [];
+  try {
+    const names = parseArtistIndexRows(await fetchSheetData(CONFIG.spreadsheetId, tabName));
+    if (!names || !names.length) return [];
+    const out = [];
+    const seen = new Set();
+    for (const name of names) {
+      // The name is the tab name too, so this only guards duplicate rows.
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ name, sheetTab: name });
+    }
+    return out;
+  } catch (err) {
+    console.info(`Artist index tab "${tabName}" is unavailable.`, err);
+    return [];
+  }
+}
+
+/* ---------------- url helpers (kept identical to index.html) ---------------- */
+
+const PILLOWCASE_RE = /pillows\.su\/f\/[a-zA-Z0-9]+/i;
+
+function extractUrl(raw){
+  const m = String(raw || "").match(/https?:\/\/\S+/i);
+  if (!m) return "";
+  return m[0].replace(/[)\]}>.,;!]+$/, "");
+}
+
+function toStreamUrl(shareUrl){
+  const m = String(shareUrl || "").match(/pillows\.su\/f\/([a-zA-Z0-9]+)/i);
+  return m ? `https://api.pillows.su/api/get/${m[1]}` : shareUrl;
+}
+
+/* ---------------- tab parsing ----------------
+   Mirrors buildAlbumsFromRows() in index.html: a divider row has column A
+   equal to the Name column; an album header has column A empty and Name
+   non-empty; a song row has both filled in. Columns are matched by their
+   row-1 header label, not by position, exactly like the site does it - so
+   if a header cell is blank the column is invisible here too, which is
+   itself something worth reporting. */
+
+/* One target per line, in the same three shapes the sheet allows:
+     WE DON'T DIAL 911
+     WE DON'T DIAL 911{Playboi Carti}
+     {WE DON'T DIAL 911{Playboi Carti}}
+   The optional artist in braces says which tab the album lives on; without
+   it the target is an album on the song's own tab. This is a simplified
+   read of parseOriginalEra() - it only needs the album name and tab, not
+   the per-copy title overrides. */
+function parseEraTargets(raw){
+  return String(raw || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      let s = line;
+      if (s.startsWith("{") && s.endsWith("}")) s = s.slice(1, -1);
+      const m = s.match(/^([^{]*)(?:\{([^}]*)\})?\s*$/);
+      const album = (m ? m[1] : s).trim();
+      const artist = m && m[2] ? m[2].trim() : "";
+      return { album, artist };
+    })
+    .filter(t => t.album);
+}
+
+function parseTab(rows, artistName){
+  const headerLabels = (rows[0] || []).map(h => String(h || "").trim().toLowerCase());
+  const col = (label) => headerLabels.indexOf(label.toLowerCase());
+  const cell = (row, i) => (i >= 0 ? String((row || [])[i] || "").trim() : "");
+
+  const idx = {
+    name:        col("Name"),
+    features:    col("Feature(s)"),
+    link:        col("Link(s)"),
+    cover:       col("Cover & YT Link(s)"),
+    originalEra: col("Original Era")
+  };
+
+  // Only the three the site can't work without. A missing Feature(s) column
+  // just means no artist photos, which the pfp check reports on its own.
+  const missingColumns = ["Name", "Link(s)", "Cover & YT Link(s)"].filter(l => col(l) === -1);
+
+  const albums = [];
+  const problems = [];
+
+  if (idx.name === -1) {
+    problems.push({ reason: 'This tab has no "Name" column header in row 1, so nothing on it can be read at all.' });
+    return { albums, problems, missingColumns, crossTargets: new Set() };
+  }
+
+  let current = null;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const a = String(row[0] || "").trim();
+    const b = cell(row, idx.name);
+
+    if (a !== "" && a === b) continue; // section divider
+
+    if (a === "" && b !== "") { // album header
+      current = {
+        name: b,
+        rowNumber: i + 1,
+        cover: cell(row, idx.cover),
+        pfp: extractUrl(cell(row, idx.features)),
+        downloadLink: cell(row, idx.link),
+        songs: []
+      };
+      albums.push(current);
+      continue;
+    }
+
+    if (a !== "" && b !== "" && current) { // song row
+      current.songs.push({
+        name: b,
+        rowNumber: i + 1,
+        playLink: cell(row, idx.link),
+        ytLink: cell(row, idx.cover),
+        eraRaw: cell(row, idx.originalEra)
+      });
+      continue;
+    }
+
+    // A row the site silently drops: it has a name and an era, but no album
+    // header above it, so buildAlbumsFromRows() has nowhere to put it.
+    if (a !== "" && b !== "" && !current) {
+      problems.push({
+        rowNumber: i + 1,
+        reason: `Row ${i + 1} looks like a song ("${b}") but sits above the first album header, so the site never renders it.`
+      });
+    }
+  }
+
+  /* Every album some song cross-lists into, as "artist tab|album name".
+     Needed because an album with no rows of its own is perfectly normal
+     when its tracks all live on another tab and point here via Original
+     Era - flagging those as empty would be wrong. */
+  const crossTargets = new Set();
+  for (const album of albums) {
+    for (const song of album.songs) {
+      for (const target of parseEraTargets(song.eraRaw)) {
+        crossTargets.add(`${(target.artist || artistName).toLowerCase()}|${target.album.toLowerCase()}`);
+      }
+    }
+  }
+
+  return { albums, problems, missingColumns, crossTargets };
+}
+
+/* ---------------- turning a parsed tab into issues ----------------
+   Anything that has to be load-tested is not an issue yet: it goes into
+   `pending`, and only becomes one if the probe fails. That way a healthy
+   archive produces no rows at all instead of a wall of "looks fine". */
+
+function auditTab(parsed, artistName, opts, crossTargets){
+  const issues = [];
+  const pending = [];
+
+  if (parsed.missingColumns.length) {
+    issues.push({
+      type: "tabProblem", artistName, albumName: "", name: "Missing column headers",
+      rowNumber: 1, link: "",
+      reason: `Row 1 has no header for: ${parsed.missingColumns.join(", ")}. Google hides any column whose header cell is blank, so the site can't see that data no matter what's typed below.`
+    });
+  }
+
+  for (const p of parsed.problems) {
+    issues.push({
+      type: "tabProblem", artistName, albumName: "", name: "Tab structure",
+      rowNumber: p.rowNumber || null, link: "", reason: p.reason
+    });
+  }
+
+  const linkColMissing = parsed.missingColumns.includes("Link(s)");
+  const coverColMissing = parsed.missingColumns.includes("Cover & YT Link(s)");
+
+  for (const album of parsed.albums) {
+    const base = { artistName, albumName: album.name, rowNumber: album.rowNumber };
+
+    /* --- cover art (album header, "Cover & YT Link(s)") ---
+       index.html only treats the cell as a cover when it starts with
+       http(s), and passes the raw cell to the img src - so a cell with
+       stray text around the URL fails there too, and is reported here. */
+    if (!coverColMissing) {
+      if (!album.cover) {
+        issues.push({
+          ...base, type: "coverMissing", name: "Album cover", link: "",
+          reason: 'The Cover & YT Link(s) cell on this album header is empty, so the site shows "NO COVER ON FILE".'
+        });
+      } else if (!/^https?:\/\//i.test(album.cover)) {
+        issues.push({
+          ...base, type: "coverMissing", name: "Album cover", link: album.cover,
+          reason: "This cell doesn't start with http(s), so the site treats it as no cover at all."
+        });
+      } else {
+        pending.push({
+          kind: "image", url: album.cover, failType: "coverBroken",
+          base: { ...base, name: "Album cover", link: album.cover }
+        });
+      }
+    }
+
+    /* --- album download link (album header, "Link(s)") ---
+       Opt-in, because only a handful of albums in the sheet carry one at
+       all - listing the other 78 as problems would bury everything else.
+       Only probed when it's a pillows link. Album downloads are often a
+       Mega/MediaFire page instead, which can't be audio-probed and isn't
+       meant to be - the site just links straight to it. */
+    if (!linkColMissing) {
+      if (!album.downloadLink) {
+        if (opts.optional) {
+          issues.push({
+            ...base, type: "downloadMissing", name: "Album download", link: "",
+            reason: "No Link(s) value on this album header, so the Download button never renders."
+          });
+        }
+      } else if (PILLOWCASE_RE.test(album.downloadLink)) {
+        pending.push({
+          kind: "audio", url: toStreamUrl(album.downloadLink), failType: "audioBroken",
+          base: { ...base, name: "Album download", link: album.downloadLink }
+        });
+      }
+    }
+
+    /* An album with no rows of its own is fine if other tabs cross-list
+       songs into it via Original Era - that's how the comps are built. */
+    const albumKey = `${artistName.toLowerCase()}|${album.name.toLowerCase()}`;
+    if (!album.songs.length && !crossTargets.has(albumKey)) {
+      issues.push({
+        ...base, type: "albumEmpty", name: "Album", link: "",
+        reason: "This album header has no song rows under it and nothing cross-lists into it, so it opens to an empty track list."
+      });
+    }
+
+    for (const song of album.songs) {
+      const sBase = { artistName, albumName: album.name, rowNumber: song.rowNumber };
+
+      if (!linkColMissing) {
+        if (!song.playLink) {
+          issues.push({
+            ...sBase, type: "audioMissing", name: song.name, link: "",
+            reason: "No Link(s) value, so this row can't be played at all."
+          });
+        } else {
+          pending.push({
+            kind: "audio", url: toStreamUrl(song.playLink), failType: "audioBroken",
+            base: { ...sBase, name: song.name, link: song.playLink }
+          });
+        }
+      }
+
+      if (opts.optional && !coverColMissing && !song.ytLink) {
+        issues.push({
+          ...sBase, type: "ytMissing", name: song.name, link: "",
+          reason: "No YouTube link in this song's Cover & YT Link(s) cell."
+        });
+      }
+    }
+  }
+
+  /* --- artist photo ---
+     artistProfilePic() in index.html walks the tab in sheet order and uses
+     the FIRST album header that has a link in Feature(s). So this is one
+     check per artist, not per album - blank cells further down the tab are
+     harmless and would just be noise. */
+  const withPhoto = parsed.albums.find(a => a.pfp);
+  if (withPhoto) {
+    pending.push({
+      kind: "image", url: withPhoto.pfp, failType: "pfpBroken",
+      base: {
+        artistName, albumName: withPhoto.name, rowNumber: withPhoto.rowNumber,
+        name: "Artist photo", link: withPhoto.pfp
+      }
+    });
+  } else if (parsed.albums.length) {
+    issues.push({
+      type: "pfpMissing", artistName, albumName: "", name: "Artist photo",
+      rowNumber: null, link: "",
+      reason: "No image URL in any album header's Feature(s) cell on this tab, so the sidebar falls back to a plain initial."
+    });
+  }
+
+  return { issues, pending };
+}
+
+/* ---------------- probing ----------------
+   Audio: an <audio> element pointed at the file, exactly like the site's
+   own duration probe. Loading metadata cross-origin works without CORS
+   headers, which a raw fetch() would need. "loadedmetadata" = the file is
+   really there; "error" or no response inside the timeout = broken.
+
+   Images: same idea with a detached Image object. A host that blocks
+   hotlinking answers with a 403, which is indistinguishable from a
+   deleted file from in here. */
+
+function probeAudio(url, timeoutMs = CONFIG.timeoutMs){
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('error', onError);
+      audio.removeAttribute('src');
+      audio.load();
+    };
+    const finish = (ok, reason) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve({ ok, reason });
+    };
+    const onLoaded = () => finish(true, null);
+    const onError = () => finish(false, "Couldn't load — the file may have been deleted or the link is broken.");
+    audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+    audio.addEventListener('error', onError, { once: true });
+    const timer = setTimeout(() => finish(false, `Timed out — no response after ${timeoutMs / 1000}s.`), timeoutMs);
+    audio.src = url;
+  });
+}
+
+function probeImage(url, timeoutMs = CONFIG.imageTimeoutMs){
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    /* Without this, imgur (where most covers live) answers a request that
+       carries a localhost Referer with an error, and every single cover
+       gets flagged. A checker should ask the same question a plain browser
+       tab would, so the referer is dropped entirely. */
+    img.referrerPolicy = 'no-referrer';
+
+    let settled = false;
+
+    const finish = (ok, reason) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      img.onload = null;
+      img.onerror = null;
+      resolve({ ok, reason });
+    };
+
+    img.onload = () => finish(true, null);
+    img.onerror = () => finish(false, "Image didn't load — the file may have been deleted, or the host blocks hotlinking.");
+    const timer = setTimeout(() => finish(false, `Timed out — no response after ${timeoutMs / 1000}s.`), timeoutMs);
+    img.src = url;
+  });
+}
+
+/* Serialises the start of image requests so they arrive at roughly
+   CONFIG.imageGapMs intervals instead of all at once. */
+let lastImageStart = 0;
+async function probeImageSpaced(url){
+  const now = Date.now();
+  const wait = Math.max(0, lastImageStart + CONFIG.imageGapMs - now);
+  lastImageStart = now + wait;
+  if (wait) await new Promise(r => setTimeout(r, wait));
+  return probeImage(url);
+}
+
+/* One failure is not evidence. A host that throttles a burst - or a slow
+   CDN on a cold connection - looks exactly like a dead file the first time
+   round, so anything that fails gets a second chance after a pause, and
+   only a second failure is reported. */
+async function probeWithRetry(prober, url, attempts = 2){
+  let last = { ok: false, reason: "" };
+  for (let i = 0; i < attempts; i++) {
+    if (i) await new Promise(r => setTimeout(r, 2000));
+    last = await prober(url);
+    if (last.ok) return last;
+  }
+  return last;
+}
+
+async function runWithConcurrency(items, limit, worker){
+  let idx = 0;
+  async function next(){
+    const i = idx++;
+    if (i >= items.length) return;
+    await worker(items[i], i);
+    return next();
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, next));
+}
+
+function groupBy(items, keyFn){
+  const map = new Map();
+  for (const item of items) {
+    const key = keyFn(item);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+  }
+  return map;
+}
+
+/* Probes each unique URL once and hands back url -> result. One dead file
+   referenced from five rows only costs one request. */
+async function probeAll(groups, prober, concurrency, onProgress){
+  const urls = [...groups.keys()];
+  const results = new Map();
+  let done = 0;
+  await runWithConcurrency(urls, concurrency, async (url) => {
+    results.set(url, await probeWithRetry(prober, url));
+    done++;
+    onProgress(done, urls.length);
+  });
+  return results;
+}
+
+/* ---------------- progress ---------------- */
+
+function setProgress(label, done, total){
+  el('statusText').textContent = label;
+  el('barFill').style.width = total ? `${(done / total) * 100}%` : '4%';
+}
+
+/* ---------------- rendering ---------------- */
+
+let STATE = { issues: [], activeFilter: 'all', meta: null };
+
+function issueCounts(onlyUnresolved){
+  const counts = {};
+  for (const issue of STATE.issues) {
+    if (onlyUnresolved && issue.resolved) continue;
+    counts[issue.type] = (counts[issue.type] || 0) + 1;
+  }
+  return counts;
+}
+
+function refreshCounts(){
+  const counts = issueCounts(true);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  document.querySelectorAll('[data-count-for]').forEach(node => {
+    const key = node.dataset.countFor;
+    node.textContent = key === 'all' ? total : (counts[key] || 0);
+  });
+  el('statusCount').textContent = total;
+}
+
+function renderTiles(){
+  const counts = issueCounts(false);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const order = Object.keys(ISSUES).sort((a, b) => ISSUES[a].order - ISSUES[b].order);
+
+  let html = `<button class="tile active" type="button" data-type="all" aria-pressed="true">
+      <div class="tile-n" data-count-for="all">${total}</div>
+      <div class="tile-label">All issues</div>
+    </button>`;
+
+  for (const type of order) {
+    const n = counts[type] || 0;
+    if (!n) continue;
+    const def = ISSUES[type];
+    html += `<button class="tile" type="button" data-type="${type}" data-tone="${def.tone}" aria-pressed="false">
+      <div class="tile-n" data-count-for="${type}">${n}</div>
+      <div class="tile-label">${esc(def.label)}</div>
+    </button>`;
+  }
+
+  const wrap = el('tiles');
+  wrap.innerHTML = html;
+  wrap.classList.add('show');
+}
+
+function renderIssueRow(issue){
+  const def = ISSUES[issue.type];
+  const row = document.createElement('div');
+  row.className = 'issue';
+  row.dataset.tone = def.tone;
+  row._issue = issue;
+
+  const pathParts = [esc(issue.artistName)];
+  if (issue.albumName) pathParts.push(esc(issue.albumName));
+  const path = pathParts.join(' <span class="sep">›</span> ');
+  const rowNum = issue.rowNumber ? `<span class="row-num">row ${issue.rowNumber}</span>` : '';
+  const linkHtml = issue.link
+    ? `<a class="issue-link" href="${esc(issue.link)}" target="_blank" rel="noopener">${esc(issue.link)}</a>`
+    : '';
+
+  row.innerHTML = `
+    <div class="issue-meta">
+      <div class="issue-path">${path}${rowNum}</div>
+      <div class="issue-name">${esc(issue.name)}</div>
+      ${linkHtml}
+      <div class="issue-reason">${esc(issue.reason)}</div>
+    </div>
+    <div class="issue-actions">
+      <span class="tag">${esc(def.label)}</span>
+      ${issue.probeUrl ? `<button class="btn small recheck-btn" type="button">Recheck</button>` : ''}
+    </div>`;
+
+  const btn = row.querySelector('.recheck-btn');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+      const res = issue.probeKind === 'audio'
+        ? await probeWithRetry(probeAudio, issue.probeUrl)
+        : await probeWithRetry(probeImageSpaced, issue.probeUrl);
+      if (res.ok) {
+        row.classList.add('resolved');
+        row.querySelector('.issue-reason').textContent = 'Working now — the recheck came back clean.';
+        btn.remove();
+        issue.resolved = true;
+        refreshCounts();
+        // The report was built when the scan ended, so it would still list
+        // a row that just proved itself fine.
+        el('copyBtn').dataset.payload = buildReportText();
+      } else {
+        row.querySelector('.issue-reason').textContent = res.reason;
+        btn.disabled = false;
+        btn.textContent = 'Recheck';
+      }
+    });
+  }
+
+  return row;
+}
+
+function renderList(){
+  const list = el('issueList');
+  list.innerHTML = '';
+
+  const active = STATE.activeFilter;
+  const order = Object.keys(ISSUES)
+    .sort((a, b) => ISSUES[a].order - ISSUES[b].order)
+    .filter(t => active === 'all' || t === active);
+
+  let rendered = 0;
+
+  for (const type of order) {
+    const group = STATE.issues.filter(i => i.type === type);
+    if (!group.length) continue;
+    rendered += group.length;
+
+    const section = document.createElement('section');
+    section.className = 'group';
+    section.innerHTML = `<div class="group-head">
+        <span class="group-title">${esc(ISSUES[type].label)}</span>
+        <span class="group-count">${group.length}</span>
+      </div>`;
+
+    const rows = document.createElement('div');
+    rows.className = 'rows';
+    group.forEach(issue => rows.appendChild(renderIssueRow(issue)));
+    section.appendChild(rows);
+    list.appendChild(section);
+  }
+
+  if (!rendered) {
+    const empty = document.createElement('div');
+    empty.className = 'summary all-clear show';
+    empty.style.marginTop = '26px';
+    empty.textContent = 'Nothing to report in this category.';
+    list.appendChild(empty);
+  }
+}
+
+function joinPhrases(parts){
+  if (!parts.length) return '';
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+function renderSummary(){
+  const meta = STATE.meta;
+  const counts = issueCounts(false);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const summaryEl = el('summary');
+  summaryEl.classList.remove('all-clear', 'has-broken');
+  summaryEl.classList.add('show');
+
+  const scope = `${meta.tabCount} tab${meta.tabCount === 1 ? '' : 's'}, ` +
+                `${meta.albumCount} album${meta.albumCount === 1 ? '' : 's'} and ` +
+                `${meta.songCount} song${meta.songCount === 1 ? '' : 's'}`;
+
+  if (!total) {
+    summaryEl.classList.add('all-clear');
+
+    const tested = [];
+    if (meta.audioTest) tested.push(`${meta.audioChecked} audio file${meta.audioChecked === 1 ? '' : 's'}`);
+    if (meta.imageTest) tested.push(`${meta.imageChecked} image${meta.imageChecked === 1 ? '' : 's'}`);
+
+    let text = tested.length
+      ? `All clear — ${scope} checked, and all ${joinPhrases(tested)} loading.`
+      : `Nothing missing across ${scope}.`;
+    if (!meta.audioTest) text += " Audio load-testing was off, so deleted files weren't checked.";
+    if (!meta.imageTest) text += " Image load-testing was off, so broken covers weren't checked.";
+    if (!meta.optional) text += ' Optional gaps (album downloads, YouTube links) were left out.';
+    summaryEl.textContent = text;
+    return;
+  }
+
+  const order = Object.keys(ISSUES).sort((a, b) => ISSUES[a].order - ISSUES[b].order);
+  const phrases = order
+    .filter(t => counts[t])
+    .map(t => `${counts[t]} ${counts[t] === 1 ? ISSUES[t].one : ISSUES[t].many}`);
+
+  summaryEl.classList.add('has-broken');
+  summaryEl.innerHTML =
+    `<b>${total}</b> issue${total === 1 ? '' : 's'} across ${scope}.` +
+    `<div class="summary-detail">${esc(joinPhrases(phrases))}.</div>`;
+}
+
+/* ---------------- orchestration ---------------- */
+
+async function runScan(){
+  const scanBtn = el('scanBtn');
+  const audioCheck = el('audioCheck');
+  const imageCheck = el('imageCheck');
+  const optCheck = el('optCheck');
+  const toggles = [audioCheck, imageCheck, optCheck];
+
+  scanBtn.disabled = true;
+  scanBtn.textContent = 'Scanning…';
+  toggles.forEach(t => { t.disabled = true; });
+  el('copyBtn').style.display = 'none';
+  el('status').classList.add('show');
+  el('statusCount').textContent = '0';
+  el('summary').classList.remove('show', 'all-clear', 'has-broken');
+  el('tiles').classList.remove('show');
+  el('tiles').innerHTML = '';
+  el('issueList').innerHTML = '';
+  setProgress('Starting…', 0, 0);
+
+  const opts = {
+    audio: audioCheck.checked,
+    images: imageCheck.checked,
+    optional: optCheck.checked
+  };
+  const startedAt = performance.now();
+
+  const artists = await resolveArtists();
+  if (!artists.length) {
+    el('status').classList.remove('show');
+    const summaryEl = el('summary');
+    summaryEl.classList.add('show', 'has-broken');
+    summaryEl.textContent = `No artist tabs were found - list each artist on the spreadsheet's "${CONFIG.artistIndexTab || 'Artists'}" tab (one per row in column A, matching its sheet tab) and check the spreadsheetId in CONFIG.`;
+    scanBtn.disabled = false;
+    scanBtn.textContent = 'Rescan';
+    toggles.forEach(t => { t.disabled = false; });
+    return;
+  }
+
+  /* --- read every tab --- */
+  let tabsDone = 0;
+  setProgress(`Reading ${artists.length} tabs…`, 0, artists.length);
+
+  const tabResults = await Promise.all(artists.map(async artist => {
+    try {
+      const rows = await fetchSheetData(CONFIG.spreadsheetId, artist.sheetTab);
+      return { artist: artist.name, parsed: parseTab(rows, artist.name), error: null };
+    } catch (err) {
+      return { artist: artist.name, parsed: null, error: err.message || String(err) };
+    } finally {
+      tabsDone++;
+      setProgress(`Reading ${artists.length} tabs…`, tabsDone, artists.length);
+    }
+  }));
+
+  /* --- audit everything that doesn't need the network ---
+     Cross-list targets are collected across the whole workbook first, since
+     a song on one tab can be what fills an album on another. */
+  const crossTargets = new Set();
+  for (const result of tabResults) {
+    if (!result.parsed) continue;
+    for (const key of result.parsed.crossTargets) crossTargets.add(key);
+  }
+
+  const issues = [];
+  const pending = [];
+  let albumCount = 0;
+  let songCount = 0;
+
+  for (const result of tabResults) {
+    if (result.error) {
+      issues.push({
+        type: "tabProblem", artistName: result.artist, albumName: "",
+        name: "Tab could not be read", rowNumber: null, link: "",
+        reason: result.error
+      });
+      continue;
+    }
+    albumCount += result.parsed.albums.length;
+    result.parsed.albums.forEach(a => { songCount += a.songs.length; });
+
+    const audited = auditTab(result.parsed, result.artist, opts, crossTargets);
+    issues.push(...audited.issues);
+    pending.push(...audited.pending);
+  }
+
+  /* --- load-test the links, if asked to --- */
+  let audioChecked = 0;
+  let imageChecked = 0;
+
+  if ((opts.audio || opts.images) && pending.length) {
+    const audioGroups = groupBy(pending.filter(p => p.kind === 'audio'), p => p.url);
+    const imageGroups = groupBy(pending.filter(p => p.kind === 'image'), p => p.url);
+    // Only the passes that are switched on contribute to the total, so the
+    // bar still finishes at 100% when one of the two is unticked.
+    const audioTotal = opts.audio ? audioGroups.size : 0;
+    const imageTotal = opts.images ? imageGroups.size : 0;
+    const grandTotal = audioTotal + imageTotal;
+
+    const stampFailures = (groups, results) => {
+      for (const [url, items] of groups) {
+        const res = results.get(url);
+        if (!res || res.ok) continue;
+        for (const item of items) {
+          issues.push({
+            ...item.base,
+            type: item.failType,
+            reason: res.reason,
+            probeUrl: url,
+            probeKind: item.kind
+          });
+        }
+      }
+    };
+
+    if (audioTotal) {
+      setProgress(`Load-testing ${audioTotal} audio file${audioTotal === 1 ? '' : 's'}…`, 0, grandTotal);
+      const audioResults = await probeAll(audioGroups, probeAudio, CONFIG.audioConcurrency, (done, total) => {
+        setProgress(`Load-testing ${total} audio file${total === 1 ? '' : 's'}…`, done, grandTotal);
+      });
+      stampFailures(audioGroups, audioResults);
+      audioChecked = audioTotal;
+    }
+
+    if (imageTotal) {
+      setProgress(`Load-testing ${imageTotal} image${imageTotal === 1 ? '' : 's'}…`, audioTotal, grandTotal);
+      const imageResults = await probeAll(imageGroups, probeImageSpaced, CONFIG.imageConcurrency, (done, total) => {
+        setProgress(`Load-testing ${total} image${total === 1 ? '' : 's'}…`, audioTotal + done, grandTotal);
+      });
+      stampFailures(imageGroups, imageResults);
+      imageChecked = imageTotal;
+    }
+
+    el('barFill').style.width = '100%';
+  }
+
+  /* --- done --- */
+  el('status').classList.remove('show');
+
+  STATE.issues = issues;
+  STATE.activeFilter = 'all';
+  STATE.meta = {
+    tabCount: artists.length,
+    albumCount,
+    songCount,
+    audioChecked,
+    imageChecked,
+    audioTest: opts.audio,
+    imageTest: opts.images,
+    optional: opts.optional,
+    elapsedMs: Math.round(performance.now() - startedAt)
+  };
+
+  el('statusCount').textContent = issues.length;
+  renderSummary();
+  renderTiles();
+  renderList();
+
+  el('copyBtn').style.display = 'inline-flex';
+  el('copyBtn').dataset.payload = buildReportText();
+
+  scanBtn.disabled = false;
+  scanBtn.textContent = 'Rescan';
+  toggles.forEach(t => { t.disabled = false; });
+}
+
+function buildReportText(){
+  const meta = STATE.meta || {};
+  const lines = [
+    `Archive audit — ${meta.tabCount} tabs, ${meta.albumCount} albums, ${meta.songCount} songs`,
+    meta.audioTest
+      ? `Load-tested ${meta.audioChecked} audio files.`
+      : `Audio load-testing was off.`,
+    meta.imageTest
+      ? `Load-tested ${meta.imageChecked} images.`
+      : `Image load-testing was off.`,
+    meta.optional ? '' : `Optional gaps (album downloads, YouTube links) were not counted.`,
+    ''
+  ].filter(l => l !== null);
+
+  const order = Object.keys(ISSUES).sort((a, b) => ISSUES[a].order - ISSUES[b].order);
+  for (const type of order) {
+    const group = STATE.issues.filter(i => i.type === type && !i.resolved);
+    if (!group.length) continue;
+    lines.push(`${ISSUES[type].label.toUpperCase()} (${group.length})`);
+    for (const issue of group) {
+      const where = [issue.artistName, issue.albumName, issue.name].filter(Boolean).join(' — ');
+      const row = issue.rowNumber ? ` (row ${issue.rowNumber})` : '';
+      lines.push(`${where}${row}${issue.link ? `: ${issue.link}` : ''}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n').trim();
+}
+
+/* ---------------- wiring ---------------- */
+
+el('scanBtn').addEventListener('click', runScan);
+
+el('tiles').addEventListener('click', (e) => {
+  const tile = e.target.closest('.tile');
+  if (!tile) return;
+  STATE.activeFilter = tile.dataset.type;
+  el('tiles').querySelectorAll('.tile').forEach(node => {
+    const isActive = node === tile;
+    node.classList.toggle('active', isActive);
+    node.setAttribute('aria-pressed', String(isActive));
+  });
+  renderList();
+});
+
+el('copyBtn').addEventListener('click', async () => {
+  const payload = el('copyBtn').dataset.payload || '';
+  try {
+    await navigator.clipboard.writeText(payload);
+    showToast('Copied the audit report.');
+  } catch {
+    showToast("Couldn't copy — your browser may be blocking clipboard access.");
+  }
+});
+</script>
+
+</body>
+</html>
