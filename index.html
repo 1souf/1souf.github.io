@@ -2996,8 +2996,15 @@ function renderCaseFile(artistName, album){
   const coverUrl = (album.cover || "").trim();
   const hasCover = /^https?:\/\//i.test(coverUrl);
 
+  // loading/decoding on the covers: every album page pulls its own cover
+  // plus one cover per card in the "More from" row below, and those cards
+  // scroll sideways off-screen - without this the browser fetched all of
+  // them up front (fifteen-odd full-size images for a couple of them
+  // actually being looked at). The header cover is above the fold, so its
+  // lazy hint costs nothing: a lazy image that's already in the viewport
+  // is fetched immediately anyway.
   const coverHtml = hasCover
-    ? `<img src="${esc(coverUrl)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;cover-fallback&quot;>NO COVER<br>ON FILE</div>'">`
+    ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=&quot;cover-fallback&quot;>NO COVER<br>ON FILE</div>'">`
     : `<div class="cover-fallback">NO COVER<br>ON FILE</div>`;
 
   // "More from this artist" row, at the bottom of the case file — every
@@ -3013,7 +3020,7 @@ function renderCaseFile(artistName, album){
           const mCoverUrl = (a.cover || "").trim();
           const mHasCover = /^https?:\/\//i.test(mCoverUrl);
           const mCoverHtml = mHasCover
-            ? `<img src="${esc(mCoverUrl)}" alt="" onerror="this.parentElement.innerHTML='<div class=&quot;more-album-cover-fallback&quot;>NO COVER</div>'">`
+            ? `<img src="${esc(mCoverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=&quot;more-album-cover-fallback&quot;>NO COVER</div>'">`
             : `<div class="more-album-cover-fallback">NO COVER</div>`;
           // "34 tracks • Comps" / "8 tracks • Edits": the divider the album
           // sits under on the sheet tells you a comp/edit apart from a regular
