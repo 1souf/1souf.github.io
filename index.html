@@ -707,12 +707,15 @@
   .player-title{font-size:.92rem; font-weight:600; color:var(--text); white-space:nowrap; display:block; width:max-content; cursor:pointer;}
   .player-title:hover{text-decoration:underline;}
   .player-sub{font-size:.78rem; color:var(--text-dim); white-space:nowrap; display:block;}
-  /* Only the primary artist is clickable (jumps to their sidebar tab);
-     featured artists in .player-sub-features stay plain text so clicking
-     one doesn't send you to the wrong artist's tab. Underline-on-hover
-     mirrors .player-title, which jumps to the album. */
+  /* Only the primary artist is clickable here (jumps to their sidebar tab).
+     A feature is clickable too, but only once splitFeatureCredits() has
+     matched it to an artist that actually has a tab - the rest of the list
+     stays plain text, so nothing ever sends you to the wrong artist. The
+     underline-on-hover mirrors .player-title, which jumps to the album. */
   .player-sub-artist{cursor:pointer;}
   .player-sub-artist:hover{text-decoration:underline;}
+  .player-sub-feature{cursor:pointer;}
+  .player-sub-feature:hover, .player-sub-feature:focus-visible{text-decoration:underline;}
   .player-links{display:flex; align-items:center; gap:11px; flex-shrink:0;}
   .player-links .link-icon svg{width:15px; height:15px;}
 
@@ -1301,13 +1304,23 @@
      phone widths the centre column had 0–46px and the controls sat on top
      of the title. Stacking gives every row its own line instead. */
   @media (max-width:600px){
-    :root{--player-h:128px;}
+    /* 40 (cover) + 64 (transport + progress) + 42 (filter/queue/close) plus
+       8px of padding top and bottom is 162, so the old 128 clipped the last
+       row off the bottom of the bar. The extra height is the price of the
+       three-row stack; .case-file reserves it through --player-h. */
+    :root{--player-h:164px;}
     .player{
       flex-wrap:wrap; align-content:center; align-items:center;
       gap:0; height:calc(var(--player-h) + env(safe-area-inset-bottom, 0px));
       padding:8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
     }
-    .player-left{width:auto; flex:1 1 0; min-width:0; gap:10px;}
+    /* 100% basis, not 0: with a 0 basis this column contributes nothing to
+       the line's hypothetical width, so .player-center's own 100% basis fit
+       beside it on the same row and shrank it to zero - the cover, the track
+       title and the artist line were all clipped away, leaving a bar with
+       nothing but controls. Claiming a full row forces the wrap the three-row
+       layout is built on. */
+    .player-left{width:auto; flex:1 1 100%; min-width:0; gap:10px;}
     .player-track{gap:10px;}
     .player-cover{width:40px; height:40px; border-radius:5px;}
     .player-title{font-size:.88rem;}
@@ -2057,6 +2070,90 @@ function albumCoArtistFor(artistName, albumName, albumSection){
   const hit = albums.find(a => !a.isDivider && a.name === albumName && (a.section || "") === (albumSection || ""))
     || albums.find(a => !a.isDivider && a.name === albumName);
   return String((hit && hit.coArtist) || "").trim();
+}
+
+/* ---------------- feature credits that link to an artist tab ----------------
+
+   The player bar's artist line has always been clickable, but the feature
+   list after it stayed plain text: there was no safe way to tell which
+   comma-separated piece was a real artist tab.
+
+   Splitting on commas is the wrong tool, and not just because of a name like
+   "Tyler, The Creator" - that one artist would become two. Nothing below
+   splits anything. Instead the feature string is scanned for the names of
+   artists that actually have a tab (the keys of DATA), longest name first,
+   and only whole names match, so "Ye" doesn't light up inside "Yeat". Every
+   piece that isn't a tab name stays plain text, which is the right answer
+   for a feature who was never given a tab of their own.
+
+   Because the match is against real tab names, "Tyler, The Creator" works
+   with no special case: it's found as one name because that's what the tab
+   is called. */
+
+function escapeRegExp(s){
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Artist names that have at least one album behind them, longest first so a
+// longer name wins the alternation when two of them start at the same spot
+// ("Tyler, The Creator" before a hypothetical "Tyler"). Rebuilt only when the
+// set of tabs changes, i.e. once per sheet load.
+let featureArtistCache = { key: null, names: [] };
+function featureArtistNames(){
+  const key = Object.keys(DATA).join("\n");
+  if (featureArtistCache.key === key) return featureArtistCache.names;
+  const names = Object.keys(DATA)
+    .filter(n => (DATA[n] || []).some(a => !a.isDivider))
+    .sort((a, b) => b.length - a.length);
+  featureArtistCache = { key, names };
+  return names;
+}
+
+function isCreditWordChar(ch){
+  return !!ch && /[\p{L}\p{N}]/u.test(ch);
+}
+
+// [{ text, artist }] - artist is the tab's own spelling when this run is a
+// known artist, undefined when it's ordinary text.
+function splitFeatureCredits(text){
+  const source = String(text || "");
+  if (!source) return [];
+  const names = featureArtistNames();
+  if (!names.length) return [{ text: source }];
+
+  const re = new RegExp(names.map(escapeRegExp).join("|"), "giu");
+  const parts = [];
+  let cursor = 0;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    const start = m.index;
+    const end = start + m[0].length;
+    // Whole names only: a hit that runs straight into a letter or digit on
+    // either side is a coincidence inside a longer word, so step past its
+    // first character and keep scanning.
+    if (isCreditWordChar(source[start - 1]) || isCreditWordChar(source[end])) {
+      re.lastIndex = start + 1;
+      continue;
+    }
+    if (start > cursor) parts.push({ text: source.slice(cursor, start) });
+    // The regex matched case-insensitively; the sheet's own spelling is what
+    // DATA is keyed by, so hand back the canonical name.
+    const needle = m[0].toLowerCase();
+    parts.push({
+      text: source.slice(start, end),
+      artist: names.find(n => n.toLowerCase() === needle) || m[0]
+    });
+    cursor = end;
+  }
+  if (cursor < source.length) parts.push({ text: source.slice(cursor) });
+  return parts;
+}
+
+function featureCreditsHtml(text){
+  return splitFeatureCredits(text).map(part => part.artist
+    ? `<span class="player-sub-feature" data-artist="${esc(part.artist)}" title="Open ${esc(part.artist)}">${esc(part.text)}</span>`
+    : esc(part.text)
+  ).join("");
 }
 
 // Chooses what one copy gets for a cell: an override naming the artist tab the
@@ -3856,7 +3953,10 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
     ? albumCoArtist : "";
   const shownCredit = shownCoArtist ? `${shownArtist}, ${shownCoArtist}` : shownArtist;
   el('playerSubArtist').textContent = shownCredit;
-  el('playerSubFeatures').textContent = song.features ? ", " + song.features : "";
+  // Features that name an artist with their own tab become clickable spans
+  // (see splitFeatureCredits); everything else stays text. Set before
+  // startMarquees() below so the marquee measures the finished line.
+  el('playerSubFeatures').innerHTML = song.features ? ", " + featureCreditsHtml(song.features) : "";
   // Tab title: the site's own title first, then what is playing.
   // "❤︎ — Song Title • Artist Name"
   document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownCredit}${song.features ? ", " + song.features : ""}`;
@@ -3878,16 +3978,13 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   syncUrlToPlayer();
 }
 
-// Clicking the artist name in the player bar opens that artist's album
-// pane in the sidebar — the same navigation as clicking them in the artist
-// list. Never touches playback. If the pane is already showing this
-// artist, it just re-opens it (which re-renders the album list fresh);
-// otherwise it slides in from the artist list.
-el('playerSubArtist').addEventListener('click', () => {
-  // Same artist the bar is naming: for a cross-listed track that's the
-  // artist it came from, so this opens THEIR pane (where the song really
-  // lives) rather than the tab it happens to be filed under.
-  const artist = songArtistName(currentAlbumSongs[currentSongIndex], currentArtistName);
+// Opens an artist's album pane in the sidebar — the same navigation as
+// clicking them in the artist list — and lights their row. Never touches
+// playback. If the pane is already showing this artist, it just re-opens it
+// (which re-renders the album list fresh); otherwise it slides in from the
+// artist list. Shared by the player bar's artist line and by any feature
+// that matched a tab.
+function goToArtist(artist){
   if (!artist) return;
   if (!(DATA[artist] || []).some(a => !a.isDivider)) {
     showToast("That artist isn't on the sheet anymore.");
@@ -3902,7 +3999,25 @@ el('playerSubArtist').addEventListener('click', () => {
   // whatever album is actually open, so nothing else desyncs.)
   document.querySelectorAll('.artist-list-item').forEach(n =>
     n.classList.toggle('active', n.dataset.artist === artist));
-  if (window.innerWidth <= 820) el('sidebar').classList.add('open');
+  // Same query the drawer's media query uses: a landscape phone is wider
+  // than 820 and still needs the drawer to actually appear, backdrop and
+  // all - the old innerWidth check opened it without either.
+  if (matchMedia('(max-width:820px), (hover:none) and (max-width:900px)').matches) openSidebar();
+}
+
+el('playerSubArtist').addEventListener('click', () => {
+  // Same artist the bar is naming: for a cross-listed track that's the
+  // artist it came from, so this opens THEIR pane (where the song really
+  // lives) rather than the tab it happens to be filed under.
+  goToArtist(songArtistName(currentAlbumSongs[currentSongIndex], currentArtistName));
+});
+
+// A feature that splitFeatureCredits() recognised as an artist tab. Only
+// those spans carry data-artist, so a tap on the ordinary text between them
+// does nothing.
+el('playerSubFeatures').addEventListener('click', (e) => {
+  const hit = e.target.closest('.player-sub-feature');
+  if (hit) goToArtist(hit.dataset.artist);
 });
 
 // Clicking the song name in the player bar jumps to the album the track is
