@@ -12,6 +12,11 @@
   :root{
     --player-h:84px;     /* height of the fixed player bar */
     --player-gap:20px;   /* breathing room left between the page's last content and the player bar */
+    /* How long a surface takes to fade to a new album theme. Lives here
+       rather than only in the JS-injected rule below so that surfaces which
+       own their own transition (the mobile drawer) can reuse the same value
+       instead of hardcoding 650ms a second time. */
+    --theme-transition:650ms;
     --bg:#111111;
     --bg-rgb:17,17,17;
     --bg-elevated:#1b1b1b;
@@ -45,7 +50,7 @@
   ::-webkit-scrollbar-thumb{background:var(--border-light); border:2px solid var(--bg);}
   :focus-visible{outline:2px solid var(--stamp); outline-offset:2px;}
 
-  .app{display:flex; height:100vh; overflow:hidden;}
+  .app{display:flex; height:100vh; height:100dvh; overflow:hidden;}
 
   /* ---------- sidebar / archive index ---------- */
   .sidebar{
@@ -53,6 +58,21 @@
     border-right:1px solid var(--border); display:flex; flex-direction:column;
     transition:left .2s ease; z-index:40;
   }
+  /* Dims the page behind the off-canvas drawer so there is always somewhere
+     to tap that gets you back out of it. Desktop never shows it. */
+  .sidebar-backdrop{
+    display:none; position:fixed; inset:0; z-index:39;
+    background:rgba(0,0,0,.55); opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  .sidebar-close{
+    display:none; align-items:center; justify-content:center; flex-shrink:0;
+    width:32px; height:32px; padding:0; margin:-4px -6px -4px 0;
+    background:none; border:none; border-radius:3px; color:var(--text-dim);
+    cursor:pointer; transition:color .15s ease, background .15s ease;
+  }
+  .sidebar-close:hover{color:var(--text); background:rgba(255,255,255,.07);}
+  .sidebar-close svg{width:15px; height:15px; display:block;}
   .sidebar-header{padding:22px 18px 16px; border-bottom:1px solid var(--border);}
   .header-top-row{display:flex; align-items:center; justify-content:space-between; gap:14px;}
   .edit-counter{display:flex; align-items:baseline; gap:9px;}
@@ -334,7 +354,11 @@
   @media (prefers-reduced-motion: reduce){ .status-pill.state-checking .status-dot{animation:none;} }
 
 
-  .case-file{padding:20px 44px calc(var(--player-h) + var(--player-gap));}
+  .case-file{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+  /* The bar is display:none until something has been played, so reserving
+     its height on every album page left ~104px of dead scroll at the bottom.
+     .has-player is toggled by a MutationObserver on the player's style. */
+  body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
   .header-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
   .cover-mount{position:relative; width:168px; height:168px; flex-shrink:0; background:var(--bg-elevated); border-radius:8px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.45);}
@@ -374,7 +398,16 @@
      as the end of the album's runtime value. */
   .album-desc-row{
     display:flex; align-items:baseline; gap:8px;
-    margin-top:8px; min-width:0; max-width:50ch;
+    margin-top:8px; min-width:0;
+    /* The 100% is load-bearing, not decoration. align-self:flex-start makes
+       the row size to max-content, and max-content here is the whole
+       description (nowrap) plus "Read More" — far wider than the header
+       column once the meta line wraps. Only max-width clamps it, so a bare
+       50ch (527px) punched a ~200px hole through the right edge of the case
+       file at 900-1130px windows and set the page's scroll width. min()
+       keeps the 50ch cap where there's room and folds it back inside the
+       column where there isn't. */
+    max-width:min(50ch, 100%);
     align-self:flex-start;
   }
   .album-desc{
@@ -1154,14 +1187,60 @@
   .queue-remove:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.07);}
   .queue-remove svg{width:13px; height:13px;}
 
-  @media (max-width:820px){
-    .sidebar{position:fixed; left:-280px; top:0; bottom:0;}
+  /* The bar is three fixed columns around a flexible centre, so it needs
+     280 + 280 + 207 + gaps + padding ≈ 1132px before the centre has any
+     room at all. Between that and the sidebar breakpoint the centre
+     collapsed to 0–100px and the transport row painted straight over the
+     track title and the volume buttons. Narrowing the two side columns as
+     the window shrinks keeps every column intact instead. */
+  @media (max-width:1160px){
+    .player{--player-side-w:210px; gap:14px; padding:0 16px;}
+  }
+  @media (max-width:1000px){
+    .player{--player-side-w:170px; gap:12px;}
+  }
+  @media (max-width:900px){
+    .player{--player-side-w:140px; gap:10px; padding:0 14px;}
+    .player-cover{width:44px; height:44px;}
+    .player-links, #volume{display:none;}
+  }
+  /* Between the sidebar breakpoint and ~1130 the content column is still
+     narrower than the table's min-content width, which is set by long
+     unbreakable words in Credits/Notes. Wrapping them is what turns that
+     sideways scrollbar into a taller row. */
+  @media (max-width:1130px){
+    .title-cell, .notes-cell, .credit-cell{overflow-wrap:anywhere;}
+  }
+
+  /* A landscape phone is 844px wide, so a width-only breakpoint left it with
+     the full 280px desktop sidebar and a content column it could not fit.
+     Touch devices get the drawer layout out to 900px; a desktop window of
+     the same width keeps the sidebar. */
+  @media (max-width:820px), (hover:none) and (max-width:900px){
+    /* .app > .sidebar, not just .sidebar: the album-theme code injects a
+       `transition: background-color, color, border-color` rule for .sidebar
+       into <head> at runtime, i.e. after this stylesheet, so on equal
+       specificity it wins and wipes the slide out (the drawer then snapped
+       open instead of sliding). The extra class beats it, and the three
+       theme properties are restated so the sidebar still fades its colour
+       with the album - the transition shorthand replaces the whole list. */
+    .app > .sidebar{
+      position:fixed; left:-280px; top:0; bottom:0;
+      transition: left .22s cubic-bezier(.25,.85,.35,1),
+                  background-color var(--theme-transition) ease,
+                  color var(--theme-transition) ease,
+                  border-color var(--theme-transition) ease;
+    }
     .sidebar.open{left:0;}
+    .sidebar-backdrop{display:block;}
+    .sidebar-backdrop.open{opacity:1; pointer-events:auto;}
+    .sidebar-close{display:flex;}
     .menu-btn{display:block;}
     .player{left:0;}
     .search-bar-wrap{position:static; padding:12px 18px;}
-    .search-bar{max-width:none;}
-    .case-file{padding:16px 18px calc(var(--player-h) + var(--player-gap));}
+    .search-bar{max-width:none; flex:1 1 0; min-width:0; width:auto;}
+    .case-file{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
     .stamp-row{gap:18px;}
     .cover-mount{width:120px; height:120px;}
     .stamp-title{font-size:1.4rem;}
@@ -1169,6 +1248,17 @@
     .more-album-card{width:104px;}
     .more-album-cover{width:104px; height:104px;}
     .credit-cell, .notes-cell, .release-cell{display:none;}
+    /* The hidden body cells had no matching header cells, so Notes /
+       Credits / File Date kept their widths and left three empty columns
+       pushing the table wider than the screen. */
+    .manifest thead th:nth-child(3),
+    .manifest thead th:nth-child(4),
+    .manifest thead th:nth-child(5){display:none;}
+    /* alignDescRowToRuntime() pins an exact pixel width to line the
+       description up with the runtime value - which on a phone is wider
+       than the screen. It bails out below 820px, this is the fallback. */
+    .album-desc-row{max-width:100%; width:100%; align-self:stretch;}
+    .album-desc{flex:1 1 auto; min-width:0;}
     .player{--player-side-w:150px;}
     .player-links{display:none;}
     #volume{display:none;}
@@ -1177,6 +1267,124 @@
     .changelog-panel{top:52px; right:16px; left:10px; width:auto; max-width:none;}
     .queue-drawer{width:100%; max-width:calc(100vw - var(--queue-left, 0px));}
     .status-pill{position:static; transform:none; margin-right:10px;}
+  }
+
+  /* The 20px just above the drawer breakpoint are the one desktop band where
+     the manifest genuinely doesn't fit: the docked 280px sidebar plus the
+     case file's 44px gutters leave 438px of content for a table whose
+     min-content width is 499px, so it hung 17px past .main's right edge.
+     Same three columns go as below 820 - by 840 the table has shrunk back
+     inside the column and they come back. */
+  @media (min-width:821px) and (max-width:839px){
+    .manifest thead th:nth-child(3),
+    .manifest thead th:nth-child(4),
+    .manifest thead th:nth-child(5),
+    .credit-cell, .notes-cell, .release-cell{display:none;}
+  }
+
+  /* The drawer slide and its dimmer are the two longest-running motion on
+     the page, so they honour the same switch as the equaliser and the
+     skeleton shimmer. The drawer still opens and closes, just instantly. */
+  @media (prefers-reduced-motion: reduce){
+    .app > .sidebar, .sidebar-backdrop{transition:none;}
+  }
+
+  /* Below ~480 the pill's label plus the search field no longer fit on one
+     line, so the pill drops back to its dot-only chip. */
+  @media (max-width:480px){
+    .status-pill{gap:0; padding:0 10px;}
+    .status-label-wrap{max-width:0; opacity:0;}
+  }
+
+  /* ---------- phone: the bar stacks into three rows ---------- */
+  /* 150 + 150 side columns plus a 207px transport row needs 592px, so at
+     phone widths the centre column had 0–46px and the controls sat on top
+     of the title. Stacking gives every row its own line instead. */
+  @media (max-width:600px){
+    :root{--player-h:128px;}
+    .player{
+      flex-wrap:wrap; align-content:center; align-items:center;
+      gap:0; height:calc(var(--player-h) + env(safe-area-inset-bottom, 0px));
+      padding:8px 14px calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    .player-left{width:auto; flex:1 1 0; min-width:0; gap:10px;}
+    .player-track{gap:10px;}
+    .player-cover{width:40px; height:40px; border-radius:5px;}
+    .player-title{font-size:.88rem;}
+    .player-sub{font-size:.74rem;}
+    .player-extra{width:auto; flex:0 0 auto; gap:4px;}
+    .player-center{
+      flex:1 1 100%; width:100%; align-self:auto;
+      justify-content:flex-start; gap:2px; padding-top:2px;
+    }
+    .ctrl-row{gap:10px;}
+    .ctrl-row-core{gap:4px;}
+    .progress-row{max-width:none; width:100%;}
+    /* With the three data columns gone the table is only #/Title/Time/Links,
+       but a long unbreakable word in a title still set a min-content width
+       wider than a 320px screen. `anywhere` (unlike break-word) counts
+       toward min-content, so the table can finally shrink to fit. */
+    .manifest td{padding:12px 8px;}
+    .manifest thead th{padding:9px 8px;}
+    .title-cell, .title-cell .t-name, .title-cell .t-features{overflow-wrap:anywhere;}
+    /* Phones have hardware volume, and the volume slider is already gone
+       below 820 - the mute toggle was the last button that had nowhere to
+       go without squeezing the title to nothing. */
+    #muteBtn{display:none;}
+    /* 40px touch targets: padding is free on an icon button. */
+    .ctrl-btn{padding:12px;}
+    .ctrl-btn.skip{padding:10px;}
+    .ctrl-btn.skip svg{width:22px; height:22px;}
+    #shuffleBtn svg, #repeatBtn svg, #queueBtn svg, #filterBtn svg{width:17px; height:17px;}
+    #muteBtn svg, #closeBtn svg{width:18px; height:18px;}
+  }
+
+  /* ---------- anything with a touch screen ----------
+     These are capability fixes, not width fixes: a tablet at 1024px has the
+     same problems as a phone. */
+  @media (hover:none){
+    /* Nothing can be revealed by hovering, so the row's links menu and its
+       play glyph have to be permanently on. */
+    .link-menu-wrap{opacity:1; pointer-events:auto;}
+    .link-menu-btn{width:40px; height:40px; font-size:1.15rem;}
+    .num-cell{width:auto;}
+    .num-cell .n{display:none;}
+    .num-cell .p{display:inline-block; color:var(--stamp-fixed);}
+    .row-play{width:38px; height:38px; padding:0; margin:-8px 0;}
+
+    /* iOS zooms the whole page in when a focused input is under 16px and
+       never zooms back out. */
+    .search-input{font-size:16px;}
+
+    /* No grey flash on tap, and no 300ms double-tap-zoom wait. */
+    .ctrl-btn, .btn, .row-play, .link-menu-btn, .artist-list-item,
+    .tree-album-item, .more-album-card, .search-result-item, .changelog-item,
+    .queue-item, .queue-close, .queue-clear-btn, .desc-modal-close,
+    .cover-viewer-close, .sidebar-close, .menu-btn, .pane-back-btn,
+    .search-clear, .search-result-goto, .changelog-item-goto,
+    .manifest tbody tr{
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation;
+    }
+    /* Two blurred, animated surfaces are expensive to composite on a phone.
+       Dropping the blur on its own isn't enough, though: both gradients end
+       28% transparent on the assumption that the blur will swallow whatever
+       scrolls underneath, so without it the album's ☆/Download/⋯ pills read
+       straight through the player bar. Nearly-opaque stops cost far less
+       than the blur did and look the same. */
+    .player, .queue-drawer{backdrop-filter:none; -webkit-backdrop-filter:none;}
+    .player{
+      background:linear-gradient(to top,
+        rgba(var(--sidebar-rgb),1) 0%,
+        rgba(var(--sidebar-rgb),.98) 65%,
+        rgba(var(--sidebar-rgb),.96) 100%);
+    }
+    .queue-drawer{
+      background:linear-gradient(to left,
+        rgba(var(--bg-elevated-rgb),1) 0%,
+        rgba(var(--bg-elevated-rgb),.98) 65%,
+        rgba(var(--bg-elevated-rgb),.96) 100%);
+    }
   }
 </style>
 </head>
@@ -1193,6 +1401,9 @@
           <span class="header-icon-divider" aria-hidden="true"></span>
           <a href="stats.html" class="link-icon social-link" title="Statistics"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4.5" y="13" width="3" height="8" rx="1.5"></rect><rect x="10.5" y="3" width="3" height="18" rx="1.5"></rect><rect x="16.5" y="9" width="3" height="12" rx="1.5"></rect></svg></a>
         </div>
+        <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close archive index" title="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
       <button class="reload-btn" id="reloadBtn" title="Re-fetch the latest data from the spreadsheet">⟳ Reload Spreadsheet</button>
     </div>
@@ -1219,9 +1430,10 @@
     <div class="sidebar-footer" id="sidebarFooter"><span class="skel" style="width:130px;height:11px;"></span></div>
   </aside>
 
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
   <main class="main">
-    <button class="menu-btn" id="menuBtn">☰ archive index</button>
+    <button class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false">☰ archive index</button>
     <div class="search-bar-wrap">
       <a class="status-pill state-checking" id="statusPill" href="archive-audit.html" title="Checking whether the audio host (Pillowcase) is reachable…">
         <span class="status-dot" id="statusDot"></span>
@@ -2965,6 +3177,18 @@ function alignDescRowToRuntime(){
     descAlignObservedRuntime = runtime;
   }
 
+  // Below the sidebar breakpoint the description row is full width and the
+  // meta line usually wraps, so there is no right edge to line up with -
+  // and the pixel width this would pin is wider than the screen, which is
+  // what used to make every album page scroll sideways. Let the stylesheet
+  // own it there. (Placed after the observer/listener setup above so a
+  // rotate back to a wide window still re-aligns.)
+  if (window.innerWidth <= 820) {
+    row.style.width = '';
+    row.style.maxWidth = '';
+    return;
+  }
+
   // On narrow windows the meta line wraps and the runtime drops onto a later
   // line, so there's no single edge left to line up with — leave the row at
   // its normal capped width rather than squeezing the text away.
@@ -3361,9 +3585,18 @@ function renderCaseFile(artistName, album){
 
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('.row-play');
-    if (!btn) return;
-    const tr = btn.closest('tr');
-    if (tr) startRow(tr, true);
+    if (btn) {
+      const tr = btn.closest('tr');
+      if (tr) startRow(tr, true);
+      return;
+    }
+    // Touch has no double-click, so there a single tap on the row is the
+    // play gesture. Desktop keeps the single click inert on purpose, so the
+    // row's text stays ordinary selectable text.
+    if (!matchMedia('(hover:none)').matches) return;
+    if (e.target.closest('.link-menu-wrap, .t-comp-tag, a')) return;
+    const row = e.target.closest('tr[data-idx]');
+    if (row) startRow(row, true);
   });
 
   tbody.querySelectorAll('tr').forEach(tr => {
@@ -4756,11 +4989,25 @@ window.addEventListener('resize', scheduleQueueBoundsUpdate);
 document.querySelector('.main').addEventListener('scroll', scheduleQueueBoundsUpdate, { passive: true });
 // The player bar appearing (first play) or disappearing (close button)
 // changes how far down the drawer may run, even with no resize at all.
-new MutationObserver(scheduleQueueBoundsUpdate).observe(el('player'), {
+// It also decides whether .case-file needs to reserve room for it at all -
+// until something has been played the bar is display:none, and reserving
+// its height left a blank screenful at the bottom of every album.
+function syncPlayerVisibility(){
+  document.body.classList.toggle('has-player', el('player').style.display !== 'none');
+}
+syncPlayerVisibility();
+new MutationObserver(() => {
+  scheduleQueueBoundsUpdate();
+  syncPlayerVisibility();
+}).observe(el('player'), {
   attributes: true, attributeFilter: ['style']
 });
 
 function openQueueDrawer(){
+  // On phones the sidebar sits over the same area, and its right edge is
+  // what --queue-left measures - opening the queue with the drawer out
+  // would squeeze it to 110px. Closing first keeps the geometry simple.
+  closeSidebar();
   updateQueueBounds();
   queueDrawer.classList.add('open');
   queueBackdrop.classList.add('open');
@@ -5235,8 +5482,30 @@ function clearQueueDropMarkers(){
 }
 
 /* ---------------- mobile sidebar ---------------- */
-function closeSidebar(){ el('sidebar').classList.remove('open'); }
-el('menuBtn').addEventListener('click', () => el('sidebar').classList.toggle('open'));
+const sidebarEl = el('sidebar');
+const sidebarBackdrop = el('sidebarBackdrop');
+const menuBtnEl = el('menuBtn');
+
+function openSidebar(){
+  sidebarEl.classList.add('open');
+  sidebarBackdrop.classList.add('open');
+  menuBtnEl.setAttribute('aria-expanded', 'true');
+}
+function closeSidebar(){
+  sidebarEl.classList.remove('open');
+  sidebarBackdrop.classList.remove('open');
+  menuBtnEl.setAttribute('aria-expanded', 'false');
+}
+// The drawer covers the ☰ that opened it, so it has three ways back out:
+// the backdrop, a × in its header, and Escape.
+el('menuBtn').addEventListener('click', () => {
+  if (sidebarEl.classList.contains('open')) closeSidebar(); else openSidebar();
+});
+el('sidebarCloseBtn').addEventListener('click', closeSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && sidebarEl.classList.contains('open')) closeSidebar();
+});
 el('paneBackBtn').addEventListener('click', closeArtistPane);
 
 /* ---------------- boot ---------------- */
@@ -5662,7 +5931,8 @@ function positionLinkMenuAt(menu, x, y){
    default theme.
    ===================================================================== */
 
-const THEME_TRANSITION_MS = 650;
+/* The fade duration itself is --theme-transition in the stylesheet, so the
+   drawer (which owns its own transition) can share the exact same value. */
 const THEME_VARS = [
   '--bg', '--bg-elevated', '--sidebar', '--border', '--border-light',
   '--stamp', '--stamp-dim', '--text', '--text-dim', '--bg-rgb', '--sidebar-rgb',
@@ -5799,9 +6069,9 @@ function __ensureThemeTransition(){
     .toast,
     table.manifest tbody tr, table.manifest thead th,
     .artist-list-item, .tree-album-item, .pane-albums-header {
-      transition: background-color ${THEME_TRANSITION_MS}ms ease,
-                  color ${THEME_TRANSITION_MS}ms ease,
-                  border-color ${THEME_TRANSITION_MS}ms ease;
+      transition: background-color var(--theme-transition) ease,
+                  color var(--theme-transition) ease,
+                  border-color var(--theme-transition) ease;
     }
   `;
   document.head.appendChild(style);
