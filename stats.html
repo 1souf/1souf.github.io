@@ -54,7 +54,21 @@
 
   .page-header{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:0 0 6px;}
   .page-title{font-family:var(--display); font-weight:900; font-size:1.9rem; letter-spacing:-.01em; margin:0;}
-  .page-sub{color:var(--text-dim); font-size:.8rem; font-weight:500;}
+  .page-sub{color:var(--text-dim); font-size:.8rem; font-weight:500; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+
+  /* "Showing: …" opens the legend, which doubles as the artist picker -
+     this keeps the current filter visible with the panel closed. The dot
+     separator lives on the button itself so it wraps with it instead of
+     being stranded at the end of the line above. */
+  .showing-btn{
+    font-family:var(--mono); font-weight:600; font-size:.8rem; color:var(--text);
+    background:none; border:0; padding:0 0 1px; cursor:pointer;
+    border-bottom:1px dashed var(--border-light);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .showing-btn::before{content:"·"; color:var(--border-light); margin-right:8px;}
+  .showing-btn:hover{border-color:var(--stamp);}
+  .showing-btn.filtered{color:var(--stamp);}
 
   .summary-row{
     display:flex; gap:32px; flex-wrap:wrap; margin:26px 0 40px;
@@ -69,20 +83,44 @@
   .year-label{font-family:var(--display); font-weight:800; font-size:1.3rem;}
   .year-total{color:var(--text-dim); font-size:.72rem; letter-spacing:.03em;}
 
-  .bars-row{display:flex; align-items:flex-end; gap:6px; height:150px;}
-  .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; cursor:default;}
-  .bar-count{font-size:.66rem; color:var(--text-dim); margin-bottom:5px; font-variant-numeric:tabular-nums; height:12px; transition:color .15s ease;}
-  .bar-col.has-count .bar-count{color:var(--text);}
-  .bar-col:hover .bar-count{color:var(--stamp);}
-  .bar{
-    width:100%; max-width:26px; background:var(--border-light);
-    border-radius:3px 3px 1px 1px; height:0%; position:relative; overflow:hidden;
-    transition:height .8s cubic-bezier(.2,.8,.2,1), box-shadow .15s ease, transform .15s ease;
+  /* ---------- yearly chart ----------
+     One line chart per year instead of twelve monthly columns. The month
+     counts are plotted as a single continuous line with a soft fill under
+     it, so a year reads as one shape - where the sprints were, where it
+     went quiet - rather than as twelve separate bars. */
+  .chart{position:relative; width:100%; height:200px;}
+  .chart svg{display:block; width:100%; height:100%;}
+
+  .chart-grid{stroke:var(--border); stroke-width:1; shape-rendering:crispEdges;}
+  .chart-axis{fill:var(--text-dim); font-family:var(--mono); font-size:10px; letter-spacing:.02em;}
+  .chart-line{
+    fill:none; stroke:var(--stamp); stroke-width:2;
+    stroke-linejoin:round; stroke-linecap:round;
   }
-  .bar-col.has-count .bar{background:var(--stamp);}
-  .bar-col:hover .bar{box-shadow:0 0 14px rgba(255,255,255,.3); transform:scaleY(1.01);}
-  .bar-segment{position:absolute; left:0; right:0;}
-  .bar-month{margin-top:9px; font-size:.62rem; color:var(--text-dim); letter-spacing:.05em; text-transform:uppercase;}
+  .chart-dot{fill:var(--bg-elevated); stroke:var(--stamp); stroke-width:1.5;}
+  .chart-dot.zero{opacity:.4;}
+  .chart-cursor{stroke:var(--stamp); stroke-width:1; stroke-dasharray:3 3; opacity:0;}
+  .chart-cursor.on{opacity:.5;}
+  .chart-focus{opacity:0;}
+  .chart-focus.on{opacity:1;}
+
+  /* Draw-in: the path carries pathLength="1", so the dash maths works at
+     any width without having to measure the path first. */
+  .chart-line.draw{stroke-dasharray:1; stroke-dashoffset:1;}
+  .chart-line.draw.in{stroke-dashoffset:0; transition:stroke-dashoffset .9s cubic-bezier(.3,.7,.3,1);}
+
+  .chart-tip{
+    position:absolute; z-index:2; pointer-events:none;
+    padding:5px 8px; border-radius:4px;
+    background:var(--bg); border:1px solid var(--border-light);
+    color:var(--text); font-size:.66rem; letter-spacing:.02em; white-space:nowrap;
+    transform:translate(-50%, -100%); opacity:0; transition:opacity .12s ease;
+  }
+  .chart-tip.on{opacity:1;}
+  .chart-tip b{font-weight:700;}
+  .chart-tip span{color:var(--text-dim);}
+
+  .year-delta{color:var(--text-dim); font-size:.68rem; margin-left:8px; letter-spacing:.02em;}
 
   /* ---------- legend: hidden by default ----------
      The eye button in the top-left corner opens it as a floating, map-style
@@ -126,9 +164,25 @@
   .legend-close{width:28px; height:28px; margin-right:-8px; background:none; border:1px solid transparent;}
   .legend-close:hover{border-color:var(--border-light);}
 
-  .legend-list{display:flex; flex-direction:column; gap:9px;}
-  .legend-item{display:flex; align-items:flex-start; gap:9px; font-size:.7rem; line-height:1.35; color:var(--text-dim); letter-spacing:.02em;}
-  .legend-swatch{width:12px; height:12px; margin-top:2px; border-radius:2px; flex-shrink:0; display:inline-block;}
+  /* The list doubles as the artist picker: picking a row redraws every
+     chart for just that artist, so there's nothing to colour-code any
+     more - only one line is ever on screen. */
+  .legend-list{display:flex; flex-direction:column; gap:2px;}
+  .legend-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    width:100%; padding:7px 9px; background:none; border:0; border-radius:4px;
+    font-family:var(--mono); font-weight:600; font-size:.72rem; letter-spacing:.02em;
+    color:var(--text-dim); text-align:left; cursor:pointer;
+    transition:color .15s ease, background .15s ease;
+  }
+  .legend-item:hover{color:var(--text); background:rgba(255,255,255,.05);}
+  .legend-item.active{
+    color:var(--text); background:rgba(255,255,255,.07);
+    box-shadow:inset 2px 0 0 var(--stamp);
+  }
+  .legend-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .legend-count{font-size:.64rem; color:var(--text-dim); font-variant-numeric:tabular-nums; flex-shrink:0;}
+  .legend-sep{height:1px; background:var(--border); margin:6px 0;}
 
   /* On narrow windows there's no empty margin beside the page for the eye
      button, so the page gets a little extra room at the top for it instead
@@ -152,11 +206,11 @@
     animation:skel-shimmer 1.6s linear infinite;
   }
   @media (prefers-reduced-motion: reduce){ .skel{animation:none;} }
+  .chart-skel{display:block; width:100%; height:200px; border-radius:4px;}
 
   @media (max-width:640px){
-    .bars-row{gap:3px; height:120px;}
-    .bar-month{font-size:.54rem; margin-top:6px;}
-    .bar-count{font-size:.56rem;}
+    .chart{height:170px;}
+    .chart-skel{height:170px;}
     .summary-row{gap:22px; padding:16px 18px;}
     .summary-num{font-size:1.25rem;}
   }
@@ -330,9 +384,9 @@
   <button type="button" class="legend-toggle" id="legendToggle" title="Show legend" aria-label="Show legend" aria-expanded="false" aria-controls="legendPanel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
   </button>
-  <aside class="legend-panel" id="legendPanel" aria-label="Artist colors">
+  <aside class="legend-panel" id="legendPanel" aria-label="Artists">
     <div class="legend-header">
-      <span class="legend-title">Legend</span>
+      <span class="legend-title">Artists</span>
       <button type="button" class="legend-close" id="legendClose" title="Hide legend" aria-label="Hide legend">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
       </button>
@@ -346,7 +400,10 @@
       Back to Archive
     </a>
   </div>
-  <div class="page-sub">Songs per month, built live from each track's file date</div>
+  <div class="page-sub">
+    <span>Songs per month, built live from each track's file date</span>
+    <button type="button" class="showing-btn" id="showingBtn" aria-haspopup="true">Showing: All artists</button>
+  </div>
 
   <div id="statsContent">
     <div class="summary-row">
@@ -357,37 +414,11 @@
     </div>
     <div class="year-block">
       <div class="year-header"><span class="skel" style="width:56px;height:19px;"></span><span class="skel" style="width:66px;height:10px;"></span></div>
-      <div class="bars-row">
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:38px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:70px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:52px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:95px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:60px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:28px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:82px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:45px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:68px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:100px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:35px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:58px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-      </div>
+      <span class="skel chart-skel"></span>
     </div>
     <div class="year-block">
       <div class="year-header"><span class="skel" style="width:56px;height:19px;"></span><span class="skel" style="width:66px;height:10px;"></span></div>
-      <div class="bars-row">
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:55px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:30px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:88px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:62px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:40px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:75px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:20px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:95px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:48px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:65px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:33px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-        <div class="bar-col"><span class="skel" style="width:16px;height:9px;margin-bottom:5px;"></span><span class="skel" style="width:100%;max-width:26px;height:80px;"></span><span class="skel" style="width:20px;height:8px;margin-top:9px;"></span></div>
-      </div>
+      <span class="skel chart-skel"></span>
     </div>
   </div>
 </div>
@@ -405,78 +436,19 @@ const CONFIG = {
   // per row in column A: that text is both the sheet tab name (sheet names
   // are matched case-insensitively) and the name shown on this page.
   // Anything in the other columns is ignored. A header row ("Artist") is fine.
-  artistIndexTab: "Artists",
-
-  // Optional: pin an artist to a chart color by name, e.g.
-  // { "Future": "#7ad0ff" }. Anyone not listed gets a stable color
-  // generated from their name below.
-  pinnedColors: {}
+  artistIndexTab: "Artists"
 };
 
 // The artist list resolved from the index tab at load time (see
-// resolveArtists()). Each entry is { name, sheetTab, color }.
+// resolveArtists()). Each entry is { name, sheetTab }.
 let ARTISTS = [];
 
 /* =====================================================================
-   Automatic artist colors. An artist's color is worked out from its name
-   and nothing else — not its position in the list, not how many artists
-   there are, nothing random — so the same name gives the exact same
-   color on every device, every visit, forever. Adding, removing or
-   reordering tabs never changes anyone else's color.
-
-   DON'T CHANGE COLOR_SEED, COLOR_SATURATIONS or COLOR_LIGHTNESSES: they're
-   part of the formula, so editing any of them reshuffles every artist's
-   color at once. This seed was re-picked by brute-force searching a billion
-   candidates for the one that keeps the (now 23) artists' colors as far
-   apart from each other as possible (mostly judged on hue, worst-case pair
-   first, so no color family gets crowded); new names just get whatever
-   color their name hashes to under it.
-   ===================================================================== */
-const COLOR_SEED = 399527510;
-const COLOR_SATURATIONS = [62, 72, 82];
-const COLOR_LIGHTNESSES = [58, 66, 74];
-
-// Turns any text into a stable 32-bit number (FNV-1a plus a final mix).
-function hashString(str){
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++){
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return h >>> 0;
-}
-
-// Name -> color. Case and stray spaces are ignored, so "Future" and
-// " future " match. Saturation and lightness are kept in a bright-enough
-// range to stay readable on the dark background.
-function colorForName(name){
-  const h = hashString(COLOR_SEED + ":" + String(name).trim().toLowerCase());
-  const hue = h % 360;
-  const sat = COLOR_SATURATIONS[(h >>> 9) % COLOR_SATURATIONS.length];
-  const light = COLOR_LIGHTNESSES[(h >>> 13) % COLOR_LIGHTNESSES.length];
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
-}
-
-// Name -> pinned color, keyed case- and space-insensitively so a pin keeps
-// working no matter how the name is written on the sheet.
-const PINNED_COLORS = new Map(
-  Object.entries(CONFIG.pinnedColors || {}).map(([name, color]) => [name.trim().toLowerCase(), color])
-);
-
-// Give every artist a color: a hand-pinned one if CONFIG has it, otherwise
-// the stable name-derived one above.
-function artistColor(name){
-  return PINNED_COLORS.get(String(name).trim().toLowerCase()) || colorForName(name);
-}
-
-/* =====================================================================
-   Legend. Hidden by default. Its list is filled in by renderLegend() once
-   the Artists tab has been read, so it always matches the chart. The eye
-   button in the top-left corner opens it; the eye-slash button inside it
-   (or Esc) hides it again. Every page load starts hidden.
+   Legend / artist picker. Hidden by default; the eye button in the
+   top-left corner opens it and the eye-slash button (or Esc) closes it.
+   Picking a row redraws every chart for just that artist - there are no
+   per-artist colours any more, since only one line is ever on screen, so
+   the list doubles as the filter rather than as a colour key.
    ===================================================================== */
 function esc(s){
   return String(s === null || s === undefined ? "" : s)
@@ -484,29 +456,74 @@ function esc(s){
     .replace(/"/g, "&quot;");
 }
 
-function renderLegend(){
-  document.getElementById('legendList').innerHTML = ARTISTS.map(artist =>
-    `<div class="legend-item"><span class="legend-swatch" style="background:${artist.color}"></span>${esc(artist.name)}</div>`
-  ).join('');
+// null = every artist combined, which is what a fresh visit starts on.
+let selectedArtist = null;
+
+function artistSongCount(name){
+  if (!STATS) return null;
+  return STATS.artistTotals[name] || 0;
 }
 
-(function setupLegend(){
+function renderLegend(){
+  const list = document.getElementById('legendList');
+  const items = [`<button type="button" class="legend-item ${selectedArtist === null ? 'active' : ''}" data-artist="" aria-pressed="${selectedArtist === null}">
+      <span class="legend-name">All artists</span>
+      <span class="legend-count" title="Songs with a file date">${STATS ? STATS.totalDated.toLocaleString() : ''}</span>
+    </button>`,
+    '<div class="legend-sep"></div>'];
+
+  ARTISTS.forEach(artist => {
+    const active = selectedArtist === artist.name;
+    const count = artistSongCount(artist.name);
+    items.push(`<button type="button" class="legend-item ${active ? 'active' : ''}" data-artist="${esc(artist.name)}" aria-pressed="${active}">
+      <span class="legend-name">${esc(artist.name)}</span>
+      <span class="legend-count" title="Songs with a file date">${count === null ? '' : count.toLocaleString()}</span>
+    </button>`);
+  });
+
+  list.innerHTML = items.join('');
+}
+
+function setLegendOpen(open){
   const page = document.querySelector('.page');
   const toggle = document.getElementById('legendToggle');
   const close = document.getElementById('legendClose');
-
+  page.classList.toggle('legend-open', open);
+  toggle.setAttribute('aria-expanded', String(open));
   // Keyboard users: focus follows whichever button is showing.
-  function setOpen(open){
-    page.classList.toggle('legend-open', open);
-    toggle.setAttribute('aria-expanded', String(open));
-    (open ? close : toggle).focus();
-  }
-  toggle.addEventListener('click', () => setOpen(true));
-  close.addEventListener('click', () => setOpen(false));
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && page.classList.contains('legend-open')) setOpen(false);
-  });
-})();
+  (open ? close : toggle).focus();
+}
+
+function updateShowingLabel(){
+  const btn = document.getElementById('showingBtn');
+  if (!btn) return;
+  btn.textContent = `Showing: ${selectedArtist || 'All artists'}`;
+  btn.classList.toggle('filtered', selectedArtist !== null);
+}
+
+// Picking an artist re-renders the whole stats block against that artist.
+// Re-rendering (rather than hiding lines) is what lets the y-axis rescale
+// to the selected artist and empty years drop out entirely.
+function selectArtist(name){
+  if (name === selectedArtist) return;
+  selectedArtist = name;
+  renderLegend();
+  updateShowingLabel();
+  if (STATS) render(STATS);
+}
+
+document.getElementById('legendList').addEventListener('click', (e) => {
+  const item = e.target.closest('.legend-item');
+  if (!item) return;
+  selectArtist(item.dataset.artist || null);
+});
+
+document.getElementById('legendToggle').addEventListener('click', () => setLegendOpen(true));
+document.getElementById('legendClose').addEventListener('click', () => setLegendOpen(false));
+document.getElementById('showingBtn').addEventListener('click', () => setLegendOpen(true));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.querySelector('.page').classList.contains('legend-open')) setLegendOpen(false);
+});
 
 function fetchSheetData(sheetId, tabName){
   return new Promise((resolve, reject) => {
@@ -605,7 +622,7 @@ async function resolveArtists(){
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ name, sheetTab: name, color: artistColor(name) });
+      out.push({ name, sheetTab: name });
     }
     ARTISTS = out;
   } catch (err) {
@@ -796,10 +813,10 @@ async function loadAllAlbums(){
 }
 
 function aggregate(albums){
-  const buckets = {}; // "year-month" -> { [artistName]: count }
+  const buckets = {};      // "year-month" -> { [artistName]: count }
+  const artistTotals = {}; // artistName -> how many dated songs they have
   let minYear = null, maxYear = null;
   let totalSongs = 0, totalDated = 0;
-  let busiest = null; // { year, month, count }
 
   albums.forEach(album => {
     album.songs.forEach(song => {
@@ -811,20 +828,62 @@ function aggregate(albums){
       const key = `${parsed.year}-${parsed.month}`;
       const bucket = buckets[key] || (buckets[key] = {});
       bucket[album.artist] = (bucket[album.artist] || 0) + 1;
-      const count = bucketTotal(bucket);
-      if (!busiest || count > busiest.count) busiest = { year: parsed.year, month: parsed.month, count };
+      artistTotals[album.artist] = (artistTotals[album.artist] || 0) + 1;
       if (minYear === null || parsed.year < minYear) minYear = parsed.year;
       if (maxYear === null || parsed.year > maxYear) maxYear = parsed.year;
     });
   });
 
-  return { buckets, minYear, maxYear, totalSongs, totalDated, busiest };
+  return { buckets, artistTotals, minYear, maxYear, totalSongs, totalDated };
 }
 
 // Sum of every artist's count in a single month's bucket.
 function bucketTotal(bucket){
   return bucket ? Object.values(bucket).reduce((a, b) => a + b, 0) : 0;
 }
+
+/* =====================================================================
+   Charts. One line chart per year, drawn as inline SVG sized in real CSS
+   pixels rather than as a fixed viewBox scaled to fit - a 720-unit
+   viewBox squeezed into a 320px phone would shrink the month labels to
+   about 4px. Anything width-dependent is therefore re-painted on resize.
+   ===================================================================== */
+
+let STATS = null;        // last aggregate() result
+let chartTop = 10;       // y-axis maximum, shared by every year block
+let totalRuntimeSeconds = null; // survives re-renders when the filter changes
+
+// The twelve monthly counts for one year, for whatever is selected.
+function seriesFor(stats, year){
+  const out = new Array(12).fill(0);
+  for (let m = 0; m < 12; m++){
+    const bucket = stats.buckets[`${year}-${m}`] || {};
+    out[m] = selectedArtist ? (bucket[selectedArtist] || 0) : bucketTotal(bucket);
+  }
+  return out;
+}
+
+// Years newest-first, dropping any the selection has nothing in: an artist
+// who only turns up from 2023 on shouldn't get three flat empty blocks.
+function visibleYears(stats){
+  const years = [];
+  for (let y = stats.maxYear; y >= stats.minYear; y--){
+    if (seriesFor(stats, y).some(v => v > 0)) years.push(y);
+  }
+  return years;
+}
+
+// Rounds a raw axis step up to the next 1/2/5 x 10^n, so the gridlines
+// land on whole numbers of songs instead of 8.4s.
+function niceStep(raw){
+  const exp = Math.floor(Math.log10(raw));
+  const base = Math.pow(10, exp);
+  const n = raw / base;
+  const mult = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return mult * base;
+}
+
+const CHART = { padL: 34, padR: 10, padT: 12, padB: 24 };
 
 function render(stats){
   const slot = document.getElementById('statsContent');
@@ -838,68 +897,189 @@ function render(stats){
     return;
   }
 
-  const globalMax = Object.values(stats.buckets).reduce((m, b) => Math.max(m, bucketTotal(b)), 0);
+  const years = visibleYears(stats);
+
+  // One shared scale for every year block: a quiet year should look quiet
+  // next to a busy one, which is the whole point of showing them together.
+  const viewMax = years.reduce((m, y) => Math.max(m, ...seriesFor(stats, y)), 0);
+  const step = Math.max(1, niceStep(Math.max(viewMax, 1) / 5));
+  chartTop = step * 5;
+
+  // The busiest month follows the filter too - it sits directly above the
+  // charts and would otherwise contradict them.
+  let busiest = null;
+  years.forEach(y => seriesFor(stats, y).forEach((v, m) => {
+    if (!busiest || v > busiest.count) busiest = { year: y, month: m, count: v };
+  }));
+
+  const runtimeHtml = totalRuntimeSeconds === null
+    ? '<span class="skel" style="display:inline-block;width:64px;height:24px;"></span>'
+    : formatTotalHours(totalRuntimeSeconds);
 
   let html = `<div class="summary-row">
     <div class="summary-stat"><span class="summary-num">${stats.totalSongs.toLocaleString()}</span><span class="summary-label">Total Edits</span></div>
     <div class="summary-stat"><span class="summary-num">${ARTISTS.length.toLocaleString()}</span><span class="summary-label">Total Artists</span></div>
-    <div class="summary-stat"><span class="summary-num" id="totalRuntimeVal"><span class="skel" style="display:inline-block;width:64px;height:24px;"></span></span><span class="summary-label">Total Runtime</span></div>
-    <div class="summary-stat"><span class="summary-num">${MONTH_LABELS[stats.busiest.month]} ${stats.busiest.year}</span><span class="summary-label">Busiest Month · ${stats.busiest.count}</span></div>
+    <div class="summary-stat"><span class="summary-num" id="totalRuntimeVal">${runtimeHtml}</span><span class="summary-label">Total Runtime</span></div>
+    ${busiest ? `<div class="summary-stat"><span class="summary-num">${MONTH_LABELS[busiest.month]} ${busiest.year}</span><span class="summary-label">Busiest Month · ${busiest.count}</span></div>` : ''}
   </div>`;
 
-  for (let year = stats.maxYear; year >= stats.minYear; year--) {
-    let yearTotal = 0;
-    const cols = MONTH_LABELS.map((label, m) => {
-      const bucket = stats.buckets[`${year}-${m}`] || {};
-      const count = bucketTotal(bucket);
-      yearTotal += count;
-      // Square-root scale instead of linear: a couple of huge outlier
-      // months (e.g. a 70-100 song sprint) would otherwise eat the whole
-      // scale and squash every normal 10-30 month down into a sliver,
-      // making a completely typical month look like nothing happened.
-      // Square-rooting both sides compresses the gap between big and
-      // small counts while still keeping bigger bars visibly bigger.
-      // The real number is always printed above the bar regardless.
-      const pct = globalMax ? Math.max((Math.sqrt(count) / Math.sqrt(globalMax)) * 100, count > 0 ? 6 : 2) : 2;
-
-      // Stack each artist's share inside the bar in a fixed order (the
-      // order artists appear on the Artists tab), so a color always means
-      // the same artist and sits in the same position across every column.
-      let cumulative = 0;
-      const segments = ARTISTS.map(artist => {
-        const artistCount = bucket[artist.name] || 0;
-        if (!artistCount) return '';
-        const segPct = (artistCount / count) * 100;
-        const bottom = cumulative;
-        cumulative += segPct;
-        return `<div class="bar-segment" style="height:${segPct}%;bottom:${bottom}%;background:${artist.color};" title="${esc(artist.name)} — ${artistCount}"></div>`;
-      }).join('');
-
-      return `<div class="bar-col ${count > 0 ? 'has-count' : ''}" title="${label} ${year} — ${count} song${count === 1 ? '' : 's'}">
-        <span class="bar-count">${count > 0 ? count : ''}</span>
-        <div class="bar" data-final-height="${pct}%">${segments}</div>
-        <span class="bar-month">${label}</span>
-      </div>`;
-    }).join('');
-
-    html += `<div class="year-block">
-      <div class="year-header"><span class="year-label">${year}</span><span class="year-total">${yearTotal.toLocaleString()} song${yearTotal === 1 ? '' : 's'}</span></div>
-      <div class="bars-row">${cols}</div>
-    </div>`;
+  if (!years.length) {
+    html += `<div class="stats-empty">${esc(selectedArtist)} has no dated songs on the sheet yet.</div>`;
+    slot.innerHTML = html;
+    return;
   }
 
-  slot.innerHTML = html;
+  years.forEach(year => {
+    const values = seriesFor(stats, year);
+    const total = values.reduce((a, b) => a + b, 0);
+    // Change against the year before, but only when that year actually had
+    // something - "+42" measured against an empty 2022 says nothing.
+    const prevTotal = (year - 1 >= stats.minYear)
+      ? seriesFor(stats, year - 1).reduce((a, b) => a + b, 0)
+      : 0;
+    const delta = prevTotal > 0 ? total - prevTotal : 0;
+    const deltaHtml = delta === 0
+      ? ''
+      : `<span class="year-delta">${delta > 0 ? '▲' : '▼'} ${Math.abs(delta).toLocaleString()} vs ${year - 1}</span>`;
 
-  // Animate the bars in after they've painted at height 0, rather than
-  // snapping straight to their final height.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      document.querySelectorAll('.bar').forEach(bar => {
-        bar.style.height = bar.dataset.finalHeight;
-      });
-    });
+    html += `<div class="year-block">
+      <div class="year-header">
+        <span class="year-label">${year}</span>
+        <span class="year-total">${total.toLocaleString()} song${total === 1 ? '' : 's'}${deltaHtml}</span>
+      </div>
+      <div class="chart" data-year="${year}" role="img" aria-label="${year}: ${total} song${total === 1 ? '' : 's'} across the year"></div>
+    </div>`;
+  });
+
+  slot.innerHTML = html;
+  paintCharts(true);
+}
+
+// Draws every .chart on the page. animate is false on resize re-paints,
+// so dragging the window doesn't replay the line-drawing animation.
+function paintCharts(animate){
+  if (!STATS) return;
+  document.querySelectorAll('.chart[data-year]').forEach(container => {
+    const year = Number(container.dataset.year);
+    paintChart(container, year, seriesFor(STATS, year), animate);
   });
 }
+
+function paintChart(container, year, values, animate){
+  const W = Math.max(240, Math.round(container.clientWidth || 600));
+  const H = Math.round(container.clientHeight || 200);
+  const { padL, padR, padT, padB } = CHART;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const stepValue = chartTop / 5;
+  const x = i => padL + (i / 11) * plotW;
+  const y = v => padT + plotH - (v / chartTop) * plotH;
+  const gid = `chartFill-${year}`;
+
+  const parts = [];
+  parts.push(`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" style="stop-color:var(--stamp);stop-opacity:.22"/>
+      <stop offset="100%" style="stop-color:var(--stamp);stop-opacity:0"/>
+    </linearGradient></defs>`);
+
+  // Horizontal gridlines + their value labels.
+  for (let i = 0; i <= 5; i++){
+    const v = stepValue * i;
+    const gy = y(v);
+    parts.push(`<line class="chart-grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${padL + plotW}" y2="${gy.toFixed(1)}"/>`);
+    parts.push(`<text class="chart-axis" x="${padL - 8}" y="${(gy + 3.5).toFixed(1)}" text-anchor="end">${Math.round(v)}</text>`);
+  }
+
+  // Month labels. On a narrow chart every other month is dropped rather
+  // than letting the abbreviations run into each other.
+  const labelEvery = (plotW / 11) < 24 ? 2 : 1;
+  MONTH_LABELS.forEach((label, i) => {
+    if (i % labelEvery !== 0) return;
+    parts.push(`<text class="chart-axis" x="${x(i).toFixed(1)}" y="${H - 7}" text-anchor="middle">${label}</text>`);
+  });
+
+  const pts = values.map((v, i) => [x(i), y(v)]);
+  const linePath = 'M' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ');
+  const baseY = (padT + plotH).toFixed(1);
+  const areaPath = `${linePath} L ${x(11).toFixed(1)} ${baseY} L ${x(0).toFixed(1)} ${baseY} Z`;
+
+  parts.push(`<path d="${areaPath}" fill="url(#${gid})"/>`);
+  parts.push(`<path class="chart-line${animate ? ' draw' : ''}" pathLength="1" d="${linePath}"/>`);
+  pts.forEach((p, i) => {
+    parts.push(`<circle class="chart-dot${values[i] ? '' : ' zero'}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6"/>`);
+  });
+  parts.push(`<line class="chart-cursor" x1="0" y1="${padT}" x2="0" y2="${padT + plotH}"/>`);
+  parts.push(`<circle class="chart-focus" r="4.5" cx="0" cy="0"/>`);
+  parts.push(`<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="transparent"/>`);
+
+  container.innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${parts.join('')}</svg>` +
+    `<div class="chart-tip"></div>`;
+
+  const svg = container.querySelector('svg');
+  const tip = container.querySelector('.chart-tip');
+  const cursor = svg.querySelector('.chart-cursor');
+  const focus = svg.querySelector('.chart-focus');
+
+  if (animate) {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const line = svg.querySelector('.chart-line');
+        if (line) line.classList.add('in');
+      }));
+    }
+  }
+
+  // Hover: nearest month wins, so the pointer never has to land exactly on
+  // a dot. The crosshair + tooltip are the stock-chart part of this.
+  const hide = () => {
+    cursor.classList.remove('on');
+    focus.classList.remove('on');
+    tip.classList.remove('on');
+  };
+  container.addEventListener('pointerleave', hide);
+  container.addEventListener('pointermove', (e) => {
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const local = pt.matrixTransform(ctm.inverse());
+    const i = Math.max(0, Math.min(11, Math.round((local.x - padL) / (plotW / 11))));
+    const value = values[i];
+    const px = x(i);
+    const py = y(value);
+
+    cursor.setAttribute('x1', px.toFixed(1));
+    cursor.setAttribute('x2', px.toFixed(1));
+    focus.setAttribute('cx', px.toFixed(1));
+    focus.setAttribute('cy', py.toFixed(1));
+    cursor.classList.add('on');
+    focus.classList.add('on');
+
+    tip.innerHTML = `<b>${MONTH_LABELS[i]} ${year}</b> <span>· ${value} song${value === 1 ? '' : 's'}</span>`;
+    tip.classList.add('on');
+
+    const box = container.getBoundingClientRect();
+    const svgBox = svg.getBoundingClientRect();
+    const scale = svgBox.width / W;
+    const left = (svgBox.left - box.left) + px * scale;
+    const top = (svgBox.top - box.top) + py * scale;
+    // Clamp against the tooltip's own measured size rather than a guessed
+    // half-width, so it never hangs off either edge of the chart.
+    const halfW = tip.offsetWidth / 2;
+    tip.style.left = `${Math.max(halfW + 4, Math.min(box.width - halfW - 4, left))}px`;
+    tip.style.top = `${Math.max(tip.offsetHeight + 4, top - 8)}px`;
+  });
+}
+
+// Charts are sized in real pixels, so a width change needs a re-paint.
+let chartResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(chartResizeTimer);
+  chartResizeTimer = setTimeout(() => paintCharts(false), 150);
+});
 
 (async function boot(){
   try {
@@ -912,6 +1092,10 @@ function render(stats){
 
     const albums = await loadAllAlbums();
     const stats = aggregate(albums);
+    STATS = stats;
+    // Again, now that there are counts to put beside each name.
+    renderLegend();
+    updateShowingLabel();
     render(stats);
 
     // Runtime can only be known by probing each track's actual audio file
@@ -921,19 +1105,22 @@ function render(stats){
     // in aggregate(), so a track appearing on two albums isn't counted
     // twice; tracks with no file linked yet are skipped too, since there's
     // nothing to probe.
-    const runtimeEl = document.getElementById('totalRuntimeVal');
-    if (runtimeEl) {
-      const songs = [];
-      albums.forEach(album => album.songs.forEach(song => {
-        if (!song.crossListed && song.playLink) songs.push(song);
-      }));
-      if (songs.length) {
-        computeTotalRuntime(songs, (totalSeconds) => {
-          runtimeEl.textContent = formatTotalHours(totalSeconds);
-        });
-      } else {
-        runtimeEl.textContent = "0 hrs";
-      }
+    const songs = [];
+    albums.forEach(album => album.songs.forEach(song => {
+      if (!song.crossListed && song.playLink) songs.push(song);
+    }));
+    if (songs.length) {
+      computeTotalRuntime(songs, (totalSeconds) => {
+        // Kept on the outside so switching artist doesn't reset the stat
+        // back to a skeleton - render() reads it back on every re-render.
+        totalRuntimeSeconds = totalSeconds;
+        const runtimeEl = document.getElementById('totalRuntimeVal');
+        if (runtimeEl) runtimeEl.textContent = formatTotalHours(totalSeconds);
+      });
+    } else {
+      totalRuntimeSeconds = 0;
+      const runtimeEl = document.getElementById('totalRuntimeVal');
+      if (runtimeEl) runtimeEl.textContent = "0 hrs";
     }
   } catch (err) {
     console.error(err);
