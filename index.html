@@ -2163,6 +2163,34 @@ function creditLinksHtml(text){
   ).join("");
 }
 
+// The album header's Feature(s) cell can name more than one artist, comma
+// separated - the ¥$ tab's headers read "Kanye West, Ty Dolla $ign". Commas
+// also live inside some names, so a run of pieces is glued back together
+// whenever the joined text is itself an artist tab: "Tyler, The Creator"
+// survives, "Kanye West, Ty Dolla $ign" doesn't merge because no tab is
+// called that. Needs DATA complete, so this runs at render time, never while
+// the tabs are still being parsed.
+function coArtistNames(raw){
+  const text = String(raw || "").trim();
+  if (!text) return [];
+  const tokens = text.split(",").map(s => s.trim()).filter(Boolean);
+  if (tokens.length < 2) return tokens;
+  const names = featureArtistNames();
+  const isTab = s => names.some(n => n.toLowerCase() === s.toLowerCase());
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    // Longest run first, so a three-piece name isn't eaten by its two-piece
+    // prefix.
+    let end = i;
+    for (let j = tokens.length - 1; j > i; j--) {
+      if (isTab(tokens.slice(i, j + 1).join(", "))) { end = j; break; }
+    }
+    out.push(tokens.slice(i, end + 1).join(", "));
+    i = end;
+  }
+  return out;
+}
+
 // Chooses what one copy gets for a cell: an override naming the artist tab the
 // copy lands on wins, then - only when this copy is "the" cross-listed one (see
 // crossListAndFinalize) - the plain "{Value}" form from before. null means
@@ -3368,13 +3396,15 @@ function renderCaseFile(artistName, album){
 
   const isComp = (album.section || "").trim().toLowerCase() === "comps";
   const releaseDateHtml = album.releaseDate ? `<span>RELEASE DATE: <b>${esc(album.releaseDate)}</b></span>` : "";
-  // The album header's Feature(s) cell can also name a second artist (see
-  // parseArtistCell()); it rides along on the ARTIST line after a dot. Skipped
-  // when it's the same name as the tab artist.
-  const coArtist = String(album.coArtist || "").trim();
-  const coArtistHtml = coArtist && coArtist.toLowerCase() !== artistName.trim().toLowerCase()
-    ? `<span class="fm-sep">•</span><b>${esc(coArtist)}</b>`
-    : "";
+  // The album header's Feature(s) cell can name more than one artist (see
+  // coArtistNames()); each rides along on the ARTIST line after its own dot.
+  // One that just repeats the tab artist is dropped, so a header cell reading
+  // "¥$" on the ¥$ tab adds nothing.
+  const coArtists = coArtistNames(album.coArtist)
+    .filter(n => n.toLowerCase() !== artistName.trim().toLowerCase());
+  const coArtistHtml = coArtists
+    .map(n => `<span class="fm-sep">•</span><b>${esc(n)}</b>`)
+    .join("");
   const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b>${coArtistHtml}</span>`;
   const hasDesc = !!(album.description && album.description.trim());
   const hasUpdate = !!(album.updates && album.updates.trim());
@@ -3423,15 +3453,15 @@ function renderCaseFile(artistName, album){
     // keeps the download icon now). Tracks with no features don't have an
     // artist line at all, so there the link stands on its own.
     //
-    // When the album header named a second artist (see parseArtistCell()),
-    // they sit between the row's own artist and the feature list, unless the
-    // feature list already names them.
+    // When the album header named other artists (see coArtistNames()), they
+    // sit between the row's own artist and the feature list, minus any the
+    // feature list already names.
     const rowArtist = songArtistName(song, artistName);
-    const extraArtist = song.features && coArtist
-      && coArtist.toLowerCase() !== rowArtist.trim().toLowerCase()
-      && !song.features.toLowerCase().includes(coArtist.toLowerCase())
-      ? coArtist : "";
-    const creditNames = extraArtist ? `${rowArtist}, ${extraArtist}` : rowArtist;
+    const extraArtists = song.features
+      ? coArtists.filter(n => n.toLowerCase() !== rowArtist.trim().toLowerCase()
+          && !song.features.toLowerCase().includes(n.toLowerCase()))
+      : [];
+    const creditNames = [rowArtist, ...extraArtists].join(", ");
     const artistLine = song.features ? `${esc(creditNames)}, ${esc(song.features)}` : "";
     const ytMark = song.ytLink
       ? `<a class="t-yt" href="${esc(song.ytLink)}" target="_blank" rel="noopener" title="Watch on YouTube"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path fill="currentColor" d="M0 4.75C0 3.784.784 3 1.75 3h20.5c.966 0 1.75.784 1.75 1.75v14.5A1.75 1.75 0 0 1 22.25 21H1.75A1.75 1.75 0 0 1 0 19.25Zm1.75-.25a.25.25 0 0 0-.25.25v14.5c0 .138.112.25.25.25h20.5a.25.25 0 0 0 .25-.25V4.75a.25.25 0 0 0-.25-.25Z"/><path fill="currentColor" d="M9 15.584V8.416a.5.5 0 0 1 .77-.42l5.576 3.583a.5.5 0 0 1 0 .842L9.77 16.005a.5.5 0 0 1-.77-.42Z"/></svg>YouTube Video</a>`
@@ -3949,16 +3979,15 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   // copy keeps its own artist here too (see songArtistName); the album
   // title, cover and share link still describe the tab it's filed under.
   const shownArtist = songArtistName(song, currentArtistName);
-  // A second artist named in the album header's Feature(s) cell (see
-  // parseArtistCell()) is credited here too, and in the tab title. Skipped
-  // only when the feature list already names them, so nothing repeats.
-  const albumCoArtist = albumCoArtistFor(currentArtistName, currentAlbumName, currentAlbumSection)
-    || String((album && album.coArtist) || "").trim();
-  const shownCoArtist = albumCoArtist
-    && albumCoArtist.toLowerCase() !== shownArtist.trim().toLowerCase()
-    && !String(song.features || "").toLowerCase().includes(albumCoArtist.toLowerCase())
-    ? albumCoArtist : "";
-  const shownCredit = shownCoArtist ? `${shownArtist}, ${shownCoArtist}` : shownArtist;
+  // Any artist named in the album header's Feature(s) cell (see
+  // coArtistNames()) is credited here too, and in the tab title. Skipped only
+  // when the feature list already names them, so nothing repeats.
+  const shownCoArtists = coArtistNames(
+    albumCoArtistFor(currentArtistName, currentAlbumName, currentAlbumSection)
+    || String((album && album.coArtist) || "").trim()
+  ).filter(n => n.toLowerCase() !== shownArtist.trim().toLowerCase()
+    && !String(song.features || "").toLowerCase().includes(n.toLowerCase()));
+  const shownCredit = [shownArtist, ...shownCoArtists].join(", ");
   // Both halves of the line go through the same matcher, so on a collab album
   // "Lil Uzi Vert, Playboi Carti" is two links rather than one. Set before
   // startMarquees() below so the marquee measures the finished line.
