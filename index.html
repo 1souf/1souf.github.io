@@ -192,7 +192,18 @@
     font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
     color:var(--stamp-fixed); white-space:nowrap; flex-shrink:0;
   }
-  .sidebar-footer{padding:12px 18px; border-top:1px solid var(--border); font-size:.65rem; color:var(--text-dim); line-height:1.5;}
+  /* Standing disclaimer, not a live count. It is one nowrap line inside a
+     marquee mask (the same treatment the player's title line gets), so a
+     sentence this long scrolls on its own instead of wrapping the footer
+     to three lines and eating the artist list's height. */
+  .sidebar-footer{
+    padding:12px 18px; border-top:1px solid var(--border); font-size:.65rem;
+    color:var(--text-dim); line-height:1.5;
+    display:flex; align-items:center; gap:7px;
+  }
+  .sidebar-footer > svg{width:12px; height:12px; flex:none; display:block;}
+  .sidebar-footer .marquee-mask{flex:1 1 auto; min-width:0;}
+  #footerText{display:block; width:max-content; white-space:nowrap;}
 
   /* ---------- main / case file ---------- */
   .main{flex:1; overflow-y:auto; position:relative;}
@@ -1458,7 +1469,12 @@
         </div>
       </div>
     </nav>
-    <div class="sidebar-footer" id="sidebarFooter"><span class="skel" style="width:130px;height:11px;"></span></div>
+    <!-- The footer is a fixed disclaimer rather than a live count, so it needs
+         no skeleton: the text is the same on every load. -->
+    <div class="sidebar-footer" id="sidebarFooter">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.25"></circle><path d="M12 11.25v5.25"></path><path d="M12 7.6v.02"></path></svg>
+      <div class="marquee-mask" id="footerMask"><span id="footerText">Nothing is hosted here. Every file is streamed from a third-party server — this site only indexes and links to it.</span></div>
+    </div>
   </aside>
 
   <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
@@ -3114,10 +3130,6 @@ function renderArtistList(){
   pane.innerHTML = "";
   pane.removeAttribute('aria-hidden');
 
-  // Also covers the background refresh, which only re-renders the list (not
-  // the whole tree) after picking up a newly-added artist tab.
-  if (el('sidebarFooter')) el('sidebarFooter').textContent = `${ARTISTS.length} artist tab(s) connected`;
-
   // Most songs first; artists with the same count fall back to A-Z. The
   // counts are worked out once up front (rather than inside the sort's
   // comparator) since artistEditCount() walks every song. This only
@@ -3911,6 +3923,67 @@ function startMarquees(){
 }
 
 window.addEventListener('resize', () => { if (el('player').style.display !== 'none') startMarquees(); });
+
+/* ---------------- sidebar footer disclaimer ---------------- */
+// Same scroll-when-it-doesn't-fit behaviour as the player's title line (same
+// speed, same hold, same edge fades), but on its own generation counter and
+// timer: the footer has nothing to do with what's playing, so it must not be
+// paused or reset by startMarquees()/stopMarquees().
+const footerMarquee = makeMarquee('footerMask', 'footerText');
+let footerMarqueeGeneration = 0;
+let footerMarqueeTimer = null;
+
+function stopFooterMarquee(){
+  footerMarqueeGeneration++;
+  if (footerMarqueeTimer) { clearTimeout(footerMarqueeTimer); footerMarqueeTimer = null; }
+  marqueeSetX(footerMarquee, 0, false);
+  marqueeSetFade(footerMarquee, MASK_NONE);
+}
+
+function footerMarqueeLeg(gen, forward){
+  if (gen !== footerMarqueeGeneration) return;
+  const m = footerMarquee;
+  if (m.distance <= 0) return;
+  marqueeSetFade(m, MASK_BOTH);
+  marqueeSetX(m, forward ? -m.distance : 0, true);
+  const onEnd = (e) => {
+    if (e.propertyName !== 'transform') return;
+    m.inner.removeEventListener('transitionend', onEnd);
+    if (gen !== footerMarqueeGeneration) return;
+    // Resting again: only the edge that's still hiding text keeps its fade.
+    marqueeSetFade(m, forward ? MASK_LEFT : MASK_RIGHT);
+    footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, !forward), MARQUEE_HOLD_MS);
+  };
+  m.inner.addEventListener('transitionend', onEnd);
+}
+
+function startFooterMarquee(){
+  stopFooterMarquee();
+  const gen = footerMarqueeGeneration;
+  // Two frames, like the player: the first paints the line, the second
+  // measures it once it has been laid out.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (gen !== footerMarqueeGeneration) return;
+    const m = footerMarquee;
+    const overflow = m.mask.scrollWidth - m.mask.clientWidth;
+    m.distance = overflow > 1 ? overflow : 0;
+    marqueeSetFade(m, m.distance > 0 ? MASK_RIGHT : MASK_NONE);
+    if (m.distance > 0) footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, true), MARQUEE_HOLD_MS);
+  }));
+}
+
+startFooterMarquee();
+// Web fonts can still swap in after first paint and change the measured
+// width, so re-measure once they're settled. Both calls are idempotent.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(startFooterMarquee);
+window.addEventListener('load', startFooterMarquee);
+// Restarting resets the line to its start, so wait for the resize to settle
+// rather than snapping the text back on every tick of a window drag.
+let footerResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(footerResizeTimer);
+  footerResizeTimer = setTimeout(startFooterMarquee, 200);
+});
 
 function resetRowVisual(rowEl){
   if (!rowEl) return;
