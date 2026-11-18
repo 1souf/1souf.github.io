@@ -727,7 +727,9 @@
       #000 calc(100% - var(--mq-fade-r)),
       rgba(0,0,0,.55) calc(100% - var(--mq-fade-r) * .45),
       rgba(0,0,0,0) 100%);
-    transition:--mq-fade-l .3s cubic-bezier(.4,0,.2,1), --mq-fade-r .3s cubic-bezier(.4,0,.2,1);
+    /* One duration and one curve for both directions: the edge has to look like
+       the same dissolve whether it is growing in or collapsing out. */
+    transition:--mq-fade-l .32s cubic-bezier(.4,0,.2,1), --mq-fade-r .32s cubic-bezier(.4,0,.2,1);
   }
   /* width:max-content keeps the clickable/hoverable area to the text itself
      instead of the whole (wider) column - the marquee measures overflow on the
@@ -3858,23 +3860,17 @@ const titleMarquee = makeMarquee('playerTitleMask', 'playerTitle', 26);
 const subMarquee = makeMarquee('playerSubMask', 'playerSub', 20);
 
 function marqueeSetFade(m, mode){
-  const curL = parseFloat(m.mask.style.getPropertyValue('--mq-fade-l')) || 0;
-  const curR = parseFloat(m.mask.style.getPropertyValue('--mq-fade-r')) || 0;
-  const l = (mode === FADE_LEFT || mode === FADE_BOTH) ? m.fade : 0;
-  const r = (mode === FADE_RIGHT || mode === FADE_BOTH) ? m.fade : 0;
-  if (l === curL && r === curR) return;
-  // Asymmetric on purpose: a fade that is appearing has to keep up with glyphs
-  // sliding under the edge (too slow and you see a hard cut first), while one
-  // that is disappearing is just cleanup after the text has stopped - anything
-  // long there draws the eye to the edge for no reason, so it is over quickly.
-  m.mask.style.transitionDuration = (l > curL || r > curR) ? '.32s' : '.26s';
-  // Ease-out when shrinking so it starts leaving immediately instead of easing
-  // in slowly and holding the edge on screen for the first half of the time.
-  m.mask.style.transitionTimingFunction = (l > curL || r > curR)
-    ? 'cubic-bezier(.4,0,.2,1)'
-    : 'cubic-bezier(.3,.6,.35,1)';
-  if (l !== curL) m.mask.style.setProperty('--mq-fade-l', l + 'px');
-  if (r !== curR) m.mask.style.setProperty('--mq-fade-r', r + 'px');
+  const l = (mode === FADE_LEFT || mode === FADE_BOTH) ? m.fade + 'px' : '0px';
+  const r = (mode === FADE_RIGHT || mode === FADE_BOTH) ? m.fade + 'px' : '0px';
+  // Both directions share the duration and curve declared on .marquee-mask.
+  // They used to differ (a quicker, front-loaded ease-out for the collapse) so
+  // the fade would "get out of the way" after the text parked, but that made
+  // the two halves of the same movement look like different animations: the
+  // appearing edge glided, the disappearing one dumped most of its change into
+  // the first few frames and then crawled. Identical timing is what makes it
+  // read as one continuous dissolve.
+  if (m.mask.style.getPropertyValue('--mq-fade-l') !== l) m.mask.style.setProperty('--mq-fade-l', l);
+  if (m.mask.style.getPropertyValue('--mq-fade-r') !== r) m.mask.style.setProperty('--mq-fade-r', r);
 }
 
 function marqueeSetX(m, x, animated){
