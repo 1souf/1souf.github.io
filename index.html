@@ -1619,8 +1619,14 @@
         <div class="fx-row">
           <div class="fx-head"><span>Reverb</span><span class="fx-val" id="reverbVal">0%</span></div>
           <div class="fx-slider-row">
-            <!-- The player bar's mute speaker, minus the two sound waves. -->
-            <svg class="fx-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M12.1657 2.14424C12.8728 2.50021 13 3.27314 13 3.7446V20.2561C13 20.7286 12.8717 21.4998 12.1656 21.8554C11.416 22.2331 10.7175 21.8081 10.3623 21.4891L4.95001 16.6248H3.00001C1.89544 16.6248 1.00001 15.7293 1.00001 14.6248L1 9.43717C1 8.3326 1.89543 7.43717 3 7.43717H4.94661L10.3623 2.51158C10.7163 2.19354 11.4151 1.76635 12.1657 2.14424ZM11 4.63507L6.00618 9.17696C5.82209 9.34439 5.58219 9.43717 5.33334 9.43717H3L3.00001 14.6248H5.33334C5.58015 14.6248 5.81823 14.716 6.00179 14.881L11 19.3731V4.63507Z"/></svg>
+            <!-- The player bar's mute speaker, minus the two sound waves.
+                 The cone is only 12x20 units of its original 24x24 box and sits
+                 in the left half of it, so as-is the glyph hugged the panel edge
+                 and towered over the hall next to it. This viewBox is a 27-unit
+                 square centred on the cone (its bounds are x 1-13, y 2-22), which
+                 centres it in the 15px slot and lands it at 11.1px tall - between
+                 the bunny (11.25) and the hall (10.63). -->
+            <svg class="fx-icon" viewBox="-6.5 -1.5 27 27" aria-hidden="true" focusable="false"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" d="M12.1657 2.14424C12.8728 2.50021 13 3.27314 13 3.7446V20.2561C13 20.7286 12.8717 21.4998 12.1656 21.8554C11.416 22.2331 10.7175 21.8081 10.3623 21.4891L4.95001 16.6248H3.00001C1.89544 16.6248 1.00001 15.7293 1.00001 14.6248L1 9.43717C1 8.3326 1.89543 7.43717 3 7.43717H4.94661L10.3623 2.51158C10.7163 2.19354 11.4151 1.76635 12.1657 2.14424ZM11 4.63507L6.00618 9.17696C5.82209 9.34439 5.58219 9.43717 5.33334 9.43717H3L3.00001 14.6248H5.33334C5.58015 14.6248 5.81823 14.716 6.00179 14.881L11 19.3731V4.63507Z"/></svg>
             <input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0" aria-label="Reverb">
             <svg class="fx-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-linecap="square" stroke-miterlimit="3.5" stroke-width="1.5" d="m2.5 8.5l9.5-5l9.5 5Zm0 12h19m-17-12v12m5-12v12m5-12v12m5-12v12"/></svg>
           </div>
