@@ -698,22 +698,37 @@
   .player-cover{width:56px; height:56px; background:var(--bg-elevated); flex-shrink:0; object-fit:cover; border-radius:6px;}
   .player-text{overflow:hidden; min-width:0;}
   .marquee-mask{overflow:hidden; white-space:nowrap; position:relative; display:block;}
-  /* Soft edge fade for the marquee. These are plain overlays (not masks) so their
-     opacity can actually transition — mask-image itself isn't animatable, which is
-     why the old version snapped in with no fade-in. */
-  .marquee-fade{
-    position:absolute; top:0; bottom:0; width:18px; pointer-events:none;
-    opacity:0; transition:opacity .35s ease; z-index:2;
+  /* Soft edge fade for the marquee, done with a real mask on the clipping box.
+     It used to be two coloured overlays painted in --sidebar, but the player
+     bar is a translucent blurred gradient, so an opaque band could never match
+     the pixels behind it: it read as a dark smudge, and on the lighter themes
+     the mismatch was even more obvious. A mask erases the glyphs instead of
+     painting over them, so it has no colour to get wrong on any background.
+     mask-image itself cannot be transitioned, but the lengths inside it can:
+     --mq-fade-l / --mq-fade-r are registered below so the browser interpolates
+     them, which lets each fade grow and collapse smoothly instead of snapping.
+     The mid stop eases the ramp (quick drop at the edge, gentler near the
+     text) so the cut looks like a gradual dissolve rather than a gradient band. */
+  @property --mq-fade-l{syntax:"<length>"; inherits:false; initial-value:0px;}
+  @property --mq-fade-r{syntax:"<length>"; inherits:false; initial-value:0px;}
+  .marquee-mask{
+    --mq-fade-l:0px; --mq-fade-r:0px;
+    -webkit-mask-image:linear-gradient(to right,
+      rgba(0,0,0,0) 0,
+      rgba(0,0,0,.55) calc(var(--mq-fade-l) * .45),
+      #000 var(--mq-fade-l),
+      #000 calc(100% - var(--mq-fade-r)),
+      rgba(0,0,0,.55) calc(100% - var(--mq-fade-r) * .45),
+      rgba(0,0,0,0) 100%);
+    mask-image:linear-gradient(to right,
+      rgba(0,0,0,0) 0,
+      rgba(0,0,0,.55) calc(var(--mq-fade-l) * .45),
+      #000 var(--mq-fade-l),
+      #000 calc(100% - var(--mq-fade-r)),
+      rgba(0,0,0,.55) calc(100% - var(--mq-fade-r) * .45),
+      rgba(0,0,0,0) 100%);
+    transition:--mq-fade-l .3s cubic-bezier(.4,0,.2,1), --mq-fade-r .3s cubic-bezier(.4,0,.2,1);
   }
-  .marquee-fade-left{
-    left:0;
-    background:linear-gradient(to right, var(--sidebar), transparent);
-  }
-  .marquee-fade-right{
-    right:0;
-    background:linear-gradient(to left, var(--sidebar), transparent);
-  }
-  .marquee-fade.on{opacity:1;}
   /* width:max-content keeps the clickable/hoverable area to the text itself
      instead of the whole (wider) column - the marquee measures overflow on the
      mask, so this doesn't change how it scrolls. Clicking it jumps to the
@@ -3826,31 +3841,40 @@ function renderCaseFile(artistName, album){
    only on the edge(s) that are actually clipping text at that moment. */
 const MARQUEE_HOLD_MS = 3000;
 const MARQUEE_SPEED_PX_S = 45;
-const MARQUEE_FADE_PX = 18;
-const MASK_NONE = 'none';
-const MASK_RIGHT = `linear-gradient(to right, #000 0, #000 calc(100% - ${MARQUEE_FADE_PX}px), transparent 100%)`;
-const MASK_LEFT = `linear-gradient(to right, transparent 0, #000 ${MARQUEE_FADE_PX}px, #000 100%)`;
-const MASK_BOTH = `linear-gradient(to right, transparent 0, #000 ${MARQUEE_FADE_PX}px, #000 calc(100% - ${MARQUEE_FADE_PX}px), transparent 100%)`;
+/* Which edge(s) are clipping right now. Only ever used as tokens: the actual
+   gradient lives in CSS, where --mq-fade-l/-r are the animatable part. */
+const FADE_NONE = 'none';
+const FADE_RIGHT = 'right';
+const FADE_LEFT = 'left';
+const FADE_BOTH = 'both';
 let marqueeGeneration = 0;
 
-function makeMarquee(maskId, innerId){
-  const mask = el(maskId);
-  const left = document.createElement('span');
-  const right = document.createElement('span');
-  left.className = 'marquee-fade marquee-fade-left';
-  right.className = 'marquee-fade marquee-fade-right';
-  mask.appendChild(left);
-  mask.appendChild(right);
-  return { mask, inner: el(innerId), left, right, distance: 0, timer: null };
+/* fadePx is the width of the dissolve at a clipping edge; it is scaled per
+   line because the title runs at a larger size than the sub/footer text. */
+function makeMarquee(maskId, innerId, fadePx){
+  return { mask: el(maskId), inner: el(innerId), fade: fadePx, distance: 0, timer: null };
 }
-const titleMarquee = makeMarquee('playerTitleMask', 'playerTitle');
-const subMarquee = makeMarquee('playerSubMask', 'playerSub');
+const titleMarquee = makeMarquee('playerTitleMask', 'playerTitle', 26);
+const subMarquee = makeMarquee('playerSubMask', 'playerSub', 20);
 
-// `css` is still one of the MASK_* constants — we just use it to decide which
-// overlay(s) to fade in, instead of setting mask-image (which can't transition).
-function marqueeSetFade(m, css){
-  m.left.classList.toggle('on', css === MASK_LEFT || css === MASK_BOTH);
-  m.right.classList.toggle('on', css === MASK_RIGHT || css === MASK_BOTH);
+function marqueeSetFade(m, mode){
+  const curL = parseFloat(m.mask.style.getPropertyValue('--mq-fade-l')) || 0;
+  const curR = parseFloat(m.mask.style.getPropertyValue('--mq-fade-r')) || 0;
+  const l = (mode === FADE_LEFT || mode === FADE_BOTH) ? m.fade : 0;
+  const r = (mode === FADE_RIGHT || mode === FADE_BOTH) ? m.fade : 0;
+  if (l === curL && r === curR) return;
+  // Asymmetric on purpose: a fade that is appearing has to keep up with glyphs
+  // sliding under the edge (too slow and you see a hard cut first), while one
+  // that is disappearing is just cleanup after the text has stopped - anything
+  // long there draws the eye to the edge for no reason, so it is over quickly.
+  m.mask.style.transitionDuration = (l > curL || r > curR) ? '.32s' : '.26s';
+  // Ease-out when shrinking so it starts leaving immediately instead of easing
+  // in slowly and holding the edge on screen for the first half of the time.
+  m.mask.style.transitionTimingFunction = (l > curL || r > curR)
+    ? 'cubic-bezier(.4,0,.2,1)'
+    : 'cubic-bezier(.3,.6,.35,1)';
+  if (l !== curL) m.mask.style.setProperty('--mq-fade-l', l + 'px');
+  if (r !== curR) m.mask.style.setProperty('--mq-fade-r', r + 'px');
 }
 
 function marqueeSetX(m, x, animated){
@@ -3864,7 +3888,7 @@ function stopMarquees(){
   [titleMarquee, subMarquee].forEach(m => {
     if (m.timer) { clearTimeout(m.timer); m.timer = null; }
     marqueeSetX(m, 0, false);
-    marqueeSetFade(m, MASK_NONE);
+    marqueeSetFade(m, FADE_NONE);
   });
 }
 
@@ -3883,7 +3907,7 @@ function marqueeRunLeg(gen, direction){
   };
 
   movers.forEach(m => {
-    marqueeSetFade(m, MASK_BOTH); // in transit: both the trailing and leading edges are clipping
+    marqueeSetFade(m, FADE_BOTH); // in transit: both the trailing and leading edges are clipping
     const targetX = direction === 'forward' ? -m.distance : 0;
     marqueeSetX(m, targetX, true);
     const onEnd = (e) => {
@@ -3891,7 +3915,7 @@ function marqueeRunLeg(gen, direction){
       m.inner.removeEventListener('transitionend', onEnd);
       if (gen === marqueeGeneration) {
         // resting again: only the edge still hiding text should fade
-        marqueeSetFade(m, direction === 'forward' ? MASK_LEFT : MASK_RIGHT);
+        marqueeSetFade(m, direction === 'forward' ? FADE_LEFT : FADE_RIGHT);
       }
       onLegDone();
     };
@@ -3904,7 +3928,7 @@ function startMarquees(){
   [titleMarquee, subMarquee].forEach(m => {
     if (m.timer) clearTimeout(m.timer);
     marqueeSetX(m, 0, false);
-    marqueeSetFade(m, MASK_NONE);
+    marqueeSetFade(m, FADE_NONE);
   });
 
   // Wait a couple of frames so the new text has actually been laid out
@@ -3917,7 +3941,7 @@ function startMarquees(){
       // element that establishes the clipped/scrollable box.
       const overflow = m.mask.scrollWidth - m.mask.clientWidth;
       m.distance = overflow > 1 ? overflow : 0;
-      marqueeSetFade(m, m.distance > 0 ? MASK_RIGHT : MASK_NONE);
+      marqueeSetFade(m, m.distance > 0 ? FADE_RIGHT : FADE_NONE);
     });
     if (titleMarquee.distance === 0 && subMarquee.distance === 0) return;
     const t = setTimeout(() => marqueeRunLeg(gen, 'forward'), MARQUEE_HOLD_MS);
@@ -3932,7 +3956,7 @@ window.addEventListener('resize', () => { if (el('player').style.display !== 'no
 // speed, same hold, same edge fades), but on its own generation counter and
 // timer: the footer has nothing to do with what's playing, so it must not be
 // paused or reset by startMarquees()/stopMarquees().
-const footerMarquee = makeMarquee('footerMask', 'footerText');
+const footerMarquee = makeMarquee('footerMask', 'footerText', 20);
 let footerMarqueeGeneration = 0;
 let footerMarqueeTimer = null;
 
@@ -3940,21 +3964,21 @@ function stopFooterMarquee(){
   footerMarqueeGeneration++;
   if (footerMarqueeTimer) { clearTimeout(footerMarqueeTimer); footerMarqueeTimer = null; }
   marqueeSetX(footerMarquee, 0, false);
-  marqueeSetFade(footerMarquee, MASK_NONE);
+  marqueeSetFade(footerMarquee, FADE_NONE);
 }
 
 function footerMarqueeLeg(gen, forward){
   if (gen !== footerMarqueeGeneration) return;
   const m = footerMarquee;
   if (m.distance <= 0) return;
-  marqueeSetFade(m, MASK_BOTH);
+  marqueeSetFade(m, FADE_BOTH);
   marqueeSetX(m, forward ? -m.distance : 0, true);
   const onEnd = (e) => {
     if (e.propertyName !== 'transform') return;
     m.inner.removeEventListener('transitionend', onEnd);
     if (gen !== footerMarqueeGeneration) return;
     // Resting again: only the edge that's still hiding text keeps its fade.
-    marqueeSetFade(m, forward ? MASK_LEFT : MASK_RIGHT);
+    marqueeSetFade(m, forward ? FADE_LEFT : FADE_RIGHT);
     footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, !forward), MARQUEE_HOLD_MS);
   };
   m.inner.addEventListener('transitionend', onEnd);
@@ -3970,7 +3994,7 @@ function startFooterMarquee(){
     const m = footerMarquee;
     const overflow = m.mask.scrollWidth - m.mask.clientWidth;
     m.distance = overflow > 1 ? overflow : 0;
-    marqueeSetFade(m, m.distance > 0 ? MASK_RIGHT : MASK_NONE);
+    marqueeSetFade(m, m.distance > 0 ? FADE_RIGHT : FADE_NONE);
     if (m.distance > 0) footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, true), MARQUEE_HOLD_MS);
   }));
 }
