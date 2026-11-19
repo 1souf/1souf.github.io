@@ -396,11 +396,11 @@
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   /* A round picture reads as a portrait, so its caption sits under the middle
-     of it rather than hanging off the left edge like an album's does. */
+     of it rather than hanging off the left edge like an album's does. The
+     Artists tab squares its portraits off, so there the caption goes back to
+     the album's left alignment. */
   .home-row-artists .home-card-name,
-  .home-row-artists .home-card-meta,
-  .artists-grid .home-card-name,
-  .artists-grid .home-card-meta{text-align:center;}
+  .home-row-artists .home-card-meta{text-align:center;}
   .home-row-empty{font-size:.78rem; color:var(--text-dim);}
 
   /* ---------- artists tab ----------
@@ -423,6 +423,9 @@
      fit whatever the window allows. */
   .artists-grid .home-card{width:auto;}
   .artists-grid .home-card-art{width:100%; height:auto; aspect-ratio:1 / 1;}
+  /* Square portraits here rather than the shelf's circles - same 7px corner as
+     every album cover, so the tab reads as a wall of covers. */
+  .artists-grid .home-artist-art{border-radius:7px;}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
   .header-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
   .cover-mount{position:relative; width:168px; height:168px; flex-shrink:0; background:var(--bg-elevated); border-radius:8px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.45);}
