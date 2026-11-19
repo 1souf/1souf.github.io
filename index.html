@@ -382,9 +382,10 @@
   @media (hover:none){
     .home-card-play{opacity:.9;}
   }
-  /* A round cover has no corner to hang the badge off, so it tucks in until
-     it's sitting on the picture instead of floating beside it. */
-  .home-row-artists .home-card-play{right:15%; bottom:15%;}
+  /* Artist covers keep the badge in the same corner as the albums'. A circle
+     has nothing there, so it hangs a little outside the picture - which reads
+     as a badge pinned to the portrait rather than floating in the middle of
+     it. */
   .home-card-name{
     margin-top:10px; font-size:.86rem; font-weight:600; line-height:1.3; color:var(--text);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -3120,7 +3121,7 @@ const HOME_GAP_MAX = 88;
 // The composed gap comes out ~28% tighter than what a perfect half-cut would
 // need: a full half left the page feeling airy, and the height is better spent
 // showing more of the last row than sitting between shelves.
-const HOME_GAP_TIGHTEN = 0.72;
+const HOME_GAP_TIGHTEN = 0.65;
 
 function sizeHomeRows(){
   const homeEl = el('homeView');
