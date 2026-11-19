@@ -398,8 +398,25 @@
   /* A round picture reads as a portrait, so its caption sits under the middle
      of it rather than hanging off the left edge like an album's does. */
   .home-row-artists .home-card-name,
-  .home-row-artists .home-card-meta{text-align:center;}
+  .home-row-artists .home-card-meta,
+  .artists-grid .home-card-name,
+  .artists-grid .home-card-meta{text-align:center;}
   .home-row-empty{font-size:.78rem; color:var(--text-dim);}
+
+  /* ---------- artists tab ----------
+     The Home shelf's artist cards, laid out as a grid that wraps rather than
+     a row that scrolls. No headline: the sidebar tab already names the page. */
+  .artists-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+  body:not(.has-player) .artists-page{padding-bottom:var(--player-gap);}
+  .artists-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+    gap:30px 18px;
+  }
+  /* Cards fill their column instead of being a fixed square, so the grid can
+     fit whatever the window allows. */
+  .artists-grid .home-card{width:auto;}
+  .artists-grid .home-card-art{width:100%; height:auto; aspect-ratio:1 / 1;}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
   .header-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
   .cover-mount{position:relative; width:168px; height:168px; flex-shrink:0; background:var(--bg-elevated); border-radius:8px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.45);}
@@ -1317,6 +1334,9 @@
     .home-row-head{margin-bottom:13px;}
     .home-row-title{font-size:1.16rem;}
     .home-row-scroller{gap:14px;}
+    .artists-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    body:not(.has-player) .artists-page{padding-bottom:var(--player-gap);}
+    .artists-grid{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:24px 14px;}
     .stamp-row{gap:18px;}
     .cover-mount{width:120px; height:120px;}
     .stamp-title{font-size:1.4rem;}
@@ -1497,12 +1517,15 @@
       </div>
       <button class="reload-btn" id="reloadBtn" title="Re-fetch the latest data from the spreadsheet">⟳ Reload Spreadsheet</button>
     </div>
-    <!-- Tab list. Home is the only tab so far - the rest of the rework adds
-         the others here, one .nav-item each (data-tab names them). -->
+    <!-- Tab list. Each tab is one .nav-item, named by its data-tab. -->
     <nav class="sidebar-nav" id="sidebarNav" aria-label="Browse">
       <button class="nav-item active" type="button" data-tab="home" aria-current="page">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
         <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-item" type="button" data-tab="artists">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span class="nav-label">Artists</span>
       </button>
     </nav>
     <!-- The footer is a fixed disclaimer rather than a live count, so it needs
@@ -2866,7 +2889,7 @@ window.addEventListener('hashchange', () => {
 });
 
 // Which tab is open. An album page isn't a tab, so opening one clears the
-// highlight instead of moving it. Only Home exists so far.
+// highlight instead of moving it.
 function setActiveTab(tab){
   document.querySelectorAll('#sidebarNav .nav-item').forEach(item => {
     const on = !!tab && item.dataset.tab === tab;
@@ -2891,6 +2914,22 @@ function showHome(){
   const mainEl = document.querySelector('.main');
   if (mainEl) mainEl.scrollTop = 0;
   sizeHomeRows();
+  if (isDrawerLayout()) closeSidebar();
+}
+
+// The Artists tab: every artist with something on the sheet, in a grid that
+// wraps instead of scrolling sideways, busiest first. No headline - the tab
+// name in the sidebar already says what it is.
+function showArtists(){
+  selectedArtistName = null;
+  selectedAlbumName = null;
+  selectedAlbumSection = null;
+  displayedAlbumSongs = null;
+  setActiveTab('artists');
+  renderArtists();
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  const mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
   if (isDrawerLayout()) closeSidebar();
 }
 
@@ -2958,17 +2997,32 @@ function homeAlbumCardHtml(rowKey, idx, artistName, album){
     </button>`;
 }
 
-function homeArtistCardHtml(idx, artistName){
-  const n = (DATA[artistName] || []).filter(a => !a.isDivider).length;
+function artistAlbumCount(artistName){
+  return (DATA[artistName] || []).filter(a => !a.isDivider).length;
+}
+
+function artistEditCount(artistName){
+  return (DATA[artistName] || []).filter(a => !a.isDivider && (a.section || "").trim().toLowerCase() === "edits").length;
+}
+
+// One artist card, shared by the Home shelf and the Artists tab. rowKey is
+// only set on the Home shelves, where the click handler resolves a card by
+// row + index; the tab has its own handler and just needs the index.
+function artistCardHtml(artistName, metaText, rowKey, idx){
   // The circle starts as the colour + initial fallback and gets the real
   // picture painted over it by applyArtistAvatar() once the cards are in the
   // document.
   return `
-    <button class="home-card" type="button" data-row="artists" data-idx="${idx}" title="${esc(artistName)}">
+    <button class="home-card" type="button"${rowKey ? ` data-row="${rowKey}"` : ""} data-idx="${idx}" title="${esc(artistName)}">
       <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${PLAY_BADGE}</div>
       <div class="home-card-name">${esc(artistName)}</div>
-      <div class="home-card-meta">${n} release${n === 1 ? "" : "s"}</div>
+      <div class="home-card-meta">${esc(metaText)}</div>
     </button>`;
+}
+
+function artistReleasesText(artistName){
+  const n = artistAlbumCount(artistName);
+  return `${n} release${n === 1 ? "" : "s"}`;
 }
 
 function homeRowHtml(rowKey, title, cardsHtml, emptyText){
@@ -2991,7 +3045,7 @@ function homeRowHtml(rowKey, title, cardsHtml, emptyText){
 // A shelf is a sampler, not the whole catalogue: ten cards is enough to see
 // what's in the row and scroll a little, and short enough that each visit to
 // Home shows a different slice of a big sheet.
-const HOME_ROW_LIMIT = 10;
+const HOME_ROW_LIMIT = 14;
 
 function renderHome(){
   // An artist tab with no albums left on it would be a dead card, so those
@@ -3003,7 +3057,7 @@ function renderHome(){
 
   el('content').innerHTML = `<div class="home" id="homeView">
     ${homeRowHtml("artists", "Artists",
-      artists.map((a, i) => homeArtistCardHtml(i, a.name)).join(""),
+      artists.map((a, i) => artistCardHtml(a.name, artistReleasesText(a.name), "artists", i)).join(""),
       "No artists on the sheet yet.")}
     ${homeRowHtml("comps", "Comps",
       comps.map((it, i) => homeAlbumCardHtml("comps", i, it.artistName, it.album)).join(""),
@@ -3073,6 +3127,43 @@ function renderHome(){
     scroller.addEventListener('scroll', sync, { passive: true });
     homeNavSyncs.push(sync);
     sync();
+  });
+}
+
+// The Artists tab's grid. Same cards as the Home shelf, but they wrap onto as
+// many rows as they need, and the order is fixed rather than shuffled: the
+// artist with the most edits first, then the most releases, then by name, so
+// the page reads as a ranking instead of a shuffle.
+function renderArtists(){
+  const list = ARTISTS
+    .filter(a => artistAlbumCount(a.name) > 0)
+    .map(a => ({ name: a.name, releases: artistAlbumCount(a.name), edits: artistEditCount(a.name) }))
+    .sort((x, y) => (y.edits - x.edits) || (y.releases - x.releases) || x.name.localeCompare(y.name));
+
+  el('content').innerHTML = `<div class="artists-page" id="artistsView">
+    <div class="artists-grid">
+      ${list.map((a, i) => artistCardHtml(
+        a.name,
+        `${a.releases} release${a.releases === 1 ? "" : "s"} • ${a.edits} edit${a.edits === 1 ? "" : "s"}`,
+        null,
+        i
+      )).join("")}
+    </div>
+  </div>`;
+
+  const pageEl = el('artistsView');
+
+  pageEl.querySelectorAll('.home-card-avatar').forEach(avatarEl => {
+    const card = avatarEl.closest('.home-card');
+    const item = list[parseInt(card.dataset.idx, 10)];
+    if (item) applyArtistAvatar(avatarEl, item.name);
+  });
+
+  pageEl.addEventListener('click', (e) => {
+    const card = e.target.closest('.home-card');
+    if (!card) return;
+    const item = list[parseInt(card.dataset.idx, 10)];
+    if (item) goToArtist(item.name);
   });
 }
 
@@ -5691,6 +5782,7 @@ el('sidebarNav').addEventListener('click', (e) => {
   const item = e.target.closest('.nav-item');
   if (!item || !item.dataset.tab) return;
   if (item.dataset.tab === 'home') showHome();
+  else if (item.dataset.tab === 'artists') showArtists();
 });
 
 /* ---------------- boot ---------------- */
