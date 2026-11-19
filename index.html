@@ -426,6 +426,45 @@
   /* Square portraits here rather than the shelf's circles - same 7px corner as
      every album cover, so the tab reads as a wall of covers. */
   .artists-grid .home-artist-art{border-radius:7px;}
+
+  /* ---------- one artist's page ----------
+     Same paper-and-stamp furniture as an album page: a square portrait where
+     the album cover sits, the name where the album title sits, and the counts
+     where the album's meta line sits. Below it the catalogue, split by the
+     sheet's own dividers so comps and edits each get their own block. */
+  .artist-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+  body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
+  .artist-head{display:flex; gap:30px; align-items:stretch; flex-wrap:wrap; margin-bottom:30px;}
+  .artist-portrait{
+    position:relative; width:168px; height:168px; flex-shrink:0;
+    background:var(--bg-elevated); border-radius:8px; overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,.45);
+  }
+  /* The fallback initial has to grow with the plate - the card-sized 2.2rem
+     would look lost in a 168px square. */
+  .artist-portrait .home-card-avatar{font-size:3.6rem;}
+  .artist-head-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
+  .artist-eyebrow{
+    font-size:.66rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text-dim); margin-bottom:4px;
+  }
+  .artist-name{
+    font-family:var(--display); font-weight:700; font-size:2.4rem; line-height:1.15;
+    letter-spacing:.02em; color:var(--stamp-fixed); padding-bottom:5px;
+  }
+  .artist-meta{display:flex; gap:18px; flex-wrap:wrap; font-size:.74rem; color:var(--text-dim); margin-top:12px; line-height:16px;}
+  .artist-meta b{color:var(--text); font-weight:500;}
+  .artist-section{margin-top:34px;}
+  .artist-section-head{display:flex; align-items:baseline; gap:10px; margin:0 0 15px;}
+  .artist-section-title{
+    font-family:var(--display); font-size:1.32rem; font-weight:700; line-height:1.2;
+    letter-spacing:.01em; color:var(--text); margin:0;
+  }
+  .artist-section-count{font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim);}
+  /* Cards fill their column, so one rule covers every width. */
+  .artist-album-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:26px 18px;}
+  .artist-album-grid .home-card{width:auto;}
+  .artist-album-grid .home-card-art{width:100%; height:auto; aspect-ratio:1 / 1;}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
   .header-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
   .cover-mount{position:relative; width:168px; height:168px; flex-shrink:0; background:var(--bg-elevated); border-radius:8px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.45);}
@@ -448,6 +487,11 @@
   .file-meta{font-size:.74rem; color:var(--text-dim); margin-top:12px; display:flex; gap:18px; flex-wrap:wrap; line-height:16px;}
   .file-meta b{color:var(--text); font-weight:500;}
   .file-meta-artist{display:inline-flex; align-items:center; gap:5px;}
+  /* The artist name on an album page links to that artist's page. The avatar
+     and the name are wrapped in one link, so this restores the 5px gap the
+     wrapper's own display would otherwise collapse. */
+  .fm-artist-link{display:inline-flex; align-items:center; gap:5px; cursor:pointer;}
+  .fm-artist-link:hover, .fm-artist-link:focus-visible{text-decoration:underline;}
   /* The dot between an album's two artist names: fixed white (never themed),
      pulled in a hair tighter than the flex gap on either side. */
   .fm-sep{color:var(--stamp-fixed); margin:0 -1px;}
@@ -1353,6 +1397,14 @@
     /* The drawer layout gets the full window width back, so the column count
        is free again - but still capped at six. */
     .artists-grid{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:24px 14px;}
+    .artist-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
+    .artist-head{gap:18px; margin-bottom:24px;}
+    .artist-portrait{width:120px; height:120px;}
+    .artist-portrait .home-card-avatar{font-size:2.6rem;}
+    .artist-name{font-size:1.7rem;}
+    .artist-section{margin-top:28px;}
+    .artist-album-grid{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:22px 14px;}
     .stamp-row{gap:18px;}
     .cover-mount{width:120px; height:120px;}
     .stamp-title{font-size:1.4rem;}
@@ -1807,6 +1859,10 @@ let selectedAlbumName = null;
 // A comp and an edit (any two albums under different dividers) can share a name, so the
 // section is part of "which album is open" as well - name alone can't tell them apart.
 let selectedAlbumSection = null;
+// The artist page, when one is open. Separate from selectedArtistName (which
+// means "the artist whose album is open") so the two pages can never be
+// confused: exactly one of them is set at a time.
+let selectedArtistPage = null;
 const DEFAULT_TITLE = document.title; // page title before any track has played, restored when the player closes
 
 const el = (id) => document.getElementById(id);
@@ -2757,26 +2813,31 @@ function updateEditCounter(){
   requestAnimationFrame(step);
 }
 
-/* ---------------- deep linking (#Section/Artist/Album) ----------------
-   The URL hash mirrors whatever album is currently open, e.g.
-   "#Comps/Playboi-Carti/Music" — copying the address bar always gets you
-   (or whoever you send it to) straight to that album's page instead of
-   landing on Home. Three names,
-   positionally, separated by "/" — no "section=.../artist=..." clutter:
-   the sheet section the album sits under ("Comps", "Edits", ...), then
-   the artist, then the album. The section is what tells apart a comp and
-   an edit that share a title. It's left off for an album that isn't
-   under any section ("#Playboi-Carti/Music"), and that same two-part
-   form is what every link from before sections were in the URL looks
-   like — those keep working and open the first album with that name,
-   exactly like before, and the address bar upgrades itself to the full
-   form once they load.
+/* ---------------- deep linking (#Artist, #Artist/Section/Album) ----------------
+   The URL hash mirrors whatever page is open — artist page or album — so
+   copying the address bar always gets you (or whoever you send it to)
+   straight there instead of landing on Home.
 
-   There used to be two more parts here, naming a song (and disambiguating
-   a repeated one) so a link could open an album on a specific track. That
-   never worked well enough to keep, so links are album-only now — see
-   parseHashParams() for how the leftovers of an old song link are ignored
-   rather than breaking it.
+   The artist comes first, because artist pages exist now:
+
+     "#Playboi-Carti"                 the artist's page
+     "#Playboi-Carti/Comps/Music"     one album, under a section
+     "#Playboi-Carti/Music"           one album, under no section
+
+   That ordering makes the links hierarchical: an album link is the artist
+   link with the album (and, when it has one, the section) appended, so
+   trimming the tail of a link walks you back up to the artist page.
+
+   The middle part names the sheet divider the album sits under ("Comps",
+   "Edits", ...) and is what tells apart a comp and an edit that share a
+   title. It's left out for an album that isn't under one.
+
+   Links written before this order changed were "#Section/Artist/Album",
+   and before that they could name a song as a fourth part. Those keep
+   working: findHashAlbum() tries the current reading first and then the
+   older ones, and the address bar upgrades itself to the new shape once
+   the page loads. (Song links themselves are long gone — a stray song part
+   is simply ignored.)
 
    Each name is run through encodeURIComponent (so a literal
    "/", "-", "+", "#", etc. inside a name can never be mistaken for
@@ -2805,31 +2866,48 @@ function parseHashParams(){
   const raw = location.hash.replace(/^#/, '');
   if (!raw) return null;
   const parts = raw.split('/');
-  if (parts.length < 2) return null;
   try {
-    // Three parts = section, artist, album. Two parts = artist, album with
-    // no section (see the comment above). A null section means the link
-    // doesn't say, so lookups fall back to the first album with that name.
-    // Anything past the album is ignored: those are the old song (and
-    // song-occurrence) parts.
-    const hasSection = parts.length >= 3;
-    const section = hasSection ? decodeHashPart(parts[0]) : null;
-    const artist = decodeHashPart(parts[hasSection ? 1 : 0]);
-    const album = decodeHashPart(parts[hasSection ? 2 : 1]);
-    // An old song link on a section-less album ("#Artist/Album/Song") is
-    // shaped exactly like a sectioned album link, so the reading above can
-    // land on the wrong names. Keep the two-part reading of the first two
-    // names too - findHashAlbum() uses it when the first one resolves to
-    // nothing.
-    const altArtist = decodeHashPart(parts[0]);
-    const altAlbum = decodeHashPart(parts[1]);
-    if (!artist || !album) return null;
-    return { artist, album, section, altArtist, altAlbum };
+    // One part names an artist page: "#Playboi-Carti".
+    if (parts.length === 1) {
+      const artist = decodeHashPart(parts[0]);
+      return artist ? { kind: 'artist', artist } : null;
+    }
+    // Two or more parts name an album: artist, an optional section, album.
+    // Anything past the album is ignored — that's the tail of an old
+    // "#Artist/Album/Song" link.
+    const first = decodeHashPart(parts[0]);
+    const second = decodeHashPart(parts[1]);
+    const third = parts.length >= 3 ? decodeHashPart(parts[2]) : null;
+    if (!first || !second) return null;
+    return {
+      kind: 'album',
+      artist: first,
+      section: third ? second : null,
+      album: third || second,
+      // Readings from before the artist moved to the front, tried only when
+      // the one above names an album that isn't there: "#Section/Artist/Album"
+      // and the song-tailed "#Artist/Album/Song", which is shaped exactly like
+      // it. The address bar upgrades itself once one of them resolves.
+      legacy: third ? [
+        { artist: second, album: third, section: first },
+        { artist: first, album: second, section: null }
+      ] : []
+    };
   } catch (e) {
     // A hand-edited hash with a broken %-escape makes decodeURIComponent
     // throw — treat that as "no deep link" instead of breaking the page.
     return null;
   }
+}
+
+// Case-insensitive, trimmed artist lookup. The hash, and the link markup
+// inside the page, both carry names as text, so neither should have to match
+// the sheet's spelling byte-for-byte to resolve.
+function findArtistByName(artistNameRaw){
+  if (!artistNameRaw) return null;
+  const key = String(artistNameRaw).trim().toLowerCase();
+  if (!key) return null;
+  return ARTISTS.find(a => a.name.trim().toLowerCase() === key) || null;
 }
 
 // Case-insensitive, trimmed lookup — the hash is user/URL-facing text,
@@ -2842,9 +2920,8 @@ function parseHashParams(){
 // falls back to the first album with that name, so a link never dead-ends.
 function findAlbumByNames(artistNameRaw, albumNameRaw, sectionRaw){
   if (!artistNameRaw || !albumNameRaw) return null;
-  const artistKey = artistNameRaw.trim().toLowerCase();
   const albumKey = albumNameRaw.trim().toLowerCase();
-  const artist = ARTISTS.find(a => a.name.trim().toLowerCase() === artistKey);
+  const artist = findArtistByName(artistNameRaw);
   if (!artist) return null;
   const sameName = (DATA[artist.name] || []).filter(a => !a.isDivider && a.name.trim().toLowerCase() === albumKey);
   if (!sameName.length) return null;
@@ -2854,14 +2931,21 @@ function findAlbumByNames(artistNameRaw, albumNameRaw, sectionRaw){
   return { artistName: artist.name, album };
 }
 
-// Turns a parsed hash into an album. The sectioned reading wins; if it names
-// nothing that exists, the first two parts are tried as artist/album - which
-// is how an old song link ("#Artist/Album/Song" on an album with no section)
-// still lands on the right album now that song links are gone.
+// Turns a parsed hash into an album. The current "#Artist/Section/Album"
+// reading wins; if it names nothing that exists, the older readings are
+// tried in turn — which is how a link written before artist pages existed
+// still lands on the right album.
 function findHashAlbum(hashParams){
-  if (!hashParams) return null;
-  return findAlbumByNames(hashParams.artist, hashParams.album, hashParams.section)
-    || findAlbumByNames(hashParams.altArtist, hashParams.altAlbum, null);
+  if (!hashParams || hashParams.kind !== 'album') return null;
+  const tries = [
+    { artist: hashParams.artist, album: hashParams.album, section: hashParams.section },
+    ...(hashParams.legacy || [])
+  ];
+  for (const t of tries) {
+    const hit = findAlbumByNames(t.artist, t.album, t.section);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 // Writes the current artist/album into the URL without adding a new
@@ -2870,9 +2954,17 @@ function findHashAlbum(hashParams){
 // without the page jumping/scrolling the way a plain `location.hash =`
 // assignment can.
 function updateUrlHash(artistName, albumName, sectionName){
-  const parts = [encodeHashPart(artistName), encodeHashPart(albumName)];
-  if (sectionName) parts.unshift(encodeHashPart(sectionName));
+  const parts = [encodeHashPart(artistName)];
+  if (sectionName) parts.push(encodeHashPart(sectionName));
+  parts.push(encodeHashPart(albumName));
   const newHash = '#' + parts.join('/');
+  if (location.hash !== newHash) history.replaceState(null, '', newHash);
+}
+
+// The artist page's own link: just the artist, so trimming an album link's
+// tail always lands here (see the deep-linking comment above).
+function updateArtistHash(artistName){
+  const newHash = '#' + encodeHashPart(artistName);
   if (location.hash !== newHash) history.replaceState(null, '', newHash);
 }
 
@@ -2892,8 +2984,9 @@ function copyLinkToClipboard(url){
 // The same hash an album page writes when it's opened (see updateUrlHash),
 // built standalone so copying never navigates away from where you are.
 function buildAlbumLink(artistName, album){
-  const parts = [encodeHashPart(artistName), encodeHashPart(album.name)];
-  if (album.section) parts.unshift(encodeHashPart(album.section));
+  const parts = [encodeHashPart(artistName)];
+  if (album.section) parts.push(encodeHashPart(album.section));
+  parts.push(encodeHashPart(album.name));
   return `${location.origin}${location.pathname}#${parts.join('/')}`;
 }
 
@@ -2902,14 +2995,22 @@ function copyAlbumLink(artistName, album){
 }
 
 // Reacts to the hash changing out from under the app — pasting a new
-// #Section/Artist/Album into the address bar while the page is already
-// open, or using the browser's back/forward buttons after following a
-// couple of links. Our own updateUrlHash() calls go through
+// #Artist or #Artist/Section/Album into the address bar while the page is
+// already open, or using the browser's back/forward buttons after following
+// a couple of links. Our own updateUrlHash() calls go through
 // history.replaceState(), which never fires 'hashchange', so this can't
 // end up fighting itself.
 window.addEventListener('hashchange', () => {
   const hashParams = parseHashParams();
-  if (!hashParams) return;
+  // No hash (or one that can't be read) means no page is selected - which is
+  // where the back button lands, since our own navigation replaces the entry
+  // instead of stacking a new one. Home is the page that belongs there.
+  if (!hashParams) { showHome(); return; }
+  if (hashParams.kind === 'artist') {
+    const artist = findArtistByName(hashParams.artist);
+    if (artist && artistAlbumCount(artist.name)) showArtist(artist.name);
+    return;
+  }
   const match = findHashAlbum(hashParams);
   if (match) selectAlbum(match.artistName, match.album);
 });
@@ -2930,6 +3031,7 @@ function setActiveTab(tab){
 // its album link (so a reload comes back to Home instead of re-opening that
 // album), and Home reads as the active tab.
 function showHome(){
+  selectedArtistPage = null;
   selectedArtistName = null;
   selectedAlbumName = null;
   selectedAlbumSection = null;
@@ -2943,10 +3045,33 @@ function showHome(){
   if (isDrawerLayout()) closeSidebar();
 }
 
+// One artist's page: who they are at the top, then their catalogue split by
+// the sheet's own dividers - plain albums first, then one block per divider
+// ("Comps", "Edits", ...) so an edit never has to be told from a comp by the
+// caption alone. The artist page isn't a tab either, so the nav highlight
+// clears the same way it does for an album.
+//
+// The background sheet refresh doesn't come through here: it calls
+// renderArtistPage() itself so the page keeps the user's scroll position.
+function showArtist(artistName){
+  selectedArtistPage = artistName;
+  selectedArtistName = null;
+  selectedAlbumName = null;
+  selectedAlbumSection = null;
+  displayedAlbumSongs = null;
+  setActiveTab(null);
+  renderArtistPage(artistName);
+  const mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
+  updateArtistHash(artistName);
+  if (isDrawerLayout()) closeSidebar();
+}
+
 // The Artists tab: every artist with something on the sheet, in a grid that
 // wraps instead of scrolling sideways, busiest first. No headline - the tab
 // name in the sidebar already says what it is.
 function showArtists(){
+  selectedArtistPage = null;
   selectedArtistName = null;
   selectedAlbumName = null;
   selectedAlbumSection = null;
@@ -3202,6 +3327,100 @@ function renderArtists(){
   });
 }
 
+// The albums the artist page is currently showing, in render order, so a card
+// click can be resolved by index the way the Home shelves' clicks are.
+let artistPageAlbums = [];
+
+// An album card for the artist page. Same shell as the Home shelf's, minus the
+// artist name under the title - every card here belongs to the same artist, so
+// the line carries the track count instead.
+function artistPageCardHtml(idx, album){
+  const coverUrl = (album.cover || "").trim();
+  const coverHtml = /^https?:\/\//i.test(coverUrl)
+    ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.outerHTML='<div class=&quot;home-card-fallback&quot;>NO COVER</div>'">`
+    : `<div class="home-card-fallback">NO COVER</div>`;
+  const n = album.songs.length;
+  return `
+    <button class="home-card" type="button" data-idx="${idx}" title="${esc(album.name)}">
+      <div class="home-card-art">${coverHtml}${PLAY_BADGE}</div>
+      <div class="home-card-name">${esc(album.name)}</div>
+      <div class="home-card-meta">${n} track${n === 1 ? "" : "s"}</div>
+    </button>`;
+}
+
+function renderArtistPage(artistName){
+  const albums = (DATA[artistName] || []).filter(a => !a.isDivider);
+
+  // Split the catalogue the way the sheet itself does: everything with no
+  // divider above it first, then one block per divider, in the order those
+  // dividers appear on the artist's tab. Naming the blocks after the dividers
+  // (rather than hard-coding "Comps" and "Edits") means a renamed or extra
+  // divider on the sheet just becomes another block here.
+  const groups = [{ title: "Albums", albums: [] }];
+  const bySection = new Map();
+  for (const album of albums) {
+    const section = (album.section || "").trim();
+    if (!section) { groups[0].albums.push(album); continue; }
+    const key = section.toLowerCase();
+    let group = bySection.get(key);
+    if (!group) {
+      group = { title: section, albums: [] };
+      bySection.set(key, group);
+      groups.push(group);
+    }
+    group.albums.push(album);
+  }
+
+  artistPageAlbums = [];
+  const sectionsHtml = groups.filter(g => g.albums.length).map(group => {
+    const cards = group.albums.map(album => {
+      artistPageAlbums.push(album);
+      return artistPageCardHtml(artistPageAlbums.length - 1, album);
+    }).join("");
+    const n = group.albums.length;
+    return `
+      <section class="artist-section">
+        <div class="artist-section-head">
+          <h2 class="artist-section-title">${esc(group.title)}</h2>
+          <span class="artist-section-count">${n} album${n === 1 ? "" : "s"}</span>
+        </div>
+        <div class="artist-album-grid">${cards}</div>
+      </section>`;
+  }).join("");
+
+  el('content').innerHTML = `<div class="artist-page" id="artistView">
+    <div class="artist-head">
+      <div class="artist-portrait"><div class="home-card-avatar artist-portrait-avatar"></div></div>
+      <div class="artist-head-col">
+        <div class="artist-eyebrow">Artist</div>
+        <div class="artist-name">${esc(artistName)}</div>
+        <div class="artist-meta">
+          <span>RELEASES: <b>${albums.length}</b></span>
+          <span>EDITS: <b>${artistEditCount(artistName)}</b></span>
+        </div>
+      </div>
+    </div>
+    ${sectionsHtml}
+  </div>`;
+
+  const pageEl = el('artistView');
+  const portraitEl = pageEl.querySelector('.artist-portrait-avatar');
+  if (portraitEl) applyArtistAvatar(portraitEl, artistName);
+
+  // Cards re-resolve against DATA rather than opening the object they were
+  // built from, so a background sheet refresh that renamed or moved an album
+  // can't open a stale snapshot.
+  pageEl.addEventListener('click', (e) => {
+    const card = e.target.closest('.home-card');
+    if (!card) return;
+    const album = artistPageAlbums[parseInt(card.dataset.idx, 10)];
+    if (!album) return;
+    const match = findAlbumByNames(artistName, album.name, album.section);
+    if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+    selectAlbum(match.artistName, match.album);
+  });
+}
+
 // The row arrows' glide. Same easeOutCubic shape as the rest of the page's
 // scrolling, and long enough to read as one movement rather than a jump.
 const ROW_SCROLL_DURATION = 340;
@@ -3321,20 +3540,28 @@ function renderAll(){
   updateEditCounter();
   updateChangelogBadge();
 
-  // A deep link (or a plain reload, since selectAlbum() keeps the hash in
-  // sync with whatever's open) takes priority over Home.
+  // A deep link (or a plain reload, since showArtist() and selectAlbum() both
+  // keep the hash in sync with whatever's open) takes priority over Home.
   const hashParams = parseHashParams();
   if (hashParams) {
-    const match = findHashAlbum(hashParams);
-    if (match) {
-      selectAlbum(match.artistName, match.album);
-      return;
+    if (hashParams.kind === 'artist') {
+      const artist = findArtistByName(hashParams.artist);
+      if (artist && artistAlbumCount(artist.name)) {
+        showArtist(artist.name);
+        return;
+      }
+    } else {
+      const match = findHashAlbum(hashParams);
+      if (match) {
+        selectAlbum(match.artistName, match.album);
+        return;
+      }
     }
   }
 
-  // No album link: the site opens on Home. The configured default album (and
-  // its first-album fallback) used to live here - that landing behaviour is
-  // gone with the sidebar rework.
+  // No link, or a link that names nothing that's still on the sheet: the site
+  // opens on Home. The configured default album (and its first-album fallback)
+  // used to live here - that landing behaviour is gone with the sidebar rework.
   showHome();
 }
 
@@ -3342,12 +3569,25 @@ function renderAll(){
 // it's confirmed the live sheet actually changed. Unlike renderAll() this
 // keeps whatever the user is currently looking at and just refreshes it in
 // place with the new data. On Home there's nothing to re-render, so it only
-// updates the counts; an album that no longer exists in the fresh data
-// (renamed or removed on the sheet) falls back to Home.
+// updates the counts; an album or artist that no longer exists in the fresh
+// data (renamed or removed on the sheet) falls back to Home.
 function refreshInPlace(){
   renderDemoBanner();
   updateEditCounter();
   updateChangelogBadge();
+
+  // An artist page redraws itself the same way an album page does - minus the
+  // scroll reset, since the user is reading it.
+  if (selectedArtistPage) {
+    const still = findArtistByName(selectedArtistPage);
+    if (!still || !artistAlbumCount(still.name)) { showHome(); return; }
+    if (still.name !== selectedArtistPage) {
+      selectedArtistPage = still.name;
+      updateArtistHash(still.name);
+    }
+    renderArtistPage(still.name);
+    return;
+  }
 
   if (!selectedArtistName || !selectedAlbumName) return;
 
@@ -3421,6 +3661,7 @@ function applyArtistAvatar(avatarEl, artistName){
 }
 
 function selectAlbum(artistName, album){
+  selectedArtistPage = null;
   selectedArtistName = artistName;
   selectedAlbumName = album.name;
   selectedAlbumSection = album.section || "";
@@ -3583,12 +3824,24 @@ function renderCaseFile(artistName, album){
   // coArtistNames()); each rides along on the ARTIST line after its own dot.
   // One that just repeats the tab artist is dropped, so a header cell reading
   // "¥$" on the ¥$ tab adds nothing.
+  //
+  // Every name here is a link to that artist's page (see goToArtist) - the
+  // avatar too, since it's the same target and makes a bigger one. A co-artist
+  // with no tab of their own stays plain text rather than linking to a page
+  // that would only apologise.
   const coArtists = coArtistNames(album.coArtist)
     .filter(n => n.toLowerCase() !== artistName.trim().toLowerCase());
   const coArtistHtml = coArtists
-    .map(n => `<span class="fm-sep">•</span><b>${esc(n)}</b>`)
+    .map(n => {
+      const known = findArtistByName(n);
+      return `<span class="fm-sep">•</span>` + (known
+        ? `<b class="fm-artist-link" data-artist="${esc(known.name)}" role="link" tabindex="0" title="Open ${esc(known.name)}">${esc(n)}</b>`
+        : `<b>${esc(n)}</b>`);
+    })
     .join("");
-  const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b>${coArtistHtml}</span>`;
+  // The avatar and the name are one link, so the whole "◯ Playboi Carti" run
+  // is a single target (and a single tab stop) rather than two.
+  const artistMetaHtml = `<span class="file-meta-artist">ARTIST: <span class="fm-artist-link" data-artist="${esc(artistName)}" role="link" tabindex="0" title="Open ${esc(artistName)}"><span class="fm-avatar cf-artist-avatar"></span><b>${esc(artistName)}</b></span>${coArtistHtml}</span>`;
   const hasDesc = !!(album.description && album.description.trim());
   const hasUpdate = !!(album.updates && album.updates.trim());
   const fileMetaHtml = isComp
@@ -4181,26 +4434,43 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   else downloadBtn.style.display = 'none';
 }
 
-// Where a credit link in the player bar goes. There's no artist page to open
-// yet - the sidebar is a tab list now, and the artist tab is one of the ones
-// still to come - so this says so rather than dead-ending silently. Once
-// that tab exists this is the one place that needs pointing at it.
+// Where every artist link in the page goes: the player bar's credit line, the
+// artist cards on Home and the Artists tab, and the ARTIST: line of an album
+// page. Names arrive as text, so they're matched case-insensitively against
+// the tabs; a name that isn't a tab any more (or has nothing left on the
+// sheet) says so rather than dead-ending on an empty page.
 function goToArtist(artist){
-  if (!artist) return;
-  if (!(DATA[artist] || []).some(a => !a.isDivider)) {
+  const match = findArtistByName(artist);
+  if (!match || !artistAlbumCount(match.name)) {
     showToast("That artist isn't on the sheet anymore.");
     return;
   }
-  showToast(`${artist}'s page isn't built yet.`);
+  // Already looking at it - re-rendering would only throw the page back to the
+  // top (and reload the portrait) for nothing.
+  if (selectedArtistPage === match.name && el('artistView')) return;
+  showArtist(match.name);
 }
 
-// One delegated handler for the whole sub line (artist half and feature half
-// alike). Only names splitFeatureCredits() recognised as an artist tab carry
-// data-artist, so a click on the ", " between two names, or on a feature with
-// no tab of their own, does nothing.
-el('playerSub').addEventListener('click', (e) => {
+// One delegated handler for every artist link in the page - the player bar's
+// credit line and the ARTIST: line on an album page alike. Only the runs the
+// render marked with data-artist are hit, so a click on the ", " between two
+// names, or on a feature with no tab of their own, does nothing.
+document.addEventListener('click', (e) => {
   const hit = e.target.closest('[data-artist]');
   if (hit) goToArtist(hit.dataset.artist);
+});
+
+// The same links answer Enter when they're reached by keyboard. Only the album
+// page's links are tab stops (the player bar's credit line is inside the
+// marquee and isn't), so this is the keyboard half of the pair above. Enter
+// only, not Space: these are marked up as links, and Space is already
+// play/pause for the whole page.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const hit = e.target.closest && e.target.closest('[data-artist]');
+  if (!hit) return;
+  e.preventDefault();
+  goToArtist(hit.dataset.artist);
 });
 
 // Clicking the song name in the player bar jumps to the album the track is
