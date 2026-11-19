@@ -408,11 +408,17 @@
      a row that scrolls. No headline: the sidebar tab already names the page. */
   .artists-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
   body:not(.has-player) .artists-page{padding-bottom:var(--player-gap);}
+  /* Never more than six across, however wide the window gets - a seventh
+     column would just make every card smaller than it needs to be. Below that
+     the count steps down with the column so the captions keep fitting. */
   .artists-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns:repeat(6, minmax(0, 1fr));
     gap:30px 18px;
   }
+  @media (max-width:1330px){ .artists-grid{grid-template-columns:repeat(5, minmax(0, 1fr));} }
+  @media (max-width:1170px){ .artists-grid{grid-template-columns:repeat(4, minmax(0, 1fr));} }
+  @media (max-width:1000px){ .artists-grid{grid-template-columns:repeat(3, minmax(0, 1fr));} }
   /* Cards fill their column instead of being a fixed square, so the grid can
      fit whatever the window allows. */
   .artists-grid .home-card{width:auto;}
@@ -1336,6 +1342,8 @@
     .home-row-scroller{gap:14px;}
     .artists-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .artists-page{padding-bottom:var(--player-gap);}
+    /* The drawer layout gets the full window width back, so the column count
+       is free again - but still capped at six. */
     .artists-grid{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:24px 14px;}
     .stamp-row{gap:18px;}
     .cover-mount{width:120px; height:120px;}
@@ -3002,7 +3010,16 @@ function artistAlbumCount(artistName){
 }
 
 function artistEditCount(artistName){
-  return (DATA[artistName] || []).filter(a => !a.isDivider && (a.section || "").trim().toLowerCase() === "edits").length;
+  // Same rule the sidebar's EDITS counter uses: every track on the artist's
+  // non-divider albums, minus the cross-listed copies (those are duplicates
+  // of a song that already lives on another album). Counting albums here was
+  // wrong - an artist with one 200-track comp has 200 edits, not 1.
+  let total = 0;
+  for (const album of DATA[artistName] || []) {
+    if (album.isDivider) continue;
+    total += album.songs.filter(s => !s.crossListed).length;
+  }
+  return total;
 }
 
 // One artist card, shared by the Home shelf and the Artists tab. rowKey is
