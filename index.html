@@ -52,7 +52,7 @@
 
   .app{display:flex; height:100vh; height:100dvh; overflow:hidden;}
 
-  /* ---------- sidebar / archive index ---------- */
+  /* ---------- sidebar / tab list ---------- */
   .sidebar{
     width:280px; flex-shrink:0; background:var(--sidebar);
     border-right:1px solid var(--border); display:flex; flex-direction:column;
@@ -96,106 +96,28 @@
      theme's stamp colour. */
   .reload-btn.spinning{color:var(--stamp-fixed);}
 
-  /* .tree is the clipping viewport; .tree-panes is a 200%-wide strip holding
-     the two panes side by side, and sliding it -50% swaps which one shows -
-     so only ever one artist's albums exist in the DOM at a time, no matter
-     how many artists/albums get added to the sheet. */
-  .tree{flex:1; overflow:hidden; position:relative; font-size:.82rem;}
-  .tree-panes{display:flex; width:200%; height:100%; transition:transform .28s cubic-bezier(.25,.85,.35,1);}
-  .tree-panes.at-albums{transform:translateX(-50%);}
-  .tree-pane{width:50%; height:100%; overflow-y:auto; flex-shrink:0;}
-  .tree-pane-artists{padding:8px 0;}
-
-  .artist-list-item{
-    display:flex; align-items:center; gap:10px; padding:11px 18px;
-    cursor:pointer; user-select:none; color:var(--text);
-    border-left:2px solid transparent;
+  /* Plain tab list. This used to be the two-pane artist/album tree; the
+     artists no longer live in the sidebar at all, so all that's left is the
+     row-per-tab list the rest of the rework will hang off. Rows are a little
+     bigger than the old artist list - there's room now that names are gone. */
+  .sidebar-nav{flex:1; overflow-y:auto; padding:10px 0;}
+  .nav-item{
+    display:flex; align-items:center; gap:12px; width:100%;
+    padding:13px 18px; background:none; border:none; border-left:2px solid transparent;
+    color:var(--text-dim); font-family:var(--mono); font-size:.9rem; font-weight:600;
+    letter-spacing:.01em; text-align:left; cursor:pointer; user-select:none;
+    transition:color .15s ease, background .15s ease;
   }
-  .artist-list-item:hover{background:var(--bg-elevated);}
-  .artist-list-item.active{background:var(--bg-elevated); border-left-color:var(--active-line);}
-  .artist-list-item .al-avatar{
-    width:28px; height:28px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size:.68rem; font-weight:700; color:rgba(255,255,255,.85);
-    background-size:cover; background-position:center; background-repeat:no-repeat;
-    text-transform:uppercase; user-select:none;
-  }
-  .artist-list-item .al-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; font-weight:500;}
-  .artist-list-item .al-meta{font-size:.68rem; color:var(--text-dim); flex-shrink:0;}
-  .artist-list-item .al-chevron{color:var(--text-dim); font-size:.8rem; flex-shrink:0; transition:transform .15s ease, color .15s ease;}
-  .artist-list-item:hover .al-chevron{color:var(--stamp-fixed); transform:translateX(2px);}
-
-  .pane-albums-header{
-    display:flex; align-items:center; gap:10px; padding:13px 16px;
-    border-bottom:1px solid var(--border);
-    position:sticky; top:0; z-index:2; background:var(--sidebar);
-  }
-  .pane-back-btn{
-    display:flex; align-items:center; gap:4px; background:none; border:none; color:var(--text-dim);
-    font-family:var(--mono); font-size:.72rem; letter-spacing:.02em; cursor:pointer; padding:4px 2px;
-    flex-shrink:0; transition:color .15s ease, transform .15s ease;
-  }
-  .pane-back-btn:hover{color:var(--stamp-fixed); transform:translateX(-2px);}
-  .pane-back-btn:hover svg{color:var(--stamp-fixed);}
-  .pane-back-btn svg{width:13px; height:13px; display:block; flex-shrink:0;}
-  .pane-artist-name{
-    font-size:.78rem; font-weight:700; color:var(--text); text-align:right;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1;
-  }
-  .pane-albums-list{padding:8px 0;}
-
-  .chevron{display:inline-block; width:9px; color:var(--text-dim); transition:transform .15s ease; font-size:.7rem;}
-  .tree-albums{overflow:hidden;}
-  .tree-albums.collapsed{display:none;}
-  .tree-album-item{
-    display:flex; justify-content:space-between; align-items:baseline; gap:8px;
-    padding:8px 18px 8px 30px; color:var(--text-dim); cursor:pointer;
-    border-left:2px solid transparent;
-    position:relative;
-  }
-  /* Small outline circle in the indent gutter to the left of each album name -
-     a thin edge only, no fill, so the row shows through it. Absolutely
-     positioned so the name/count columns never move. Its colour is pinned to
-     the dim text grey rather than currentColor: the row it sits on turns
-     white when selected (and on hover), and the dot must stay a quiet grey
-     through all of that instead of lighting up with the name. */
-  .tree-album-item .a-dot{
-    position:absolute; left:13px; top:50%; transform:translateY(-50%);
-    width:6px; height:6px; border-radius:50%;
-    background:none;
-    border:1px solid var(--text-dim);
-    opacity:.42;
-    transition:opacity .15s ease;
-  }
-  .tree-album-item:hover .a-dot{opacity:.68;}
-  /* The selected album's dot sits at that same hover grey permanently - the
-     selection reads as "a little more present", never as a white ring, and
-     hovering the row on top of it changes nothing. */
-  .tree-album-item.active .a-dot{opacity:.68;}
-  .tree-album-item:hover{color:var(--text); background:var(--bg-elevated);}
-  .tree-album-item.active{color:var(--text); border-left-color:var(--active-line); background:var(--bg-elevated);}
-  .tree-album-item .a-name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1;}
-  .tree-album-item .a-count{font-size:.68rem; opacity:.55; flex-shrink:0;}
-  /* Section label at the left edge, with only the collapse arrow beside it -
-     no rules on either side. */
-  .tree-divider{
-    display:flex; align-items:center; gap:6px;
-    padding:6px 16px; margin:2px 0;
-    user-select:none; cursor:pointer;
-  }
-  .tree-divider:hover{background:var(--bg-elevated);}
-  /* The section label and its collapse arrow stay pure white on every state,
-     and are never recoloured by the album theme. */
-  .tree-divider .chevron{flex-shrink:0; color:var(--stamp-fixed);}
-  .tree-divider.collapsed .chevron{transform:rotate(-90deg);}
-  .tree-divider .label{
-    font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
-    color:var(--stamp-fixed); white-space:nowrap; flex-shrink:0;
-  }
+  .nav-item svg{width:20px; height:20px; flex:none; display:block;}
+  .nav-item:hover{color:var(--text); background:var(--bg-elevated);}
+  .nav-item.active{color:var(--text); background:var(--bg-elevated); border-left-color:var(--active-line);}
+  /* The active tab's glyph stays pure white, like the old section labels -
+     it never picks up the album theme's accent. */
+  .nav-item.active svg{color:var(--stamp-fixed);}
   /* Standing disclaimer, not a live count. It is one nowrap line inside a
      marquee mask (the same treatment the player's title line gets), so a
      sentence this long scrolls on its own instead of wrapping the footer
-     to three lines and eating the artist list's height. */
+     to three lines and eating the tab list's height. */
   .sidebar-footer{
     padding:12px 18px; border-top:1px solid var(--border); font-size:.65rem;
     color:var(--text-dim); line-height:1.5;
@@ -370,6 +292,113 @@
      its height on every album page left ~104px of dead scroll at the bottom.
      .has-player is toggled by a MutationObserver on the player's style. */
   body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
+  /* ---------- home ----------
+     Three rows of cards. --home-card is the square art size and
+     --home-row-gap the space between the shelves: sizeHomeRows() sets both
+     from the measured page, keeping the covers small enough to read a shelf
+     at a glance and letting the leftover height go into the gaps. */
+  .home{
+    --home-card:200px;
+    --home-row-gap:42px;
+    padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));
+  }
+  body:not(.has-player) .home{padding-bottom:var(--player-gap);}
+  .home-row + .home-row{margin-top:var(--home-row-gap);}
+  /* Title on the left, the row's scroll arrows on the right of the same line. */
+  .home-row-head{display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 15px;}
+  .home-row-title{
+    font-family:var(--display); font-size:1.32rem; font-weight:700; line-height:1.2;
+    letter-spacing:.01em; color:var(--text); margin:0;
+  }
+  .home-row-nav{display:flex; gap:2px; flex:none;}
+  .home-row-nav[hidden]{display:none;}
+  .row-nav-btn{
+    width:30px; height:30px; padding:0; border:none; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:none; color:var(--text); cursor:pointer;
+    transition:color .15s ease, background .15s ease, opacity .15s ease;
+  }
+  .row-nav-btn svg{width:19px; height:19px; display:block;}
+  .row-nav-btn:hover:not(:disabled){background:var(--bg-elevated);}
+  /* The direction you can't go any further in is the dim one; the other stays
+     bright, so which way there's more to see reads at a glance. */
+  .row-nav-btn:disabled{color:var(--text-dim); opacity:.3; cursor:default;}
+  /* The padding/margin pair leaves room for the cover's shadow inside the
+     scroll box (overflow-x:auto clips both axes) without changing the row's
+     height. */
+  .home-row-scroller{
+    display:flex; gap:18px; overflow-x:auto;
+    padding:8px 0 10px; margin:-8px 0 -10px;
+    scrollbar-width:thin;
+  }
+  .home-card{
+    flex:0 0 auto; width:var(--home-card); padding:0; border:none; background:none;
+    font-family:inherit; color:inherit; text-align:left; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  }
+  .home-card-art{
+    position:relative; width:var(--home-card); height:var(--home-card);
+    border-radius:7px; background:var(--bg-elevated);
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+    transition:box-shadow .15s ease;
+  }
+  /* Hover lifts the shadow rather than the cover: a cover that grew on hover
+     made the row jump, and the play badge already says it's clickable. */
+  .home-card:hover .home-card-art,
+  .home-card:focus-visible .home-card-art{box-shadow:0 8px 22px rgba(0,0,0,.55);}
+  /* No overflow:hidden here - the play badge sits on the corner and would be
+     clipped by it, especially on the round artist covers - so the picture
+     clips itself instead. */
+  .home-card-art img{width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit;}
+  .home-card-fallback{
+    width:100%; height:100%; border-radius:inherit; display:flex; align-items:center; justify-content:center;
+    font-size:.62rem; letter-spacing:.05em; color:var(--text-dim); text-align:center; padding:10px;
+  }
+  /* Artist cards are round; the colour + initial fallback fills the circle
+     until (or instead of) a profile picture loading over it. */
+  .home-artist-art{border-radius:50%;}
+  .home-card-avatar{
+    width:100%; height:100%; border-radius:inherit; display:flex; align-items:center; justify-content:center;
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    font-size:2.2rem; font-weight:700; color:rgba(255,255,255,.85); text-transform:uppercase;
+    user-select:none;
+  }
+  /* The player bar's own play glyph, parked on the cover. The whole card is
+     already the button, so this is an affordance, not a second control -
+     hence pointer-events:none rather than a nested <button>. It stays out of
+     the way until the cover is hovered or reached by keyboard. */
+  .home-card-play{
+    position:absolute; right:7px; bottom:7px;
+    width:38px; height:38px; color:#fff;
+    filter:drop-shadow(0 1px 4px rgba(0,0,0,.7));
+    opacity:0; pointer-events:none;
+    transition:opacity .15s ease, transform .15s ease;
+  }
+  .home-card-play svg{width:100%; height:100%; display:block;}
+  .home-card:hover .home-card-play,
+  .home-card:focus-visible .home-card-play{opacity:1; transform:scale(1.06);}
+  /* A touch screen has no hover to reveal it with, so there the badge just
+     stays put - otherwise the covers would have no affordance at all. */
+  @media (hover:none){
+    .home-card-play{opacity:.9;}
+  }
+  /* A round cover has no corner to hang the badge off, so it tucks in until
+     it's sitting on the picture instead of floating beside it. */
+  .home-row-artists .home-card-play{right:15%; bottom:15%;}
+  .home-card-name{
+    margin-top:10px; font-size:.86rem; font-weight:600; line-height:1.3; color:var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .home-card:hover .home-card-name{color:var(--stamp-fixed);}
+  .home-card-meta{
+    margin-top:2px; font-size:.72rem; color:var(--text-dim);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  /* A round picture reads as a portrait, so its caption sits under the middle
+     of it rather than hanging off the left edge like an album's does. */
+  .home-row-artists .home-card-name,
+  .home-row-artists .home-card-meta{text-align:center;}
+  .home-row-empty{font-size:.78rem; color:var(--text-dim);}
   .stamp-row{display:flex; gap:30px; align-items:stretch; margin-bottom:24px; flex-wrap:wrap;}
   .header-col{flex:1 1 240px; min-width:220px; display:flex; flex-direction:column; justify-content:flex-end;}
   .cover-mount{position:relative; width:168px; height:168px; flex-shrink:0; background:var(--bg-elevated); border-radius:8px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.45);}
@@ -619,9 +648,6 @@
   tr:hover .num-cell .eq{display:none;}
   tr:hover .num-cell .row-pause{display:block;}
 
-  .empty-state{padding:60px 44px; color:var(--text-dim); font-size:.86rem; max-width:50ch;}
-  .empty-state b{color:var(--text); display:block; font-family:var(--display); font-size:1.1rem; margin-bottom:10px; text-transform:uppercase;}
-
   /* ---------- "more from this artist" row ---------- */
   .more-albums{margin:30px 0 0;}
   .more-albums-title{
@@ -672,10 +698,6 @@
     animation:skel-shimmer 1.6s linear infinite;
   }
   @media (prefers-reduced-motion: reduce){ .skel{animation:none;} }
-  .cover-mount.skel{display:block;}
-  .skel-title{display:block; width:250px; height:30px; margin:5px 0 3px;}
-  tr.skel-row{cursor:default;}
-  tr.skel-row:hover{background:none;}
 
   /* ---------- player ---------- */
   .player{
@@ -1289,6 +1311,11 @@
     .search-bar{max-width:none; flex:1 1 0; min-width:0; width:auto;}
     .case-file{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
+    .home{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    body:not(.has-player) .home{padding-bottom:var(--player-gap);}
+    .home-row-head{margin-bottom:13px;}
+    .home-row-title{font-size:1.16rem;}
+    .home-row-scroller{gap:14px;}
     .stamp-row{gap:18px;}
     .cover-mount{width:120px; height:120px;}
     .stamp-title{font-size:1.4rem;}
@@ -1419,10 +1446,10 @@
     .search-input{font-size:16px;}
 
     /* No grey flash on tap, and no 300ms double-tap-zoom wait. */
-    .ctrl-btn, .btn, .row-play, .link-menu-btn, .artist-list-item,
-    .tree-album-item, .more-album-card, .search-result-item, .changelog-item,
+    .ctrl-btn, .btn, .row-play, .link-menu-btn, .nav-item,
+    .more-album-card, .search-result-item, .changelog-item,
     .queue-item, .queue-close, .queue-clear-btn, .desc-modal-close,
-    .cover-viewer-close, .sidebar-close, .menu-btn, .pane-back-btn,
+    .cover-viewer-close, .sidebar-close, .menu-btn,
     .search-clear, .search-result-goto, .changelog-item-goto,
     .manifest tbody tr{
       -webkit-tap-highlight-color:transparent;
@@ -1463,31 +1490,19 @@
           <span class="header-icon-divider" aria-hidden="true"></span>
           <a href="stats.html" class="link-icon social-link" title="Statistics"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4.5" y="13" width="3" height="8" rx="1.5"></rect><rect x="10.5" y="3" width="3" height="18" rx="1.5"></rect><rect x="16.5" y="9" width="3" height="12" rx="1.5"></rect></svg></a>
         </div>
-        <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close archive index" title="Close">
+        <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close menu" title="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
       <button class="reload-btn" id="reloadBtn" title="Re-fetch the latest data from the spreadsheet">⟳ Reload Spreadsheet</button>
     </div>
-    <nav class="tree" id="tree">
-      <div class="tree-panes" id="treePanes">
-        <div class="tree-pane tree-pane-artists" id="paneArtists" aria-hidden="true">
-          <div class="artist-list-item"><span class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span class="skel" style="width:105px;height:13px;"></span><span class="skel" style="width:20px;height:11px;margin-left:auto;"></span></div>
-          <div class="artist-list-item"><span class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span class="skel" style="width:85px;height:13px;"></span><span class="skel" style="width:20px;height:11px;margin-left:auto;"></span></div>
-          <div class="artist-list-item"><span class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span class="skel" style="width:150px;height:13px;"></span><span class="skel" style="width:20px;height:11px;margin-left:auto;"></span></div>
-          <div class="artist-list-item"><span class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span class="skel" style="width:95px;height:13px;"></span><span class="skel" style="width:20px;height:11px;margin-left:auto;"></span></div>
-        </div>
-        <div class="tree-pane tree-pane-albums">
-          <div class="pane-albums-header">
-            <button class="pane-back-btn" id="paneBackBtn" title="Back to artists">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              <span>Back</span>
-            </button>
-            <span class="pane-artist-name" id="paneArtistName"></span>
-          </div>
-          <div class="pane-albums-list" id="paneAlbumsList"></div>
-        </div>
-      </div>
+    <!-- Tab list. Home is the only tab so far - the rest of the rework adds
+         the others here, one .nav-item each (data-tab names them). -->
+    <nav class="sidebar-nav" id="sidebarNav" aria-label="Browse">
+      <button class="nav-item active" type="button" data-tab="home" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        <span class="nav-label">Home</span>
+      </button>
     </nav>
     <!-- The footer is a fixed disclaimer rather than a live count, so it needs
          no skeleton: the text is the same on every load. -->
@@ -1500,7 +1515,7 @@
   <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
   <main class="main">
-    <button class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false">☰ archive index</button>
+    <button class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false">☰ menu</button>
     <div class="search-bar-wrap">
       <a class="status-pill state-checking" id="statusPill" href="archive-audit.html" title="Checking whether the audio host (Pillowcase) is reachable…">
         <span class="status-dot" id="statusDot"></span>
@@ -1517,37 +1532,9 @@
     </div>
     <div id="demoBannerSlot"></div>
     <div id="content">
-      <div class="case-file" aria-hidden="true">
-        <div class="stamp-row">
-          <div class="cover-mount skel"></div>
-          <div class="header-col">
-            <span class="skel skel-title"></span>
-            <div class="file-meta">
-              <span class="skel" style="width:95px;height:11px;"></span>
-              <span class="skel" style="width:70px;height:11px;"></span>
-              <span class="skel" style="width:105px;height:11px;"></span>
-            </div>
-            <div class="actions">
-              <span class="skel" style="width:38px;height:38px;"></span>
-              <span class="skel" style="width:104px;height:38px;"></span>
-              <span class="skel" style="width:38px;height:38px;"></span>
-            </div>
-          </div>
-        </div>
-        <table class="manifest">
-          <thead><tr><th>#</th><th>Title</th><th>Notes</th><th>Credits</th><th>File Date</th><th style="text-align:center;" title="Time"><svg class="th-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7V12L14.5 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"></path></svg></th><th style="text-align:right;"></th></tr></thead>
-          <tbody>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:70%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:88%;height:11px;"></span></td><td class="credit-cell"></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:45%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:50%;height:11px;"></span></td><td class="credit-cell"></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:60%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:35%;height:11px;"></span></td><td class="credit-cell"></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="display:block;width:80%;height:12px;"></span><span class="skel" style="display:block;width:40%;height:10px;margin-top:6px;"></span></td><td class="notes-cell"><span class="skel" style="width:92%;height:11px;"></span></td><td class="credit-cell"><span class="skel" style="width:60%;height:11px;"></span></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:52%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:70%;height:11px;"></span></td><td class="credit-cell"><span class="skel" style="width:45%;height:11px;"></span></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:66%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:80%;height:11px;"></span></td><td class="credit-cell"></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:38%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:55%;height:11px;"></span></td><td class="credit-cell"></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-            <tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:72%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:30%;height:11px;"></span></td><td class="credit-cell"><span class="skel" style="width:50%;height:11px;"></span></td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Home. The tab's own content is the next step of the rework, so the
+           page starts empty rather than dropping straight into an album. -->
+      <div class="home" id="homeView"></div>
     </div>
   </main>
 </div>
@@ -1761,10 +1748,10 @@ let resumeContext = null;
 let currentAlbumName = "";
 let currentAlbumSection = "";
 let displayedAlbumSongs = null;
-// Which artist/album is currently shown in the case file. The sidebar's
-// album pane is rebuilt from scratch every time it's opened (see
-// openArtistPane()), so this is how it knows which row to mark active
-// instead of relying on a DOM element that may no longer exist.
+// Which artist/album is currently shown in the case file. The album page
+// itself is rebuilt from scratch every time one is opened, so this is what
+// the address bar, the player bar's "go to album" click and the background
+// refresh all read instead of a DOM element that may no longer exist.
 let selectedArtistName = null;
 let selectedAlbumName = null;
 // A comp and an edit (any two albums under different dividers) can share a name, so the
@@ -1989,12 +1976,12 @@ function fetchSheetData(sheetId, tabName){
    "Feature(s)" only means something on a SONG row (the featured
    artists shown under the track name). On an ALBUM HEADER row that
    column does nothing else, so it doubles as a place to drop that
-   artist's sidebar profile picture: paste an image link into the
-   Feature(s) cell of any of that artist's album headers and the
-   sidebar's artist-list avatar picks up the first link it finds
-   scanning that artist's headers in sheet order (see extractUrl() and
+   artist's profile picture: paste an image link into the Feature(s)
+   cell of any of that artist's album headers and the album page's
+   byline avatar picks up the first link it finds scanning that
+   artist's headers in sheet order (see extractUrl() and
    artistProfilePic()). Leave every header's Feature(s) cell blank and
-   the sidebar just falls back to a plain initial.
+   the byline just falls back to a plain initial.
 
    That same header cell can also name a SECOND artist for the album,
    written next to the picture link - "Trippie Redd https://…/t.png"
@@ -2467,7 +2454,7 @@ async function readArtistIndex(){
 // Builds the live artist list from the spreadsheet's index tab and leaves it
 // in ARTISTS. indexOk is false when the tab can't be used (missing,
 // unreadable, or empty), which is when nothing is pruned and the current list
-// is kept (so a dropped request can't empty the sidebar).
+// is kept (so a dropped request can't drop every artist's data).
 async function resolveArtists(){
   const indexed = await readArtistIndex();
   // Missing/unreadable, or readable but empty (mid-edit on the sheet, a
@@ -2492,7 +2479,7 @@ async function resolveArtists(){
 
 // Drops DATA entries (and their cached rows) for artists no longer on the
 // live list. Only called when the index tab was read successfully, so a
-// network hiccup can never wipe the sidebar.
+// network hiccup can never wipe an artist's data.
 function pruneArtistData(artists){
   const keep = new Set(artists.map(a => a.name));
   let removed = false;
@@ -2697,23 +2684,6 @@ function countAllEdits(){
   return total;
 }
 
-// Same idea as countAllEdits() but scoped to a single artist — powers the
-// small count shown next to each name in the artist list pane. Unlike
-// countAllEdits(), a cross-listed song here only gets excluded when it
-// was cross-listed from an album on THIS SAME artist's own tab (that's
-// still the same edit counted twice within one artist's tally). A song
-// cross-listed in from a DIFFERENT artist's tab genuinely belongs to
-// this artist's visible tracklist now, so it counts.
-function artistEditCount(artistName){
-  let total = 0;
-  const albums = DATA[artistName] || [];
-  albums.forEach(album => {
-    if (album.isDivider) return;
-    total += album.songs.filter(s => !s.crossListed || s.fromArtist !== artistName).length;
-  });
-  return total;
-}
-
 function updateEditCounter(){
   const numEl = el('editCounterNum');
   if (!numEl) return;
@@ -2737,11 +2707,11 @@ function updateEditCounter(){
   requestAnimationFrame(step);
 }
 
-/* ---------------- deep linking (#Section/Artist/Album[/Song]) ----------------
+/* ---------------- deep linking (#Section/Artist/Album) ----------------
    The URL hash mirrors whatever album is currently open, e.g.
    "#Comps/Playboi-Carti/Music" — copying the address bar always gets you
    (or whoever you send it to) straight to that album's page instead of
-   landing on the default first-artist/first-album view. Three names,
+   landing on Home. Three names,
    positionally, separated by "/" — no "section=.../artist=..." clutter:
    the sheet section the album sits under ("Comps", "Edits", ...), then
    the artist, then the album. The section is what tells apart a comp and
@@ -2752,28 +2722,11 @@ function updateEditCounter(){
    exactly like before, and the address bar upgrades itself to the full
    form once they load.
 
-   A song adds a fourth part: "#Comps/Playboi-Carti/Music/Some-Song" (an
-   album with no section uses an empty first part —
-   "#/Playboi-Carti/Music/Some-Song" — so the positions never shift).
-   Opening one lands on the album, scrolls to that song and loads it into
-   the player bar PAUSED: a link never starts playing by itself (browsers
-   block that anyway, and it'd be rude). The address bar picks the song up
-   while a track from the album on screen is loaded, so copying it shares
-   that song; picking an album from the sidebar, or browsing to another
-   one, goes back to the plain album link (clicking the song name in the
-   player bar counts as going to the song, so that keeps it). See
-   syncUrlToPlayer() and loadLinkedSong().
-
-   A fifth part disambiguates a song name that appears more than once on
-   the same album (an intro reprised, two "Interlude"s, etc): it's the
-   1-based position of that track among the songs sharing its name, e.g.
-   the second "Interlude" is ".../Interlude/2". It's only ever added when
-   the album actually has a repeated name — a song with a unique name
-   never grows a fifth part, so every pre-existing link keeps working
-   unchanged. A link with no fifth part (old link, or a name that isn't
-   duplicated) falls back to the first playable track with that name, same
-   as before. See songOccurrenceForIndex(), buildSongLink() and
-   loadLinkedSong().
+   There used to be two more parts here, naming a song (and disambiguating
+   a repeated one) so a link could open an album on a specific track. That
+   never worked well enough to keep, so links are album-only now — see
+   parseHashParams() for how the leftovers of an old song link are ignored
+   rather than breaking it.
 
    Each name is run through encodeURIComponent (so a literal
    "/", "-", "+", "#", etc. inside a name can never be mistaken for
@@ -2798,25 +2751,6 @@ function decodeHashPart(s){
   return decodeURIComponent(s.replace(/-/g, '%20'));
 }
 
-// Same case-insensitive, trimmed comparison as everywhere else a song/album
-// name gets matched against the hash.
-function songNameKey(name){
-  return (name || "").trim().toLowerCase();
-}
-
-// 1-based position of songs[idx] among the songs on that same list that
-// share its name — e.g. the second "Interlude" on the tracklist is 2. Songs
-// are unique unless the exact position is not important. Returns null when
-// the name is unique on that list, so callers can tell "no disambiguator
-// needed" apart from "it's track 1 of however many".
-function songOccurrenceForIndex(songs, idx){
-  if (!songs || !songs[idx]) return null;
-  const key = songNameKey(songs[idx].name);
-  const sameNamed = [];
-  songs.forEach((s, i) => { if (songNameKey(s.name) === key) sameNamed.push(i); });
-  return sameNamed.length > 1 ? sameNamed.indexOf(idx) + 1 : null;
-}
-
 function parseHashParams(){
   const raw = location.hash.replace(/^#/, '');
   if (!raw) return null;
@@ -2826,19 +2760,21 @@ function parseHashParams(){
     // Three parts = section, artist, album. Two parts = artist, album with
     // no section (see the comment above). A null section means the link
     // doesn't say, so lookups fall back to the first album with that name.
+    // Anything past the album is ignored: those are the old song (and
+    // song-occurrence) parts.
     const hasSection = parts.length >= 3;
     const section = hasSection ? decodeHashPart(parts[0]) : null;
     const artist = decodeHashPart(parts[hasSection ? 1 : 0]);
     const album = decodeHashPart(parts[hasSection ? 2 : 1]);
-    // Optional fourth part: a song on that album (see loadLinkedSong()).
-    const song = (parts.length >= 4 && parts[3]) ? decodeHashPart(parts[3]) : null;
-    // Optional fifth part: which of that album's same-named songs this is
-    // (see songOccurrenceForIndex()). Anything that isn't a positive whole
-    // number is treated as absent rather than breaking the link.
-    const occRaw = (parts.length >= 5 && parts[4]) ? parseInt(parts[4], 10) : NaN;
-    const songOccurrence = (Number.isInteger(occRaw) && occRaw > 0) ? occRaw : null;
+    // An old song link on a section-less album ("#Artist/Album/Song") is
+    // shaped exactly like a sectioned album link, so the reading above can
+    // land on the wrong names. Keep the two-part reading of the first two
+    // names too - findHashAlbum() uses it when the first one resolves to
+    // nothing.
+    const altArtist = decodeHashPart(parts[0]);
+    const altAlbum = decodeHashPart(parts[1]);
     if (!artist || !album) return null;
-    return { artist, album, section, song, songOccurrence };
+    return { artist, album, section, altArtist, altAlbum };
   } catch (e) {
     // A hand-edited hash with a broken %-escape makes decodeURIComponent
     // throw — treat that as "no deep link" instead of breaking the page.
@@ -2868,44 +2804,30 @@ function findAlbumByNames(artistNameRaw, albumNameRaw, sectionRaw){
   return { artistName: artist.name, album };
 }
 
+// Turns a parsed hash into an album. The sectioned reading wins; if it names
+// nothing that exists, the first two parts are tried as artist/album - which
+// is how an old song link ("#Artist/Album/Song" on an album with no section)
+// still lands on the right album now that song links are gone.
+function findHashAlbum(hashParams){
+  if (!hashParams) return null;
+  return findAlbumByNames(hashParams.artist, hashParams.album, hashParams.section)
+    || findAlbumByNames(hashParams.altArtist, hashParams.altAlbum, null);
+}
+
 // Writes the current artist/album into the URL without adding a new
 // browser-history entry per click (replaceState never fires
 // 'hashchange' either, so this can't loop with the listener below) and
 // without the page jumping/scrolling the way a plain `location.hash =`
 // assignment can.
-function updateUrlHash(artistName, albumName, sectionName, songName, songOccurrence){
+function updateUrlHash(artistName, albumName, sectionName){
   const parts = [encodeHashPart(artistName), encodeHashPart(albumName)];
-  if (songName) {
-    parts.push(encodeHashPart(songName));
-    // Only present when this song's name isn't unique on the album (see
-    // songOccurrenceForIndex()) — a plain, unambiguous song link never
-    // grows a needless fifth part.
-    if (songOccurrence) parts.push(String(songOccurrence));
-  }
-  // A song always gets the full four-part form, even for an album with no
-  // section (empty first part) — otherwise "#Artist/Album/Song" would be
-  // read as section/artist/album.
-  if (sectionName || songName) parts.unshift(sectionName ? encodeHashPart(sectionName) : '');
+  if (sectionName) parts.unshift(encodeHashPart(sectionName));
   const newHash = '#' + parts.join('/');
   if (location.hash !== newHash) history.replaceState(null, '', newHash);
 }
 
-// Same section/artist/album/song hash format updateUrlHash() writes to the
-// address bar (see the comment there for why a song always gets the full
-// four-part form) — but built standalone, without touching the current URL
-// or browser history. Used by the "Copy Link" menu item so copying a song's
-// link from wherever you're browsing never navigates you away to it.
-function buildSongLink(artistName, album, songName, songIdx){
-  const parts = [encodeHashPart(artistName), encodeHashPart(album.name), encodeHashPart(songName)];
-  const occurrence = songOccurrenceForIndex(album.songs, songIdx);
-  if (occurrence) parts.push(String(occurrence));
-  parts.unshift(album.section ? encodeHashPart(album.section) : '');
-  return `${location.origin}${location.pathname}#${parts.join('/')}`;
-}
-
-// One clipboard path for every "Copy Link" item, so a song link and an
-// album link behave (and read) exactly the same way: same toasts, same
-// fallback when the Clipboard API isn't available.
+// One clipboard path for every "Copy Link" item: same toasts, same fallback
+// when the Clipboard API isn't available.
 function copyLinkToClipboard(url){
   if (!navigator.clipboard || !navigator.clipboard.writeText) {
     showToast("Couldn't copy the link — clipboard access isn't available.");
@@ -2917,13 +2839,8 @@ function copyLinkToClipboard(url){
   );
 }
 
-function copySongLink(artistName, album, song, songIdx){
-  copyLinkToClipboard(buildSongLink(artistName, album, song.name, songIdx));
-}
-
-// Album-only counterpart to buildSongLink(): the same hash an album page
-// writes when it's opened (see updateUrlHash), without the optional song
-// part. Built standalone so copying never navigates away from where you are.
+// The same hash an album page writes when it's opened (see updateUrlHash),
+// built standalone so copying never navigates away from where you are.
 function buildAlbumLink(artistName, album){
   const parts = [encodeHashPart(artistName), encodeHashPart(album.name)];
   if (album.section) parts.unshift(encodeHashPart(album.section));
@@ -2932,60 +2849,6 @@ function buildAlbumLink(artistName, album){
 
 function copyAlbumLink(artistName, album){
   copyLinkToClipboard(buildAlbumLink(artistName, album));
-}
-
-// Keeps the address bar in step with the player: while the loaded track
-// belongs to the album that's on screen, the URL also names the track (so
-// copying it shares that song); otherwise it's just the album. selectAlbum()
-// always writes the album-only form — choosing an album is what makes a
-// plain album link — and loading/playing a track (playSongAt), or closing
-// the player, calls this to add or drop the song again.
-function syncUrlToPlayer(){
-  if (!selectedArtistName || !selectedAlbumName) return;
-  const onScreen = currentSongIndex >= 0 && currentAlbumSongs && currentAlbumSongs === displayedAlbumSongs;
-  const song = onScreen ? currentAlbumSongs[currentSongIndex] : null;
-  const occurrence = song ? songOccurrenceForIndex(currentAlbumSongs, currentSongIndex) : null;
-  updateUrlHash(selectedArtistName, selectedAlbumName, selectedAlbumSection, song ? song.name : null, occurrence);
-}
-
-// Second half of opening a link that names a song (the album page itself is
-// already up — selectAlbum() ran first): scroll that song's row into view and
-// load it into the player bar PAUSED. Nothing here ever calls play().
-// Matching is case-insensitive like the album lookup. If an album has more
-// than one song with that name, songOccurrence (the link's optional fifth
-// part, see songOccurrenceForIndex()) picks which one — the exact track that
-// was on screen when the link was copied. Without a usable occurrence (an
-// old link, or one that's out of range because tracks were added/removed
-// since) it falls back to the first playable one, same as before. A song
-// that's no longer on the album just leaves you on the album page, and a
-// song with no source file yet gets scrolled to but has nothing to load. If
-// that exact track is already loaded in the player (e.g. a link to the song
-// you're listening to), playback is left alone.
-function loadLinkedSong(artistName, album, songNameRaw, songOccurrence){
-  if (!songNameRaw) return;
-  const key = songNameRaw.trim().toLowerCase();
-  const matches = [];
-  album.songs.forEach((s, i) => { if ((s.name || "").trim().toLowerCase() === key) matches.push(i); });
-  if (!matches.length) return;
-  let idx;
-  if (matches.length > 1 && songOccurrence && songOccurrence >= 1 && songOccurrence <= matches.length) {
-    idx = matches[songOccurrence - 1];
-  } else {
-    const playableIdx = matches.find(i => album.songs[i].playLink);
-    idx = playableIdx !== undefined ? playableIdx : matches[0];
-  }
-  const song = album.songs[idx];
-
-  const rowEl = el('content').querySelectorAll('tbody tr')[idx] || null;
-  if (rowEl) rowEl.scrollIntoView({ block: 'center' });
-  if (!song.playLink) return;
-
-  const streamUrl = toStreamUrl(song.playLink);
-  const alreadyLoaded = currentSongIndex >= 0 && !!audioEl.src && !!streamUrl && audioEl.src.includes(streamUrl);
-  if (!alreadyLoaded) {
-    playSongAt(idx, rowEl, album.songs, artistName, (album.cover || "").trim(), album, true);
-  }
-  syncUrlToPlayer();
 }
 
 // Reacts to the hash changing out from under the app — pasting a new
@@ -2997,89 +2860,382 @@ function loadLinkedSong(artistName, album, songNameRaw, songOccurrence){
 window.addEventListener('hashchange', () => {
   const hashParams = parseHashParams();
   if (!hashParams) return;
-  const match = findAlbumByNames(hashParams.artist, hashParams.album, hashParams.section);
-  if (match) {
-    selectAlbum(match.artistName, match.album);
-    loadLinkedSong(match.artistName, match.album, hashParams.song, hashParams.songOccurrence);
-  }
+  const match = findHashAlbum(hashParams);
+  if (match) selectAlbum(match.artistName, match.album);
 });
 
-// Where a fresh visit (no deep link in the URL) lands. Change any
-// value below to change the site's default landing album — matching is
-// case-insensitive and ignores extra whitespace, so it just needs to be
-// spelled the same as it is on the sheet. "section" is optional: leave it
-// "" to take the first album with that name, or set it (e.g. "Comps" or
-// "Edits") if the same title exists under more than one section.
-const DEFAULT_ALBUM = { artist: "Playboi Carti", album: "the wonderful world of red", section: "" };
+// Which tab is open. An album page isn't a tab, so opening one clears the
+// highlight instead of moving it. Only Home exists so far.
+function setActiveTab(tab){
+  document.querySelectorAll('#sidebarNav .nav-item').forEach(item => {
+    const on = !!tab && item.dataset.tab === tab;
+    item.classList.toggle('active', on);
+    if (on) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+}
+
+// The Home tab: three shelves - artists, comps, edits - rebuilt (and
+// re-shuffled) on every visit. No album is selected, the address bar drops
+// its album link (so a reload comes back to Home instead of re-opening that
+// album), and Home reads as the active tab.
+function showHome(){
+  selectedArtistName = null;
+  selectedAlbumName = null;
+  selectedAlbumSection = null;
+  displayedAlbumSongs = null;
+  setActiveTab('home');
+  renderHome();
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  const mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
+  sizeHomeRows();
+  if (isDrawerLayout()) closeSidebar();
+}
+
+/* ---------- home ---------- */
+
+// Fisher-Yates over a copy, so the sheet's own ordering is never touched.
+// The rows are rebuilt from scratch each time Home is opened, which is what
+// makes the page look different every visit rather than once per load.
+function shuffled(list){
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const swap = out[i]; out[i] = out[j]; out[j] = swap;
+  }
+  return out;
+}
+
+// Every non-divider album filed under one of the sheet's dividers, paired
+// with the artist tab it came from - the comps and edits shelves mix artists,
+// so a card needs both to open the right album.
+function albumsInSection(sectionName){
+  const want = sectionName.trim().toLowerCase();
+  const out = [];
+  for (const artistName of Object.keys(DATA)) {
+    for (const album of DATA[artistName] || []) {
+      if (album.isDivider) continue;
+      if ((album.section || "").trim().toLowerCase() !== want) continue;
+      out.push({ artistName, album });
+    }
+  }
+  return out;
+}
+
+// The three lists the markup on screen was built from, so a click can be
+// resolved by row + index instead of round-tripping names through data
+// attributes.
+let homeRows = null;
+// One entry per shelf, so a resize (which changes how far a row can travel)
+// can refresh which arrows are live.
+let homeNavSyncs = [];
+
+const CHEVRON_LEFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"></path></svg>`;
+const CHEVRON_RIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"></path></svg>`;
+
+// The player bar's play glyph, used as the cover's affordance. Decoration
+// only - the card itself is the button. Drawn as a solid disc plus the
+// triangle as its own black path rather than the bar's knocked-out version:
+// there the arrow is a hole, so it showed whatever cover was behind it.
+const PLAY_BADGE = `<span class="home-card-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"></path><path d="M15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="#111111"></path></svg></span>`;
+
+function homeAlbumCardHtml(rowKey, idx, artistName, album){
+  const coverUrl = (album.cover || "").trim();
+  // Same cover test and inline fallback as the album page's "more from"
+  // row: a dead or missing link swaps itself for the NO COVER plate rather
+  // than leaving a broken-image icon.
+  const coverHtml = /^https?:\/\//i.test(coverUrl)
+    ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.outerHTML='<div class=&quot;home-card-fallback&quot;>NO COVER</div>'">`
+    : `<div class="home-card-fallback">NO COVER</div>`;
+  const n = album.songs.length;
+  return `
+    <button class="home-card" type="button" data-row="${rowKey}" data-idx="${idx}" title="${esc(album.name)}">
+      <div class="home-card-art">${coverHtml}${PLAY_BADGE}</div>
+      <div class="home-card-name">${esc(album.name)}</div>
+      <div class="home-card-meta">${esc(artistName)} • ${n} track${n === 1 ? "" : "s"}</div>
+    </button>`;
+}
+
+function homeArtistCardHtml(idx, artistName){
+  const n = (DATA[artistName] || []).filter(a => !a.isDivider).length;
+  // The circle starts as the colour + initial fallback and gets the real
+  // picture painted over it by applyArtistAvatar() once the cards are in the
+  // document.
+  return `
+    <button class="home-card" type="button" data-row="artists" data-idx="${idx}" title="${esc(artistName)}">
+      <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${PLAY_BADGE}</div>
+      <div class="home-card-name">${esc(artistName)}</div>
+      <div class="home-card-meta">${n} release${n === 1 ? "" : "s"}</div>
+    </button>`;
+}
+
+function homeRowHtml(rowKey, title, cardsHtml, emptyText){
+  return `
+    <section class="home-row home-row-${rowKey}">
+      <div class="home-row-head">
+        <h2 class="home-row-title">${esc(title)}</h2>
+        ${cardsHtml ? `
+        <div class="home-row-nav">
+          <button type="button" class="row-nav-btn" data-dir="-1" aria-label="Scroll ${esc(title)} left">${CHEVRON_LEFT}</button>
+          <button type="button" class="row-nav-btn" data-dir="1" aria-label="Scroll ${esc(title)} right">${CHEVRON_RIGHT}</button>
+        </div>` : ""}
+      </div>
+      ${cardsHtml
+        ? `<div class="home-row-scroller">${cardsHtml}</div>`
+        : `<div class="home-row-empty">${esc(emptyText)}</div>`}
+    </section>`;
+}
+
+// A shelf is a sampler, not the whole catalogue: ten cards is enough to see
+// what's in the row and scroll a little, and short enough that each visit to
+// Home shows a different slice of a big sheet.
+const HOME_ROW_LIMIT = 10;
+
+function renderHome(){
+  // An artist tab with no albums left on it would be a dead card, so those
+  // are dropped before the shuffle.
+  const artists = shuffled(ARTISTS.filter(a => (DATA[a.name] || []).some(al => !al.isDivider))).slice(0, HOME_ROW_LIMIT);
+  const comps = shuffled(albumsInSection("Comps")).slice(0, HOME_ROW_LIMIT);
+  const edits = shuffled(albumsInSection("Edits")).slice(0, HOME_ROW_LIMIT);
+  homeRows = { artists, comps, edits };
+
+  el('content').innerHTML = `<div class="home" id="homeView">
+    ${homeRowHtml("artists", "Artists",
+      artists.map((a, i) => homeArtistCardHtml(i, a.name)).join(""),
+      "No artists on the sheet yet.")}
+    ${homeRowHtml("comps", "Comps",
+      comps.map((it, i) => homeAlbumCardHtml("comps", i, it.artistName, it.album)).join(""),
+      "No comps on the sheet yet.")}
+    ${homeRowHtml("edits", "Edits",
+      edits.map((it, i) => homeAlbumCardHtml("edits", i, it.artistName, it.album)).join(""),
+      "No edits on the sheet yet.")}
+  </div>`;
+
+  const homeEl = el('homeView');
+
+  homeEl.querySelectorAll('.home-card-avatar').forEach(avatarEl => {
+    const card = avatarEl.closest('.home-card');
+    const item = homeRows.artists[parseInt(card.dataset.idx, 10)];
+    if (item) applyArtistAvatar(avatarEl, item.name);
+  });
+
+  // One delegated handler for all three shelves. Artist cards go through
+  // goToArtist(), which is the single place that knows artist pages aren't
+  // built yet - so these report the same thing the player bar's credit link
+  // does, and start working the day that page exists.
+  //
+  // Album cards re-resolve against DATA rather than opening the object they
+  // were built from: a background sheet refresh can delete or move an album
+  // while Home is on screen, and this way the click either opens the album as
+  // it is now or says it's gone, instead of rendering a stale snapshot.
+  homeEl.addEventListener('click', (e) => {
+    const card = e.target.closest('.home-card');
+    if (!card) return;
+    const list = homeRows[card.dataset.row];
+    const item = list && list[parseInt(card.dataset.idx, 10)];
+    if (!item) return;
+    if (card.dataset.row === 'artists') { goToArtist(item.name); return; }
+    const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
+    if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+    selectAlbum(match.artistName, match.album);
+  });
+
+  // The < > pair beside each title: one click throws the row a full screen of
+  // cards sideways, and the two arrows swap which one is live as the row
+  // moves - including when it's dragged by hand rather than by a button.
+  homeNavSyncs = [];
+  homeEl.querySelectorAll('.home-row').forEach(rowEl => {
+    const scroller = rowEl.querySelector('.home-row-scroller');
+    const nav = rowEl.querySelector('.home-row-nav');
+    if (!scroller || !nav) return;
+    const prevBtn = nav.querySelector('[data-dir="-1"]');
+    const nextBtn = nav.querySelector('[data-dir="1"]');
+
+    const sync = () => {
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      // A shelf whose cards all fit has nothing to arrow through, so the pair
+      // stays out of the way entirely.
+      nav.hidden = max <= 1;
+      prevBtn.disabled = scroller.scrollLeft <= 2;
+      nextBtn.disabled = scroller.scrollLeft >= max - 2;
+    };
+
+    nav.addEventListener('click', (e) => {
+      const btn = e.target.closest('.row-nav-btn');
+      if (!btn || btn.disabled) return;
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      const step = Number(btn.dataset.dir) * scroller.clientWidth;
+      animateRowScroll(scroller, Math.max(0, Math.min(max, scroller.scrollLeft + step)));
+    });
+
+    scroller.addEventListener('scroll', sync, { passive: true });
+    homeNavSyncs.push(sync);
+    sync();
+  });
+}
+
+// The row arrows' glide. Same easeOutCubic shape as the rest of the page's
+// scrolling, and long enough to read as one movement rather than a jump.
+const ROW_SCROLL_DURATION = 340;
+
+function animateRowScroll(scroller, target){
+  const startPos = scroller.scrollLeft;
+  const startTime = performance.now();
+  if (scroller._navFrame) cancelAnimationFrame(scroller._navFrame);
+  function step(now){
+    const progress = Math.min((now - startTime) / ROW_SCROLL_DURATION, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    scroller.scrollLeft = startPos + (target - startPos) * eased;
+    if (progress < 1) {
+      scroller._navFrame = requestAnimationFrame(step);
+    } else {
+      scroller._navFrame = null;
+    }
+  }
+  scroller._navFrame = requestAnimationFrame(step);
+}
+
+function syncHomeNavs(){
+  homeNavSyncs.forEach(fn => fn());
+}
+
+// The covers are sized from the page's height, but capped: letting the height
+// drive them unchecked is what made them enormous on a big monitor. The
+// height left over after the cap goes into the space *between* the shelves, so
+// the last row's covers still land about half below the fold - the gaps are
+// the flexible part. Two gaps sit above that row, so:
+//
+//   artTop + 2·Δgap + S/2 = cut      ⇒   Δgap = (cut - artTop - S/2) / 2
+//
+// Everything is measured from the .home box, so the page's scroll offset
+// cancels out.
+const HOME_CARD_MIN = 116;
+const HOME_CARD_MAX = 180;
+// A safety net for narrow columns (mostly the drawer layout): never so wide
+// that a second card can't peek in beside the first.
+const HOME_CARDS_ACROSS = { wide: 4.2, drawer: 2.5 };
+const HOME_GAP_BASE = 56;
+const HOME_GAP_MAX = 88;
+// The composed gap comes out ~28% tighter than what a perfect half-cut would
+// need: a full half left the page feeling airy, and the height is better spent
+// showing more of the last row than sitting between shelves.
+const HOME_GAP_TIGHTEN = 0.72;
+
+function sizeHomeRows(){
+  const homeEl = el('homeView');
+  const mainEl = document.querySelector('.main');
+  if (!homeEl || !mainEl) return;
+  const lastArt = homeEl.querySelector('.home-row:last-child .home-card-art');
+  // Nothing to solve against when the last shelf is empty (no comps or no
+  // edits on the sheet) - the CSS defaults stay.
+  if (!lastArt) { syncHomeNavs(); return; }
+
+  // Start from the base spacing every time, so the result depends only on the
+  // window and never on what the previous solve happened to leave behind.
+  homeEl.style.setProperty('--home-row-gap', HOME_GAP_BASE + 'px');
+
+  // The page's own bottom edge, less the player bar when it's up: the bar
+  // sits over the scroll pane, so its top edge is what actually hides the
+  // rest of the cover.
+  const homeTop = homeEl.getBoundingClientRect().top;
+  const playerH = document.body.classList.contains('has-player') ? (el('player').offsetHeight || 0) : 0;
+  const cut = mainEl.getBoundingClientRect().bottom - playerH - homeTop;
+
+  // Every shelf above the last one grows by exactly as much as the covers do
+  // (an empty one has no cover to grow), plus half a cover for the last row's
+  // own midpoint.
+  const growingRows = Array.from(homeEl.querySelectorAll('.home-row'))
+    .slice(0, -1)
+    .filter(rowEl => rowEl.querySelector('.home-card-art')).length;
+
+  // offsetHeight, not the rect: a hovered card is scaled 1.03 and that would
+  // skew the solve by a couple of pixels.
+  const sizeNow = lastArt.offsetHeight;
+  const artTopNow = lastArt.getBoundingClientRect().top - homeTop;
+  const ideal = sizeNow + (cut - artTopNow - sizeNow / 2) / (growingRows + 0.5);
+
+  const scroller = lastArt.closest('.home-row-scroller');
+  const cardGap = parseFloat(getComputedStyle(scroller).columnGap) || 0;
+  const across = isDrawerLayout() ? HOME_CARDS_ACROSS.drawer : HOME_CARDS_ACROSS.wide;
+  const byWidth = (scroller.clientWidth + cardGap) / across - cardGap;
+
+  const size = Math.round(Math.max(HOME_CARD_MIN, Math.min(HOME_CARD_MAX, byWidth, ideal)));
+  homeEl.style.setProperty('--home-card', size + 'px');
+
+  // The cap bit, so the shelves are shorter than the page: hand the rest to
+  // the gaps. Measured again because the covers just changed size. A phone
+  // gets a tighter ceiling - the same 88px that reads as generous on a desktop
+  // window reads as a hole between two rows on a 390px screen.
+  if (ideal > size + 0.5) {
+    const artTop = lastArt.getBoundingClientRect().top - homeTop;
+    const push = (cut - artTop - size / 2) / 2;
+    const gapMax = isDrawerLayout() ? 64 : HOME_GAP_MAX;
+    const gap = Math.round(Math.max(HOME_GAP_BASE, Math.min(gapMax, HOME_GAP_BASE + push)) * HOME_GAP_TIGHTEN);
+    homeEl.style.setProperty('--home-row-gap', gap + 'px');
+  }
+
+  // A narrower window means a shorter row, so a shelf that was already at its
+  // end can suddenly have more to show (or stop being scrollable at all).
+  syncHomeNavs();
+}
+
+// Web fonts land after first paint, so the row titles can change height by a
+// pixel or two once they do - re-solve after they've settled.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeHomeRows);
+let homeResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(homeResizeTimer);
+  homeResizeTimer = setTimeout(sizeHomeRows, 100);
+});
 
 function renderAll(){
-  renderTree();
   renderDemoBanner();
   updateEditCounter();
   updateChangelogBadge();
 
-  // A deep link (or a plain reload, since selectAlbum() keeps the hash
-  // in sync with whatever's open) takes priority over the default view.
+  // A deep link (or a plain reload, since selectAlbum() keeps the hash in
+  // sync with whatever's open) takes priority over Home.
   const hashParams = parseHashParams();
   if (hashParams) {
-    const match = findAlbumByNames(hashParams.artist, hashParams.album, hashParams.section);
+    const match = findHashAlbum(hashParams);
     if (match) {
       selectAlbum(match.artistName, match.album);
-      loadLinkedSong(match.artistName, match.album, hashParams.song, hashParams.songOccurrence);
       return;
     }
   }
 
-  // No hash — land on the configured default album rather than
-  // whatever's alphabetically first.
-  const defaultMatch = findAlbumByNames(DEFAULT_ALBUM.artist, DEFAULT_ALBUM.album, DEFAULT_ALBUM.section);
-  if (defaultMatch) { selectAlbum(defaultMatch.artistName, defaultMatch.album); return; }
-
-  // Default album isn't on the sheet right now (renamed, tab missing,
-  // etc.) — fall back to the first album of the first artist so the
-  // site still lands somewhere instead of showing nothing.
-  for (const artist of ARTISTS) {
-    const albums = (DATA[artist.name] || []).filter(a => !a.isDivider);
-    if (albums.length) { selectAlbum(artist.name, albums[0]); return; }
-  }
-  el('content').innerHTML = `<div class="empty-state"><b>Nothing filed yet</b>No artist tabs were found. List each artist on the spreadsheet's "Artists" tab (one per row in column A, matching its sheet tab) and check the spreadsheetId in CONFIG.</div>`;
+  // No album link: the site opens on Home. The configured default album (and
+  // its first-album fallback) used to live here - that landing behaviour is
+  // gone with the sidebar rework.
+  showHome();
 }
 
 // Used by the background auto-refresh (see silentlyRefreshCache()) once
-// it's confirmed the live sheet actually changed. Unlike renderAll()
-// (boot's first paint and the "Reload Spreadsheet" button both use it,
-// and it always jumps to the first artist/album) this keeps whatever
-// the user is currently looking at and just refreshes it in place with
-// the new data - counts, the open artist pane if any, and the open
-// album if it's still there. Falls back to renderAll()'s default view
-// only when whatever was open no longer exists in the fresh data (e.g.
-// that album got renamed or removed on the sheet).
+// it's confirmed the live sheet actually changed. Unlike renderAll() this
+// keeps whatever the user is currently looking at and just refreshes it in
+// place with the new data. On Home there's nothing to re-render, so it only
+// updates the counts; an album that no longer exists in the fresh data
+// (renamed or removed on the sheet) falls back to Home.
 function refreshInPlace(){
   renderDemoBanner();
   updateEditCounter();
   updateChangelogBadge();
-  renderArtistList();
 
-  // Work out which album stays open first, so the sidebar pane below is
-  // rebuilt against it. Same name AND section, so a comp/edit pair that
-  // share a title don't swap places; falls back to the name alone in case
-  // the album got moved to a different section on the sheet.
-  let keepAlbum = null;
-  if (selectedArtistName && selectedAlbumName) {
-    const albums = (DATA[selectedArtistName] || []).filter(a => !a.isDivider);
-    keepAlbum = albums.find(a => a.name === selectedAlbumName && (a.section || "") === selectedAlbumSection)
-      || albums.find(a => a.name === selectedAlbumName)
-      || null;
-    if (keepAlbum) selectedAlbumSection = keepAlbum.section || "";
-  }
+  if (!selectedArtistName || !selectedAlbumName) return;
 
-  if (el('treePanes').classList.contains('at-albums') && selectedArtistName) {
-    openArtistPane(selectedArtistName);
-  }
+  // Same name AND section, so a comp/edit pair that share a title don't swap
+  // places; falls back to the name alone in case the album got moved to a
+  // different section on the sheet.
+  const albums = (DATA[selectedArtistName] || []).filter(a => !a.isDivider);
+  const keepAlbum = albums.find(a => a.name === selectedAlbumName && (a.section || "") === selectedAlbumSection)
+    || albums.find(a => a.name === selectedAlbumName)
+    || null;
 
-  if (keepAlbum) { renderCaseFile(selectedArtistName, keepAlbum); return; }
+  if (!keepAlbum) { showHome(); return; }
 
-  renderAll();
+  selectedAlbumSection = keepAlbum.section || "";
+  renderCaseFile(selectedArtistName, keepAlbum);
 }
 
 function renderDemoBanner(){
@@ -3088,25 +3244,12 @@ function renderDemoBanner(){
   slot.innerHTML = `<div class="demo-banner"><span><b>Demo data</b> — this is sample content, not your live sheet. Set <code>spreadsheetId</code> in the CONFIG block (top of index.html) to go live.</span></div>`;
 }
 
-// Pane 1: just artist names + their total edit count. Clicking one slides
-// in pane 2 (openArtistPane) instead of expanding inline — this is what
-// keeps the sidebar readable no matter how many artists/albums exist.
-function renderTree(){
-  renderArtistList();
-  // A full re-render (boot, or "Reload Spreadsheet") always lands back on
-  // the artist list rather than re-opening whatever pane was showing —
-  // the data backing it may have just changed.
-  el('treePanes').classList.remove('at-albums');
-  el('paneAlbumsList').innerHTML = "";
-  el('paneArtistName').textContent = "";
-}
-
-// An artist's sidebar avatar picture is whatever extractUrl() found in
+// An artist's avatar picture is whatever extractUrl() found in
 // the first (in sheet order) of that artist's album headers that has a
 // link in its "Feature(s)" cell — see the comment above
 // buildAlbumsFromRows() and the pfpLink field set there. Returns "" if
-// none of the artist's headers have one, which just means the sidebar
-// falls back to the plain initial below.
+// none of the artist's headers have one, which just means the album
+// byline falls back to the plain initial below.
 function artistProfilePic(artistName){
   const albums = DATA[artistName] || [];
   for (const album of albums) {
@@ -3132,11 +3275,10 @@ function avatarInitial(name){
   return trimmed ? trimmed[0].toUpperCase() : "?";
 }
 
-// Shared by the sidebar artist list and the album view's byline avatar so
-// both show the exact same picture (or the exact same color+initial
-// fallback) for a given artist. See artistProfilePic() above for why a
-// failed/missing picture just leaves the fallback showing rather than
-// breaking anything.
+// Draws the album page's byline avatar: the artist's picture, or the same
+// stable colour+initial fallback when there isn't one. See
+// artistProfilePic() above for why a failed/missing picture just leaves the
+// fallback showing rather than breaking anything.
 function applyArtistAvatar(avatarEl, artistName){
   avatarEl.style.backgroundColor = avatarColor(artistName);
   avatarEl.textContent = avatarInitial(artistName);
@@ -3151,165 +3293,13 @@ function applyArtistAvatar(avatarEl, artistName){
   }
 }
 
-function renderArtistList(){
-  const pane = el('paneArtists');
-  pane.innerHTML = "";
-  pane.removeAttribute('aria-hidden');
-
-  // Most songs first; artists with the same count fall back to A-Z. The
-  // counts are worked out once up front (rather than inside the sort's
-  // comparator) since artistEditCount() walks every song. This only
-  // changes the DISPLAY order - ARTISTS itself is never reordered, so
-  // loading, caching and deep links aren't affected.
-  const ranked = ARTISTS
-    .map(artist => ({ artist, count: artistEditCount(artist.name) }))
-    .sort((a, b) =>
-      b.count - a.count ||
-      a.artist.name.localeCompare(b.artist.name, undefined, { sensitivity: 'base' })
-    );
-
-  ranked.forEach(({ artist, count }) => {
-    const item = document.createElement('div');
-    item.className = 'artist-list-item';
-    item.dataset.artist = artist.name;
-    if (artist.name === selectedArtistName) item.classList.add('active');
-
-    // Built as a real element (not innerHTML) so a picture link can be
-    // set via the style API instead of getting spliced into an HTML
-    // string — sidesteps any quoting issues in the URL entirely, and an
-    // image that fails to load just leaves the color+initial showing
-    // underneath instead of breaking anything.
-    const avatar = document.createElement('span');
-    avatar.className = 'al-avatar';
-    applyArtistAvatar(avatar, artist.name);
-    item.appendChild(avatar);
-
-    item.insertAdjacentHTML('beforeend', `<span class="al-name">${esc(artist.name)}</span><span class="al-meta">${count}</span><span class="al-chevron">›</span>`);
-    item.addEventListener('click', () => openArtistPane(artist.name));
-    pane.appendChild(item);
-  });
-}
-
-// The skeleton markup baked into the initial HTML (4 artist rows, 8
-// track rows) is just a fixed sample — on a tall sidebar or a big
-// monitor it runs out well before the bottom of the pane, leaving a
-// chunk of plain background showing under it while the real data is
-// still loading. These two functions top each one up with just enough
-// extra rows — same markup, cycled through a small set of widths so it
-// doesn't look like an obviously repeating pattern — to actually cover
-// the visible area, measured live rather than guessed. They only ever
-// ADD rows on top of what's already there, and only run once, before
-// boot() kicks off the data fetch, so the fuller skeleton is what's on
-// screen for the entire load rather than popping in partway through.
-
-const ARTIST_SKEL_NAME_WIDTHS = [105, 85, 150, 95, 120, 70, 135, 110, 90, 140];
-function artistSkeletonRowHTML(i){
-  const w = ARTIST_SKEL_NAME_WIDTHS[i % ARTIST_SKEL_NAME_WIDTHS.length];
-  return `<div class="artist-list-item"><span class="skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span class="skel" style="width:${w}px;height:13px;"></span><span class="skel" style="width:20px;height:11px;margin-left:auto;"></span></div>`;
-}
-function fillSidebarSkeleton(){
-  const pane = el('paneArtists');
-  if (!pane || !pane.children.length) return;
-  const rowHeight = pane.children[0].getBoundingClientRect().height;
-  if (!rowHeight) return;
-  // +2 so the fake list slightly overflows into scroll like a real one
-  // would, instead of stopping suspiciously exactly at the fold.
-  const needed = Math.ceil(pane.clientHeight / rowHeight) + 2;
-  for (let i = pane.children.length; i < needed; i++) {
-    pane.insertAdjacentHTML('beforeend', artistSkeletonRowHTML(i));
-  }
-}
-
-const TRACK_SKEL_PATTERNS = [
-  { title:70, notes:88, credit:0  }, { title:45, notes:50, credit:0  },
-  { title:60, notes:35, credit:0  }, { title:52, notes:70, credit:45 },
-  { title:66, notes:80, credit:0  }, { title:38, notes:55, credit:0  },
-  { title:72, notes:30, credit:50 }
-];
-function trackSkeletonRowHTML(i){
-  const p = TRACK_SKEL_PATTERNS[i % TRACK_SKEL_PATTERNS.length];
-  const creditSkel = p.credit ? `<span class="skel" style="width:${p.credit}%;height:11px;"></span>` : "";
-  return `<tr class="skel-row"><td class="num-cell"><span class="skel" style="width:14px;height:11px;"></span></td><td class="title-cell"><span class="skel" style="width:${p.title}%;height:12px;"></span></td><td class="notes-cell"><span class="skel" style="width:${p.notes}%;height:11px;"></span></td><td class="credit-cell">${creditSkel}</td><td class="release-cell"><span class="skel" style="width:56px;height:11px;"></span></td><td class="time-cell"><span class="skel" style="width:30px;height:11px;"></span></td><td class="discord-cell"></td></tr>`;
-}
-function fillTableSkeleton(){
-  const tbody = document.querySelector('#content tbody');
-  const mainEl = document.querySelector('.main');
-  const caseFile = document.querySelector('.case-file');
-  if (!tbody || !tbody.children.length || !mainEl || !caseFile) return;
-  const rowHeight = tbody.children[0].getBoundingClientRect().height;
-  if (!rowHeight) return;
-  // Height case-file uses up before the tbody even starts (cover art,
-  // title, tags, action buttons, table header) — subtract that from the
-  // main pane's own visible height to get how much row-space is left.
-  const usedAboveRows = caseFile.getBoundingClientRect().height - tbody.getBoundingClientRect().height;
-  const available = mainEl.clientHeight - usedAboveRows;
-  const needed = Math.max(tbody.children.length, Math.ceil(available / rowHeight) + 2);
-  for (let i = tbody.children.length; i < needed; i++) {
-    tbody.insertAdjacentHTML('beforeend', trackSkeletonRowHTML(i));
-  }
-}
-
-// Pane 2: one artist's albums, grouped under its dividers (e.g. "Comps",
-// "Edits") exactly like before. Rebuilt fresh each time it's opened, so
-// there's only ever one artist's worth of album rows in the DOM.
-function openArtistPane(artistName){
-  const albums = DATA[artistName] || [];
-  el('paneArtistName').textContent = artistName;
-  const listEl = el('paneAlbumsList');
-  listEl.innerHTML = "";
-  let sectionList = listEl;
-  albums.forEach(album => {
-    if (album.isDivider) {
-      const div = document.createElement('div');
-      div.className = 'tree-divider';
-      div.innerHTML = `<span class="label">${esc(album.label)}</span><span class="chevron">▾</span>`;
-      const sub = document.createElement('div');
-      sub.className = 'tree-albums';
-      // Every section starts open now — collapsing "Edits" by default was
-      // only there to fight clutter in the old single-pane sidebar, which
-      // no longer applies now that each artist gets its own pane.
-      div.addEventListener('click', () => {
-        div.classList.toggle('collapsed');
-        sub.classList.toggle('collapsed');
-      });
-      listEl.appendChild(div);
-      listEl.appendChild(sub);
-      sectionList = sub;
-      return;
-    }
-    const item = document.createElement('div');
-    item.className = 'tree-album-item';
-    if (artistName === selectedArtistName && album.name === selectedAlbumName && (album.section || "") === selectedAlbumSection) item.classList.add('active');
-    item.dataset.album = album.name;
-    item.dataset.section = album.section || "";
-    item.innerHTML = `<span class="a-dot" aria-hidden="true"></span><span class="a-name">${esc(album.name)}</span><span class="a-count">${album.songs.length}</span>`;
-    item.addEventListener('click', () => selectAlbum(artistName, album));
-    sectionList.appendChild(item);
-  });
-  el('treePanes').classList.add('at-albums');
-}
-
-function closeArtistPane(){
-  el('treePanes').classList.remove('at-albums');
-}
-
 function selectAlbum(artistName, album){
   selectedArtistName = artistName;
   selectedAlbumName = album.name;
   selectedAlbumSection = album.section || "";
-  // Matched by data-album/data-section rather than "whichever element was clicked" —
-  // the sidebar's album pane only ever holds one artist's items at a
-  // time (see openArtistPane()), so it just has to be showing THIS artist
-  // and the item's name + section have to match. Name alone isn't enough:
-  // a comp and an edit can share a title, and both would light up. Matching
-  // here (instead of on the clicked element) means every way of landing on
-  // an album (a sidebar click, a search result's "go to album", a deep
-  // link, or the "more from this artist" row) highlights the right item
-  // whenever that pane happens to be the one on screen.
-  const paneShowsThisArtist = el('paneArtistName').textContent === artistName;
-  document.querySelectorAll('.tree-album-item').forEach(n => n.classList.toggle('active',
-    paneShowsThisArtist && n.dataset.album === album.name && n.dataset.section === selectedAlbumSection));
-  document.querySelectorAll('.artist-list-item').forEach(n => n.classList.toggle('active', n.dataset.artist === artistName));
+  // An album page isn't one of the sidebar's tabs, so nothing in the nav
+  // stays highlighted while it's open.
+  setActiveTab(null);
   renderCaseFile(artistName, album);
   // The page itself never scrolls - .main is the scrolling pane - so swapping
   // the album's HTML leaves it at whatever offset the last album was scrolled
@@ -3319,7 +3309,7 @@ function selectAlbum(artistName, album){
   const mainEl = document.querySelector('.main');
   if (mainEl) mainEl.scrollTop = 0;
   updateUrlHash(artistName, album.name, album.section);
-  if (window.innerWidth <= 820) closeSidebar();
+  if (isDrawerLayout()) closeSidebar();
 }
 
 /* Lines the description's "Read More" up with the end of the runtime value.
@@ -3431,8 +3421,8 @@ function renderCaseFile(artistName, album){
 
   // "More from this artist" row, at the bottom of the case file — every
   // other non-divider album on this artist's tab (comps included), in
-  // the exact order the sheet (and the sidebar's album pane) has them
-  // in, since that's the ordering the sheet owner already chose.
+  // the exact order the sheet has them in, since that's the ordering the
+  // sheet owner already chose.
   const moreAlbums = (DATA[artistName] || []).filter(a => !a.isDivider && a !== album);
   const moreAlbumsHtml = moreAlbums.length ? `
     <div class="more-albums">
@@ -3547,12 +3537,13 @@ function renderCaseFile(artistName, album){
     const compTagHtml = (fromComp && song.fromAlbum)
       ? `<div class="t-comp-tag" data-from-album="${esc(song.fromAlbum)}" data-from-artist="${esc(song.fromArtist || artistName)}" data-from-section="${esc(song.fromSection || "")}" title="Also appears on &quot;${esc(song.fromAlbum)}&quot;${crossedArtists ? ` by ${esc(song.fromArtist)}` : ""}">${esc(compTagLabel)}</div>`
       : "";
+    // No "Copy Link" here any more: song links are gone (see the deep-linking
+    // comment), and the album's own link is in the header's ⋯ menu.
     const linkMenuItems = [
       song.ytLink ? `<a class="link-menu-item" href="${esc(song.ytLink)}" target="_blank" rel="noopener">${ICONS.youtube}<span>Watch on YouTube</span></a>` : "",
       song.discordLink ? `<a class="link-menu-item" href="${esc(song.discordLink)}" target="_blank" rel="noopener">${ICONS.discord}<span>View Discord Message</span></a>` : "",
       song.playLink ? `<a class="link-menu-item" href="${esc(toDownloadUrl(song.playLink))}" target="_blank" rel="noopener">${ICONS.download}<span>Download</span></a>` : "",
       song.playLink ? `<button type="button" class="link-menu-item queue-next-item" data-idx="${idx}">${ICONS.queueNext}<span>Add to Queue</span></button>` : "",
-      `<button type="button" class="link-menu-item copy-link-item" data-idx="${idx}">${ICONS.link}<span>Copy Link</span></button>`,
     ].filter(Boolean).join("");
     const linksMenuHtml = linkMenuItems ? `
       <div class="link-menu-wrap">
@@ -3638,59 +3629,6 @@ function renderCaseFile(artistName, album){
     cardEl.addEventListener('click', () => selectAlbum(artistName, moreAlbums[i]));
   });
 
-  const moreAlbumsRow = el('content').querySelector('.more-albums-row');
-  if (moreAlbumsRow) {
-    // A plain vertical mouse-wheel scroll over the row moves it
-    // horizontally instead, since it's the only scroll gesture a mouse
-    // (as opposed to a trackpad, which can already shift-scroll or swipe)
-    // has to offer.
-    //
-    // Only the "scrolled past the last card" end falls through to the
-    // page's normal scroll, so you can keep reading on down the page.
-    // The start doesn't: once you're back at the first card, continuing
-    // to scroll "backward" stays inside the row instead of bubbling up
-    // and yanking the whole page upward, which is what actually happens
-    // if that direction is allowed through too - scrolling back to the
-    // start and one notch further used to jump you away from the row
-    // entirely.
-    //
-    // Animated the same way as the Up/Down arrow-key scroll (see
-    // animateArrowScroll below) rather than jumping scrollLeft straight
-    // to each new value - wheel events fire in a rapid burst, so a
-    // one-tick-one-jump version feels stuttery next to a short eased
-    // glide that later ticks can smoothly extend.
-    let wheelTarget = null;
-    let wheelFrame = null;
-    function animateWheelScroll(){
-      const target = wheelTarget;
-      const startPos = moreAlbumsRow.scrollLeft;
-      const startTime = performance.now();
-      if (wheelFrame) cancelAnimationFrame(wheelFrame);
-      function step(now){
-        const progress = Math.min((now - startTime) / ARROW_SCROLL_DURATION, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        moreAlbumsRow.scrollLeft = startPos + (target - startPos) * eased;
-        if (progress < 1) {
-          wheelFrame = requestAnimationFrame(step);
-        } else {
-          wheelFrame = null;
-          wheelTarget = null;
-        }
-      }
-      wheelFrame = requestAnimationFrame(step);
-    }
-    moreAlbumsRow.addEventListener('wheel', (e) => {
-      if (e.deltaY === 0) return;
-      const maxScroll = moreAlbumsRow.scrollWidth - moreAlbumsRow.clientWidth;
-      const base = wheelTarget !== null ? wheelTarget : moreAlbumsRow.scrollLeft;
-      const atEnd = base >= maxScroll - 1;
-      if (e.deltaY > 0 && atEnd) return; // let the page scroll on past the row
-      e.preventDefault();
-      wheelTarget = Math.max(0, Math.min(maxScroll, base + e.deltaY));
-      animateWheelScroll();
-    }, { passive: false });
-  }
-
   const tbody = el('content').querySelector('tbody');
   // Clicking a comp tag jumps to the album the song was originally
   // cross-listed FROM — the origin album, not the one currently on
@@ -3714,13 +3652,6 @@ function renderCaseFile(artistName, album){
         return;
       }
       selectAlbum(match.artistName, match.album);
-    });
-  });
-  tbody.querySelectorAll('.copy-link-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      const song = album.songs[idx];
-      copySongLink(artistName, album, song, idx);
     });
   });
   tbody.querySelectorAll('.queue-next-item').forEach(btn => {
@@ -4032,7 +3963,7 @@ function setRowPlayingVisual(rowEl, playing){
   }
 }
 
-function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPaused, fromQueue){
+function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQueue){
   // songs/artistName/albumCoverUrl/album are only passed explicitly when the user
   // is starting playback from an album's page (a real click) or when the
   // queue is being consumed (see fromQueue below). Calls that are just
@@ -4073,14 +4004,7 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   if (currentSongIndex !== idx || currentAlbumSongs !== songs || !audioEl.src.includes(src)) {
     audioEl.src = src;
   }
-  if (startPaused) {
-    // Opened from a shared song link: get the track fully loaded (source,
-    // player bar, row highlight) but leave it for the visitor to press play.
-    audioEl.preload = 'metadata';
-    audioEl.pause();
-  } else {
-    audioEl.play().catch(() => showToast("Couldn't start playback — the source link may be broken."));
-  }
+  audioEl.play().catch(() => showToast("Couldn't start playback — the source link may be broken."));
 
   currentAlbumSongs = songs;
   currentAlbumCover = albumCoverUrl;
@@ -4089,19 +4013,6 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   currentSongIndex = idx;
   currentRowEl = rowEl;
   if (rowEl) rowEl.classList.add('playing');
-  if (startPaused) {
-    // pause() fires no 'pause' event when nothing was playing, and swapping
-    // the source doesn't either — so do by hand what that listener would
-    // have: play icon on the button, static ▶ (not the equalizer) on the
-    // row, and the progress bar back at zero.
-    el('playPauseBtn').innerHTML = ICONS.play;
-    if (rowEl) setRowPlayingVisual(rowEl, false);
-    el('seek').value = 0;
-    seekLastValue = 0;
-    updateRangeFill(el('seek'));
-    el('curTime').textContent = formatSeconds(0);
-    el('durTime').textContent = formatSeconds(0);
-  }
 
   el('player').style.display = 'flex';
   el('playerTitle').textContent = song.name;
@@ -4141,41 +4052,25 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, startPa
   const downloadBtn = el('playerDownload');
   if (song.playLink) { downloadBtn.href = toDownloadUrl(song.playLink); downloadBtn.style.display = 'inline-flex'; }
   else downloadBtn.style.display = 'none';
-  syncUrlToPlayer();
 }
 
-// Opens an artist's album pane in the sidebar — the same navigation as
-// clicking them in the artist list — and lights their row. Never touches
-// playback. If the pane is already showing this artist, it just re-opens it
-// (which re-renders the album list fresh); otherwise it slides in from the
-// artist list. Shared by the player bar's artist line and by any feature
-// that matched a tab.
+// Where a credit link in the player bar goes. There's no artist page to open
+// yet - the sidebar is a tab list now, and the artist tab is one of the ones
+// still to come - so this says so rather than dead-ending silently. Once
+// that tab exists this is the one place that needs pointing at it.
 function goToArtist(artist){
   if (!artist) return;
   if (!(DATA[artist] || []).some(a => !a.isDivider)) {
     showToast("That artist isn't on the sheet anymore.");
     return;
   }
-  openArtistPane(artist);
-  // openArtistPane() slides the pane into view but doesn't itself highlight
-  // the artist row — the row's .active class is set by renderArtistList()
-  // and cleared by selectAlbum(). Re-apply it here so whichever artist was
-  // highlighted before doesn't stay lit now that a different artist's pane
-  // is open. (Only the .active class is touched; selectedArtistName stays
-  // whatever album is actually open, so nothing else desyncs.)
-  document.querySelectorAll('.artist-list-item').forEach(n =>
-    n.classList.toggle('active', n.dataset.artist === artist));
-  // Same query the drawer's media query uses: a landscape phone is wider
-  // than 820 and still needs the drawer to actually appear, backdrop and
-  // all - the old innerWidth check opened it without either.
-  if (matchMedia('(max-width:820px), (hover:none) and (max-width:900px)').matches) openSidebar();
+  showToast(`${artist}'s page isn't built yet.`);
 }
 
 // One delegated handler for the whole sub line (artist half and feature half
-// alike). Only runs splitFeatureCredits() recognised as an artist tab carry
+// alike). Only names splitFeatureCredits() recognised as an artist tab carry
 // data-artist, so a click on the ", " between two names, or on a feature with
-// no tab of their own, does nothing. Each name opens its own pane - which is
-// the point: the artist half of a collab album can hold two tabs.
+// no tab of their own, does nothing.
 el('playerSub').addEventListener('click', (e) => {
   const hit = e.target.closest('[data-artist]');
   if (hit) goToArtist(hit.dataset.artist);
@@ -4198,9 +4093,6 @@ el('playerTitle').addEventListener('click', () => {
   } else {
     selectAlbum(match.artistName, match.album);
   }
-  // This click means "take me to that song", so the address bar names the
-  // song too (selectAlbum() alone would leave the plain album link).
-  syncUrlToPlayer();
 });
 
 el('playPauseBtn').addEventListener('click', () => {
@@ -4416,7 +4308,7 @@ audioEl.addEventListener('ended', () => {
     saveResumeContextIfNeeded();
     const next = songQueue.shift();
     renderQueuePanel();
-    playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, false, true);
+    playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, true);
     return;
   }
 
@@ -4485,7 +4377,7 @@ function stepTrack(dir){
     saveResumeContextIfNeeded();
     const next = songQueue.shift();
     renderQueuePanel();
-    playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, false, true);
+    playSongAt(next.idx, rowElForSongs(next.songs, next.idx), next.songs, next.artistName, next.albumCoverUrl, next.album, true);
     return;
   }
 
@@ -4694,7 +4586,6 @@ el('closeBtn').addEventListener('click', () => {
   stopMarquees();
   if (currentRowEl) { resetRowVisual(currentRowEl); currentRowEl = null; }
   currentSongIndex = -1;
-  syncUrlToPlayer();
   document.title = DEFAULT_TITLE;
   // Hand the audio session back to the OS too, or the lock screen keeps
   // showing a track that's no longer loaded anywhere.
@@ -5270,6 +5161,9 @@ document.querySelector('.main').addEventListener('scroll', scheduleQueueBoundsUp
 // its height left a blank screenful at the bottom of every album.
 function syncPlayerVisibility(){
   document.body.classList.toggle('has-player', el('player').style.display !== 'none');
+  // The bar is what the Home shelves get cut against, so the cover size is
+  // solved again once it's gone or arrived. A no-op while an album is open.
+  sizeHomeRows();
 }
 syncPlayerVisibility();
 new MutationObserver(() => {
@@ -5762,6 +5656,13 @@ const sidebarEl = el('sidebar');
 const sidebarBackdrop = el('sidebarBackdrop');
 const menuBtnEl = el('menuBtn');
 
+// True whenever the sidebar is the off-canvas drawer rather than the docked
+// column. Same query the stylesheet's breakpoint uses, so a landscape phone
+// (wider than 820, but a touch device) counts as drawer too.
+function isDrawerLayout(){
+  return matchMedia('(max-width:820px), (hover:none) and (max-width:900px)').matches;
+}
+
 function openSidebar(){
   sidebarEl.classList.add('open');
   sidebarBackdrop.classList.add('open');
@@ -5782,7 +5683,14 @@ sidebarBackdrop.addEventListener('click', closeSidebar);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && sidebarEl.classList.contains('open')) closeSidebar();
 });
-el('paneBackBtn').addEventListener('click', closeArtistPane);
+
+// One delegated handler for the tab list, so each tab added later is just
+// another .nav-item with its own data-tab - no extra listener to wire up.
+el('sidebarNav').addEventListener('click', (e) => {
+  const item = e.target.closest('.nav-item');
+  if (!item || !item.dataset.tab) return;
+  if (item.dataset.tab === 'home') showHome();
+});
 
 /* ---------------- boot ---------------- */
 
@@ -5913,8 +5821,8 @@ async function loadAllArtists(artists){
 // does nothing. If something did change, it rebuilds DATA from the
 // fresh rows and applies it via refreshInPlace() (not renderAll() -
 // see that function for why) so the user's current view updates
-// automatically without getting yanked back to the first album, along
-// with a toast letting them know a refresh just happened.
+// automatically without getting yanked back to Home, along with a toast
+// letting them know a refresh just happened.
 async function silentlyRefreshCache(previousRowsByArtist){
   const rowsByArtist = { ...previousRowsByArtist };
   let anyChanged = false;
@@ -5923,8 +5831,8 @@ async function silentlyRefreshCache(previousRowsByArtist){
   const nameKey = list => list.map(a => a.name.trim().toLowerCase()).sort().join("\n");
   const paintedKey = nameKey(ARTISTS);
   const { artists, indexOk } = await resolveArtists();
-  // A tab added or removed since the paint still has to redraw the sidebar,
-  // even when every row it already had is unchanged.
+  // A tab added or removed since the paint still has to rebuild DATA (and
+  // the search index), even when every row it already had is unchanged.
   if (paintedKey !== nameKey(artists)) anyChanged = true;
   await Promise.all(artists.map(async artist => {
     try {
@@ -6150,16 +6058,17 @@ function positionLinkMenuAt(menu, x, y){
 }
 
 // If every current artist tab has a cached copy of its rows from a
-// previous successful load, paint straight from that - no skeleton, no
-// waiting on Google. A cache miss (first-ever visit, a newly-added
-// artist tab with nothing cached yet, or a malformed/corrupted cache)
-// just falls back to the original skeleton-then-fetch flow further
-// down, so there's no scenario where the page fails to load.
+// previous successful load, paint straight from that - no waiting on
+// Google. A cache miss (first-ever visit, a newly-added artist tab with
+// nothing cached yet, or a malformed/corrupted cache) just falls back to
+// the live fetch further down, so there's no scenario where the page
+// fails to load.
 (async function boot(){
   const cached = getSheetRowsCache();
-  // The artist list from last visit, which is how the index tab's artists
-  // paint instantly. Empty on a first visit (or after the cache was cleared),
-  // in which case the live fetch below resolves the list from the sheet.
+  // The artist list from last visit, which is what the cached rows are keyed
+  // by - so the cached albums can be rebuilt without waiting on the index
+  // tab. Empty on a first visit (or after the cache was cleared), in which
+  // case the live fetch below resolves the list from the sheet.
   const artists = getCachedArtistList();
   const haveFullCache = artists.length > 0 &&
     artists.every(artist => Array.isArray(cached[artist.name]));
@@ -6186,8 +6095,6 @@ function positionLinkMenuAt(menu, x, y){
     // without disturbing whatever the user does in the meantime.
     silentlyRefreshCache(cached);
   } else {
-    fillSidebarSkeleton();
-    fillTableSkeleton();
     await loadAllArtists();
     renderAll();
   }
@@ -6344,7 +6251,7 @@ function __ensureThemeTransition(){
     .case-file, .btn, .link-menu, .changelog-panel,
     .toast,
     table.manifest tbody tr, table.manifest thead th,
-    .artist-list-item, .tree-album-item, .pane-albums-header {
+    .nav-item {
       transition: background-color var(--theme-transition) ease,
                   color var(--theme-transition) ease,
                   border-color var(--theme-transition) ease;
