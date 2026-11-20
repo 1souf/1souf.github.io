@@ -434,7 +434,30 @@
      sheet's own dividers so comps and edits each get their own block. */
   .artist-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
   body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
-  .artist-head{display:flex; gap:30px; align-items:stretch; flex-wrap:wrap; margin-bottom:30px;}
+  .artist-head{position:relative; isolation:isolate; display:flex; gap:30px; align-items:stretch; flex-wrap:wrap; margin-bottom:30px;}
+  /* Soft wash behind the portrait and the name, dyed with the average colour
+     of the artist's picture (--artist-tint, set from JS). It hangs off the top
+     of the content column like a header band and dissolves downwards into the
+     page - both gradients are anchored at the box's top edge, so the colour is
+     at full strength where the search bar ends and gone by the section below. */
+  .artist-banner{
+    --artist-tint:120 120 120;
+    position:absolute; z-index:0; pointer-events:none;
+    /* Sits on the page's own padding box, so the soft edge on its left lines up
+       with the content column instead of running under the sidebar. */
+    left:-44px; right:-44px; top:-20px; bottom:-70px;
+    opacity:0; transition:opacity .5s ease;
+    background:
+      radial-gradient(ellipse 62% 104% at 15% 0%, rgb(var(--artist-tint) / .60) 0%, rgb(var(--artist-tint) / .26) 42%, rgb(var(--artist-tint) / 0) 84%),
+      radial-gradient(ellipse 95% 128% at 44% 0%, rgb(var(--artist-tint) / .22) 0%, rgb(var(--artist-tint) / 0) 74%);
+    /* The wash still holds colour where the box meets the sidebar, which would
+       read as a cut edge. This one fade eats it. */
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 96px);
+    mask-image: linear-gradient(to right, transparent 0, #000 96px);
+  }
+  .artist-banner.is-on{opacity:1;}
+  /* Everything in the header paints above the wash. */
+  .artist-head > :not(.artist-banner){position:relative; z-index:1;}
   /* Round here, unlike the tab's square plates: this one stands alone next to
      the name, so it reads as a portrait rather than another cover. */
   .artist-portrait{
@@ -1415,6 +1438,15 @@
     .artist-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
     .artist-head{gap:18px; margin-bottom:24px;}
+    /* The page's own padding is 18px here, and the header stacks (portrait
+       above the name), so the wash is re-shaped to reach down over the name
+       rather than running out of height half way. */
+    .artist-banner{
+      left:-18px; right:-18px; top:-46px; bottom:-40px;
+      background:
+        radial-gradient(ellipse 80% 112% at 20% 0%, rgb(var(--artist-tint) / .58) 0%, rgb(var(--artist-tint) / .24) 44%, rgb(var(--artist-tint) / 0) 86%),
+        radial-gradient(ellipse 112% 132% at 50% 0%, rgb(var(--artist-tint) / .20) 0%, rgb(var(--artist-tint) / 0) 78%);
+    }
     .artist-portrait{width:120px; height:120px;}
     .artist-portrait .home-card-avatar{font-size:2.6rem;}
     .artist-name{font-size:1.7rem;}
@@ -3458,6 +3490,7 @@ function renderArtistPage(artistName){
 
   el('content').innerHTML = `<div class="artist-page" id="artistView">
     <div class="artist-head">
+      <div class="artist-banner" aria-hidden="true"></div>
       <div class="artist-portrait"><div class="home-card-avatar artist-portrait-avatar"></div></div>
       <div class="artist-head-col">
         <div class="artist-eyebrow">Artist</div>
@@ -3474,6 +3507,7 @@ function renderArtistPage(artistName){
   const pageEl = el('artistView');
   const portraitEl = pageEl.querySelector('.artist-portrait-avatar');
   if (portraitEl) applyArtistAvatar(portraitEl, artistName);
+  applyArtistBanner(pageEl.querySelector('.artist-head'), artistName);
 
   // Clamp before the browser paints, so a long block never flashes open first.
   syncArtistSections();
@@ -3747,6 +3781,153 @@ function applyArtistAvatar(avatarEl, artistName){
     };
     preload.src = pfp;
   }
+}
+
+/* ---------------- artist page banner ----------------
+   The wash behind an artist's portrait is dyed with the average colour of
+   their profile picture. Reading those pixels needs CORS, and the hosts these
+   pictures live on mostly don't send Access-Control-Allow-Origin - imgur and
+   Pinterest taint the canvas outright - so the averages are computed once and
+   kept here, keyed by artist name. Each row is the plain RGB mean of the
+   picture as it sits on the sheet; the tint actually painted is derived from
+   it at render time (see bannerTint), so the look can be retuned here without
+   recomputing anything.
+
+   An artist missing from this table still gets a banner: their picture is
+   sampled live when the host allows it, and falls back to a stable muted hue
+   from their name when it doesn't - so a new row on the sheet never renders
+   bare. Swapping a picture on the sheet leaves the old average in place until
+   this table is regenerated. */
+const ARTIST_PFP_AVERAGE = {
+  "¥$": [98, 92, 91],
+  "A$AP Rocky": [61, 94, 133],
+  "Destroy Lonely": [17, 17, 13],
+  "Don Toliver": [52, 15, 11],
+  "Drake": [25, 28, 8],
+  "Frank Ocean": [149, 120, 141],
+  "HXG": [47, 51, 58],
+  "JID": [33, 34, 33],
+  "Future": [97, 93, 92],
+  "Kanye West": [150, 111, 118],
+  "Ken Carson": [182, 175, 152],
+  "Lil Uzi Vert": [73, 42, 84],
+  "Metro Boomin": [99, 49, 42],
+  "Offset": [49, 51, 45],
+  "Playboi Carti": [45, 27, 23],
+  "The Weeknd": [39, 46, 57],
+  "Travis Scott": [152, 101, 84],
+  "Trippie Redd": [30, 19, 26],
+  "Tyler, The Creator": [197, 193, 190],
+  "Young Nudy": [145, 140, 139],
+  "Young Thug": [58, 56, 57],
+};
+
+// The banner is a dark wash, not the picture's own colour. Keeping hue and
+// throwing away most of the lightness and saturation is what lets a near-white
+// portrait (Tyler) and a near-black one (Destroy Lonely) sit in the same page
+// without either flooding it or disappearing. Saturation only gets capped, not
+// raised: a grey picture should give a grey banner, and lifting a 2% colour
+// bias up to a minimum would invent a hue the picture doesn't have.
+const BANNER_TINT_MAX_SATURATION = 0.50;
+const BANNER_TINT_LIGHTNESS = [0.17, 0.36];
+
+function rgbToHsl(r, g, b){
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (!d) return [0, 0, l];
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s, l];
+}
+
+function hslToRgb(h, s, l){
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hp = (((h % 360) + 360) % 360) / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  let rgb;
+  if (hp < 1) rgb = [c, x, 0];
+  else if (hp < 2) rgb = [x, c, 0];
+  else if (hp < 3) rgb = [0, c, x];
+  else if (hp < 4) rgb = [0, x, c];
+  else if (hp < 5) rgb = [x, 0, c];
+  else rgb = [c, 0, x];
+  const m = l - c / 2;
+  return rgb.map(v => Math.round((v + m) * 255));
+}
+
+// "r g b", the form the CSS gradient wants (rgb(var(--artist-tint) / .55)).
+function bannerTint(rgb){
+  const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  const lightness = Math.min(BANNER_TINT_LIGHTNESS[1], Math.max(BANNER_TINT_LIGHTNESS[0], l));
+  return hslToRgb(h, Math.min(s, BANNER_TINT_MAX_SATURATION), lightness).join(" ");
+}
+
+// For an artist with no entry and no readable picture: a hue taken from the
+// name, kept deliberately weak so it can't clash with anything.
+function fallbackBannerTint(name){
+  return hslToRgb(hashStr(name) % 360, 0.18, 0.26).join(" ");
+}
+
+// Averages a picture the browser is allowed to read. Resolves null when the
+// host doesn't send CORS headers (the image loads, but drawing it taints the
+// canvas) or when it fails outright.
+const pfpColorCache = new Map();
+function samplePfpColor(url){
+  if (pfpColorCache.has(url)) return Promise.resolve(pfpColorCache.get(url));
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    let settled = false;
+    const done = rgb => {
+      if (settled) return;
+      settled = true;
+      pfpColorCache.set(url, rgb);
+      resolve(rgb);
+    };
+    img.onload = () => {
+      try {
+        const size = 32;
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] < 128) continue;
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+        }
+        done(n ? [r / n, g / n, b / n] : null);
+      } catch (e) {
+        done(null);
+      }
+    };
+    img.onerror = () => done(null);
+    img.src = url;
+  });
+}
+
+function applyArtistBanner(headEl, artistName){
+  const banner = headEl && headEl.querySelector('.artist-banner');
+  if (!banner) return;
+  const setTint = tint => {
+    banner.style.setProperty('--artist-tint', tint);
+    banner.classList.add('is-on');
+  };
+  const known = ARTIST_PFP_AVERAGE[artistName];
+  if (known) { setTint(bannerTint(known)); return; }
+  const pfp = artistProfilePic(artistName);
+  if (!pfp) { setTint(fallbackBannerTint(artistName)); return; }
+  samplePfpColor(pfp).then(rgb => {
+    // The page may have been re-rendered while the sample was in flight.
+    if (!banner.isConnected) return;
+    setTint(rgb ? bannerTint(rgb) : fallbackBannerTint(artistName));
+  });
 }
 
 function selectAlbum(artistName, album){
