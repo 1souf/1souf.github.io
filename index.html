@@ -86,11 +86,21 @@
   /* Plain tab list. This used to be the two-pane artist/album tree; the
      artists no longer live in the sidebar at all, so all that's left is the
      row-per-tab list the rest of the rework will hang off. Rows are a little
-     bigger than the old artist list - there's room now that names are gone. */
-  .sidebar-nav{flex:1; overflow-y:auto; padding:10px 0;}
+     bigger than the old artist list - there's room now that names are gone.
+     Rows are inset and rounded so the selected one reads as a pill sitting
+     in the panel rather than a full-bleed bar against its edge; 10px margin
+     plus 10px padding keeps the icons on the same x they had with the old
+     18px padding + 2px border, so nothing else in the panel moved. The 4px
+     gap is what stops two pills touching: the row's own box is 42px
+     (11 + 20 + 11) and the gap puts the pitch back at 46px, so a hovered row
+     and the selected one above it stay clearly apart. It's a flex `gap`
+     rather than a vertical margin because adjacent margins collapse - two
+     2px margins became one 2px gap. */
+  .sidebar-nav{flex:1; overflow-y:auto; padding:10px 0; display:flex; flex-direction:column; gap:4px;}
   .nav-item{
-    display:flex; align-items:center; gap:12px; width:100%;
-    padding:13px 18px; background:none; border:none; border-left:2px solid transparent;
+    display:flex; align-items:center; gap:12px; width:calc(100% - 20px);
+    margin:0 10px; padding:11px 10px; border-radius:8px;
+    background:none; border:none;
     color:var(--text-dim); font-family:var(--mono); font-size:.9rem; font-weight:600;
     letter-spacing:.01em; text-align:left; text-decoration:none;
     cursor:pointer; user-select:none;
@@ -98,7 +108,7 @@
   }
   .nav-item svg{width:20px; height:20px; flex:none; display:block;}
   .nav-item:hover{color:var(--text); background:var(--bg-elevated);}
-  .nav-item.active{color:var(--text); background:var(--bg-elevated); border-left-color:var(--active-line);}
+  .nav-item.active{color:var(--text); background:var(--bg-elevated);}
   /* The active tab's glyph stays pure white, like the old section labels -
      it never picks up the album theme's accent. */
   .nav-item.active svg{color:var(--stamp-fixed);}
@@ -109,7 +119,7 @@
      description and changelog entries use (see .desc-modal). */
   /* The drawer runs to the bottom of the screen on phones, so the last row
      keeps clear of the home indicator. */
-  .sidebar-tools{flex:none; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));}
+  .sidebar-tools{flex:none; display:flex; flex-direction:column; gap:4px; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));}
   .sidebar-tools .nav-item:disabled{opacity:.55; cursor:default;}
   .sidebar-tools .nav-item.spinning{color:var(--text);}
 
@@ -1089,50 +1099,32 @@
     transform:none; box-shadow:0 6px 20px rgba(0,0,0,.45);
   }
 
-  /* ---------- changelog / "what's new" ---------- */
-  .changelog-btn{
-    position:fixed; top:16px; right:30px; z-index:55;
-    display:flex; align-items:center; gap:8px;
-    background:var(--bg-elevated); color:var(--text-dim); border:1px solid var(--border-light);
-    border-radius:20px; padding:8px 14px 8px 12px; font-family:var(--mono); font-weight:600;
-    font-size:.72rem; letter-spacing:.03em; cursor:pointer;
-    transition:color .15s ease, border-color .15s ease;
-    box-shadow:0 4px 16px rgba(0,0,0,.35);
-  }
-  .changelog-btn svg{width:15px; height:15px; flex-shrink:0;}
-  .changelog-btn:hover, .changelog-btn.active{color:var(--text); border-color:var(--stamp-fixed);}
-  .changelog-btn-label{white-space:nowrap;}
-  .changelog-bell{position:relative; display:flex; flex-shrink:0;}
+  /* ---------- changelog / "what's new" ----------
+     The trigger is an ordinary sidebar row (see .nav-item); the list opens in
+     the same centred modal a description does, so it dims the page and can't
+     be left hanging half over the content on a narrow window. */
+  /* The bell wraps its own badge so the dot can sit on the glyph's shoulder
+     without shifting the row's layout. */
+  .changelog-bell{position:relative; display:flex; flex:none;}
   /* Just a dot - no count. (It used to hold the number, which needed a wide
      badge hanging off the bell and a bigger gap before the label.) */
   .changelog-badge{
     display:none;
-    position:absolute; top:1px; right:1px;   /* on the bell's top-right shoulder, just outside its outline */
-    width:4px; height:4px; border-radius:50%;
+    position:absolute; top:-1px; right:-1px;
+    width:5px; height:5px; border-radius:50%;
     background:var(--stamp-fixed);
-    box-shadow:0 0 0 1px var(--bg-elevated);   /* thin ring that separates the dot from the bell */
+    box-shadow:0 0 0 1.5px var(--bg-elevated);   /* thin ring that separates the dot from the bell */
   }
-
-  .changelog-panel{
-    display:none; flex-direction:column;
-    position:fixed; top:60px; right:30px; z-index:55;
-    width:360px; max-width:calc(100vw - 36px); max-height:min(70vh, 520px);
-    background:var(--bg-elevated); border:1px solid var(--border-light); border-radius:8px;
-    box-shadow:0 10px 30px rgba(0,0,0,.5); overflow:hidden;
+  /* The list owns the scrolling inside the modal, so the body drops its own
+     padding (the rows run edge to edge, like the queue's) and its own scroll. */
+  .desc-modal-body.is-changelog{
+    padding:0; white-space:normal;
+    display:flex; flex-direction:column; overflow:hidden;
   }
-  .changelog-panel.open{display:flex;}
-  .changelog-panel-header{
-    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
-    padding:12px 14px; border-bottom:1px solid var(--border);
-    font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim);
-  }
-  .changelog-close{background:none; border:none; color:var(--text-dim); cursor:pointer; padding:2px; display:flex;}
-  .changelog-close svg{width:14px; height:14px;}
-  .changelog-close:hover{color:var(--text);}
   .changelog-list{flex:1; min-height:0; overflow-y:auto;}
-  .changelog-empty{padding:26px 14px; color:var(--text-dim); font-size:.78rem; text-align:center; line-height:1.5;}
+  .changelog-empty{padding:26px 16px; color:var(--text-dim); font-size:.78rem; text-align:center; line-height:1.5;}
   .changelog-item{
-    display:flex; align-items:center; gap:10px; padding:10px 14px;
+    display:flex; align-items:center; gap:10px; padding:11px 16px;
     cursor:pointer; border-bottom:1px solid var(--border); border-left:2px solid transparent;
   }
   .changelog-item:last-child{border-bottom:none;}
@@ -1451,9 +1443,6 @@
     .player{--player-side-w:150px;}
     .player-links{display:none;}
     #volume{display:none;}
-    .changelog-btn{top:6px; right:16px; padding:8px; border-radius:50%;}
-    .changelog-btn-label{display:none;}
-    .changelog-panel{top:52px; right:16px; left:10px; width:auto; max-width:none;}
     .queue-drawer{width:100%; max-width:calc(100vw - var(--queue-left, 0px));}
   }
 
@@ -1618,6 +1607,15 @@
     </nav>
     <!-- Foot of the panel, in the same row style as the tabs above. -->
     <div class="sidebar-tools">
+      <!-- "What's new". The dot on the bell means there are songs dated after
+           the last time this visitor opened the list. -->
+      <button class="nav-item" id="changelogBtn" type="button" title="What's new — recently added songs" aria-haspopup="dialog" aria-expanded="false" aria-controls="changelogModal">
+        <span class="changelog-bell">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="changelog-badge" id="changelogBadge"></span>
+        </span>
+        <span class="nav-label">Updates</span>
+      </button>
       <button class="nav-item" id="reloadBtn" type="button" title="Re-fetch the latest data from the spreadsheet">
         <span class="nav-glyph" aria-hidden="true">⟳</span>
         <span class="nav-label">Reload</span>
@@ -1658,23 +1656,6 @@
       <div class="home" id="homeView"></div>
     </div>
   </main>
-</div>
-
-<button class="changelog-btn" id="changelogBtn" type="button" title="What's new — recently added songs">
-  <span class="changelog-bell">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-    <span class="changelog-badge" id="changelogBadge"></span>
-  </span>
-  <span class="changelog-btn-label">Updates</span>
-</button>
-<div class="changelog-panel" id="changelogPanel">
-  <div class="changelog-panel-header">
-    <span>Recently added</span>
-    <button class="changelog-close" id="changelogCloseBtn" type="button" title="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-  </div>
-  <div class="changelog-list" id="changelogList"></div>
 </div>
 
 <footer class="player" id="player" style="display:none;">
@@ -1815,6 +1796,21 @@
   </div>
 </div>
 <div class="desc-modal-backdrop" id="infoModalBackdrop"></div>
+
+<!-- "What's new", opened from the sidebar's Updates row. Same shell again; the
+     body drops its padding so the list rows run edge to edge. -->
+<div class="desc-modal" id="changelogModal" aria-hidden="true" role="dialog" aria-labelledby="changelogModalTitle">
+  <div class="desc-modal-header">
+    <span class="desc-modal-title" id="changelogModalTitle">Recently added</span>
+    <button class="desc-modal-close" id="changelogCloseBtn" type="button" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="desc-modal-body is-changelog">
+    <div class="changelog-list" id="changelogList"></div>
+  </div>
+</div>
+<div class="desc-modal-backdrop" id="changelogModalBackdrop"></div>
 
 <div class="cover-viewer" id="coverViewer" aria-hidden="true" role="dialog" aria-label="Album cover">
   <div class="cover-viewer-stage" id="coverViewerStage">
@@ -4808,8 +4804,8 @@ document.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
-  const changelogPanel = el('changelogPanel');
-  const scrollEl = (changelogPanel && changelogPanel.classList.contains('open'))
+  const changelogModal = el('changelogModal');
+  const scrollEl = (changelogModal && changelogModal.classList.contains('open'))
     ? el('changelogList')
     : document.querySelector('.main');
   if (!scrollEl) return;
@@ -5723,31 +5719,35 @@ function openChangelogPanel(){
   // additions still show up highlighted), then stamp "seen" for next
   // time and clear the badge.
   renderChangelogList();
-  el('changelogPanel').classList.add('open');
-  el('changelogBtn').classList.add('active');
+  const modal = el('changelogModal');
+  modal.classList.add('open');
+  el('changelogModalBackdrop').classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  el('changelogBtn').setAttribute('aria-expanded', 'true');
+  // Same selection lock the description and info modals take.
+  document.body.classList.add('desc-modal-open');
   setChangelogLastSeen(Date.now());
   updateChangelogBadge();
 }
 function closeChangelogPanel(){
-  const panel = el('changelogPanel');
-  if (!panel) return;
-  panel.classList.remove('open');
-  el('changelogBtn').classList.remove('active');
+  const modal = el('changelogModal');
+  if (!modal || !modal.classList.contains('open')) return;
+  modal.classList.remove('open');
+  el('changelogModalBackdrop').classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  el('changelogBtn').setAttribute('aria-expanded', 'false');
+  if (!el('descModal').classList.contains('open') && !el('infoModal').classList.contains('open')) {
+    document.body.classList.remove('desc-modal-open');
+  }
 }
 function toggleChangelogPanel(){
-  const panel = el('changelogPanel');
-  if (panel.classList.contains('open')) closeChangelogPanel();
+  if (el('changelogModal').classList.contains('open')) closeChangelogPanel();
   else openChangelogPanel();
 }
 
-el('changelogBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  toggleChangelogPanel();
-});
+el('changelogBtn').addEventListener('click', toggleChangelogPanel);
 el('changelogCloseBtn').addEventListener('click', () => closeChangelogPanel());
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.changelog-panel') && !e.target.closest('.changelog-btn')) closeChangelogPanel();
-});
+el('changelogModalBackdrop').addEventListener('click', () => closeChangelogPanel());
 
 /* ---------------- queue drawer ---------------- */
 const queueDrawer = el('queueDrawer');
@@ -6930,7 +6930,7 @@ function __ensureThemeTransition(){
   const style = document.createElement('style');
   style.textContent = `
     html, body, .sidebar, .player, .search-bar, .search-results,
-    .case-file, .btn, .link-menu, .changelog-panel,
+    .case-file, .btn, .link-menu, .desc-modal,
     .toast,
     table.manifest tbody tr, table.manifest thead th,
     .nav-item {
