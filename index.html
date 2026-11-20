@@ -2861,17 +2861,25 @@ function updateEditCounter(){
   requestAnimationFrame(step);
 }
 
-/* ---------------- deep linking (#Artist, #Artist/Section/Album) ----------------
-   The URL hash mirrors whatever page is open — artist page or album — so
-   copying the address bar always gets you (or whoever you send it to)
-   straight there instead of landing on Home.
+/* ---------------- deep linking (#artists, #Artist, #Artist/Section/Album) ----------------
+   The URL hash mirrors whatever page is open — the artists tab, an artist
+   page or an album — so copying the address bar always gets you (or whoever
+   you send it to) straight there instead of landing on Home.
 
-   The artist comes first, because artist pages exist now:
+   Home deliberately has no link: it's what you land on when the hash names
+   nothing, so "#" and a bare URL already mean Home. Everything else does:
 
-     "#Playboi-Carti"                 the artist's page
-     "#Playboi-Carti/Comps/Music"     one album, under a section
-     "#Playboi-Carti/Music"           one album, under no section
+     "#artists"                      the Artists tab
+     "#Playboi-Carti"                the artist's page
+     "#Playboi-Carti/Comps/Music"    one album, under a section
+     "#Playboi-Carti/Music"          one album, under no section
 
+   "#artists" is a reserved word, matched before the artist lookup: a sheet
+   artist literally named "Artists" would have to be reached by an album
+   link, which still resolves. The tab has to win that tie, or the tab's
+   link would silently start opening somebody's page one day.
+
+   After the tab, the artist comes first, because artist pages exist now.
    That ordering makes the links hierarchical: an album link is the artist
    link with the album (and, when it has one, the section) appended, so
    trimming the tail of a link walks you back up to the artist page.
@@ -2910,15 +2918,22 @@ function decodeHashPart(s){
   return decodeURIComponent(s.replace(/-/g, '%20'));
 }
 
+// The one hash segment that names a tab rather than a page. Kept lowercase
+// and compared case-insensitively so "#Artists" works too.
+const ARTISTS_TAB_HASH = 'artists';
+
 function parseHashParams(){
   const raw = location.hash.replace(/^#/, '');
   if (!raw) return null;
   const parts = raw.split('/');
   try {
-    // One part names an artist page: "#Playboi-Carti".
+    // One part names either the Artists tab or an artist page:
+    // "#artists", "#Playboi-Carti".
     if (parts.length === 1) {
       const artist = decodeHashPart(parts[0]);
-      return artist ? { kind: 'artist', artist } : null;
+      if (!artist) return null;
+      if (artist.trim().toLowerCase() === ARTISTS_TAB_HASH) return { kind: 'tab', tab: 'artists' };
+      return { kind: 'artist', artist };
     }
     // Two or more parts name an album: artist, an optional section, album.
     // Anything past the album is ignored — that's the tail of an old
@@ -3016,6 +3031,14 @@ function updateArtistHash(artistName){
   if (location.hash !== newHash) history.replaceState(null, '', newHash);
 }
 
+// The Artists tab's own link. Home doesn't get one - it's the page the site
+// falls back to when the hash says nothing - but the tab is worth being able
+// to send to somebody, and this is what makes a reload come back to it.
+function updateArtistsHash(){
+  const newHash = '#' + ARTISTS_TAB_HASH;
+  if (location.hash !== newHash) history.replaceState(null, '', newHash);
+}
+
 // One clipboard path for every "Copy Link" item: same toasts, same fallback
 // when the Clipboard API isn't available.
 function copyLinkToClipboard(url){
@@ -3054,6 +3077,7 @@ window.addEventListener('hashchange', () => {
   // where the back button lands, since our own navigation replaces the entry
   // instead of stacking a new one. Home is the page that belongs there.
   if (!hashParams) { showHome(); return; }
+  if (hashParams.kind === 'tab') { showArtists(); return; }
   if (hashParams.kind === 'artist') {
     const artist = findArtistByName(hashParams.artist);
     if (artist && artistAlbumCount(artist.name)) showArtist(artist.name);
@@ -3065,7 +3089,9 @@ window.addEventListener('hashchange', () => {
 
 // Which tab is open. An album page isn't a tab, so opening one clears the
 // highlight instead of moving it.
+let activeTabName = null;
 function setActiveTab(tab){
+  activeTabName = tab || null;
   document.querySelectorAll('#sidebarNav .nav-item').forEach(item => {
     const on = !!tab && item.dataset.tab === tab;
     item.classList.toggle('active', on);
@@ -3117,7 +3143,8 @@ function showArtist(artistName){
 
 // The Artists tab: every artist with something on the sheet, in a grid that
 // wraps instead of scrolling sideways, busiest first. No headline - the tab
-// name in the sidebar already says what it is.
+// name in the sidebar already says what it is. Unlike Home it keeps a hash,
+// so the tab can be linked to and a reload comes back to it.
 function showArtists(){
   selectedArtistPage = null;
   selectedArtistName = null;
@@ -3126,7 +3153,7 @@ function showArtists(){
   displayedAlbumSongs = null;
   setActiveTab('artists');
   renderArtists();
-  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  updateArtistsHash();
   const mainEl = document.querySelector('.main');
   if (mainEl) mainEl.scrollTop = 0;
   if (isDrawerLayout()) closeSidebar();
@@ -3668,6 +3695,10 @@ function renderAll(){
   // keep the hash in sync with whatever's open) takes priority over Home.
   const hashParams = parseHashParams();
   if (hashParams) {
+    if (hashParams.kind === 'tab') {
+      showArtists();
+      return;
+    }
     if (hashParams.kind === 'artist') {
       const artist = findArtistByName(hashParams.artist);
       if (artist && artistAlbumCount(artist.name)) {
@@ -3712,6 +3743,11 @@ function refreshInPlace(){
     renderArtistPage(still.name);
     return;
   }
+
+  // The artists tab has no selection to resolve, but its grid is built from
+  // the sheet, so it has to be redrawn too - otherwise a background refresh
+  // leaves it showing artists that were renamed or emptied.
+  if (activeTabName === 'artists') { renderArtists(); return; }
 
   if (!selectedArtistName || !selectedAlbumName) return;
 
