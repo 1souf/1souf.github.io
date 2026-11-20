@@ -5909,16 +5909,22 @@ el('changelogModalBackdrop').addEventListener('click', () => closeChangelogPanel
 /* ---------------- site changelog (GitHub commits) ----------------
    The Site pane reads the repo's own commit history from the public GitHub
    API - no token, which also means the unauthenticated budget of 60 calls an
-   hour is per visitor, not per site. The list is cached in localStorage for
-   a quarter of an hour so a normal session costs one call, and the fetch
-   only happens the first time the Site tab is opened. */
+   hour is per visitor, not per site. It re-reads the repo every time the
+   pane is opened, so a push made a minute ago is there on the next open;
+   the localStorage copy is only there to paint the list instantly while that
+   request is in flight (and to fall back on if GitHub can't be reached). */
 const GITHUB_REPO = '1souf/1souf.github.io';
 const SITE_COMMITS_KEY = 'archiveSiteCommits';
-const SITE_COMMITS_TTL = 15 * 60 * 1000;
 const SITE_COMMITS_LIMIT = 30;
+// Flipping between the two panes shouldn't cost a request each time. Short
+// enough that a human never notices it, long enough that a bored visitor
+// clicking back and forth can't burn the hourly budget.
+const SITE_COMMITS_MIN_GAP = 10000;
 
 let siteCommits = null;
 let siteCommitsState = 'idle';   // idle | loading | ready | error
+let siteCommitsFetchedAt = 0;    // when the list on screen was last confirmed
+let siteCommitsRequest = null;   // in-flight fetch, so a reopen can't double it
 let changelogPane = 'songs';     // remembered for the session, not persisted
 
 // "Nov 20, 2026 · 14:32" - the same date shape the sheet's own dates use,
@@ -5946,6 +5952,10 @@ function renderSiteCommits(){
   if (!listEl) return;
   const repoUrl = `https://github.com/${GITHUB_REPO}`;
 
+  // A refresh replaces every row, which would otherwise throw the pane back
+  // to the top while someone is reading it.
+  const keepScroll = listEl.scrollTop;
+
   if (!siteCommits) {
     listEl.innerHTML = siteCommitsState === 'error'
       ? `<div class="changelog-empty">Couldn't reach GitHub.<br><a href="${repoUrl}/commits" target="_blank" rel="noopener">Open the commit history there</a></div>`
@@ -5971,49 +5981,74 @@ function renderSiteCommits(){
     </a>`;
   }).join("") +
     `<a class="commit-all" href="${repoUrl}/commits" target="_blank" rel="noopener">All commits on GitHub</a>`;
+
+  if (keepScroll) listEl.scrollTop = keepScroll;
 }
 
-async function loadSiteCommits(){
-  if (siteCommitsState === 'loading' || siteCommitsState === 'ready') return;
-  const cached = readCachedCommits();
-  if (cached && Date.now() - (cached.fetchedAt || 0) < SITE_COMMITS_TTL) {
-    siteCommits = cached.commits;
-    siteCommitsState = 'ready';
-    renderSiteCommits();
-    return;
+// Re-reads the repo. Called every time the Site pane is opened; the list on
+// screen stays up while the request runs, so a refresh never blanks the pane
+// or flashes the "reading" placeholder over rows that are already there.
+function loadSiteCommits(){
+  if (siteCommitsRequest) return siteCommitsRequest;   // one request at a time
+
+  // First open of the session: paint the cached list straight away.
+  if (!siteCommits) {
+    const cached = readCachedCommits();
+    if (cached) {
+      siteCommits = cached.commits;
+      siteCommitsState = 'ready';
+    }
+  }
+  // Same idea as the in-flight guard, for the close/reopen case.
+  if (siteCommits && Date.now() - siteCommitsFetchedAt < SITE_COMMITS_MIN_GAP) {
+    const listEl = el('changelogSiteList');
+    if (!listEl || !listEl.childElementCount) renderSiteCommits();
+    return Promise.resolve();
   }
 
-  siteCommitsState = 'loading';
-  renderSiteCommits();
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=${SITE_COMMITS_LIMIT}`, {
-      headers: { Accept: 'application/vnd.github+json' },
-    });
-    if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
-    const rows = await res.json();
-    const commits = (Array.isArray(rows) ? rows : []).map(row => {
-      const meta = row.commit || {};
-      const stamp = (meta.author || meta.committer || {}).date || "";
-      return {
-        sha: row.sha || "",
-        short: (row.sha || "").slice(0, 7),
-        message: String(meta.message || "").split("\n")[0].trim(),
-        date: stamp,
-        url: row.html_url || `https://github.com/${GITHUB_REPO}/commit/${row.sha}`,
-      };
-    }).filter(c => c.message);
-    if (!commits.length) throw new Error('no commits');
-    siteCommits = commits;
-    siteCommitsState = 'ready';
+  if (!siteCommits) siteCommitsState = 'loading';
+  // Paint now only if the pane is empty - the cached rows (or the
+  // placeholder) belong there before the network answers, but re-rendering an
+  // identical list would just bounce its scroll back to the top.
+  const listEl = el('changelogSiteList');
+  if (!listEl || !listEl.childElementCount) renderSiteCommits();
+
+  siteCommitsRequest = (async () => {
     try {
-      localStorage.setItem(SITE_COMMITS_KEY, JSON.stringify({ fetchedAt: Date.now(), commits }));
-    } catch (err) { /* quota / private mode: the pane just refetches next time */ }
-  } catch (err) {
-    // A cache older than the TTL still beats an empty pane.
-    siteCommits = cached ? cached.commits : null;
-    siteCommitsState = 'error';
-  }
-  renderSiteCommits();
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=${SITE_COMMITS_LIMIT}`, {
+        headers: { Accept: 'application/vnd.github+json' },
+        cache: 'no-store',   // GitHub serves this from its own cache otherwise
+      });
+      if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
+      const rows = await res.json();
+      const commits = (Array.isArray(rows) ? rows : []).map(row => {
+        const meta = row.commit || {};
+        const stamp = (meta.author || meta.committer || {}).date || "";
+        return {
+          sha: row.sha || "",
+          short: (row.sha || "").slice(0, 7),
+          message: String(meta.message || "").split("\n")[0].trim(),
+          date: stamp,
+          url: row.html_url || `https://github.com/${GITHUB_REPO}/commit/${row.sha}`,
+        };
+      }).filter(c => c.message);
+      if (!commits.length) throw new Error('no commits');
+      siteCommits = commits;
+      siteCommitsState = 'ready';
+      siteCommitsFetchedAt = Date.now();
+      try {
+        localStorage.setItem(SITE_COMMITS_KEY, JSON.stringify({ fetchedAt: siteCommitsFetchedAt, commits }));
+      } catch (err) { /* quota / private mode: the pane just refetches next time */ }
+    } catch (err) {
+      // Rows already on screen (fresh or cached) are better than an error
+      // message, so only the empty case falls through to one.
+      if (!siteCommits) siteCommitsState = 'error';
+    } finally {
+      siteCommitsRequest = null;
+      renderSiteCommits();
+    }
+  })();
+  return siteCommitsRequest;
 }
 
 function setChangelogPane(pane){
