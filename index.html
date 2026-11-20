@@ -197,6 +197,35 @@
     border-bottom:1px solid var(--border);
     padding:14px 18px;
   }
+  /* Where you are, on the left of the bar - the same idea as an address bar.
+     Absolutely positioned so the search keeps sitting dead centre of the
+     column: the trail only ever occupies the space that was already empty
+     either side of the 440px bar, and truncates rather than shoving the bar
+     off-centre. Lines up with the page's own 44px gutter. */
+  .crumbs{
+    position:absolute; left:44px; top:50%; transform:translateY(-50%);
+    display:flex; align-items:center; gap:7px; min-width:0; overflow:hidden;
+    /* half the row, minus half the search bar, minus this left inset and a gap */
+    max-width:calc(50% - 276px);
+    font-family:var(--mono); font-size:.72rem; font-weight:500;
+    color:var(--text-dim); white-space:nowrap;
+  }
+  /* The way back keeps its full text; the page you're on is what gets
+     ellipsised when the row runs out of width. */
+  .crumb-link{
+    flex:none; padding:0; border:none; background:none;
+    font:inherit; color:inherit; cursor:pointer;
+    transition:color .15s ease;
+  }
+  .crumb-link:hover{color:var(--text); text-decoration:underline; text-underline-offset:2px;}
+  /* The page you're on: brighter than the links, and never a target. */
+  .crumb-current{
+    flex:1 1 auto; min-width:0;
+    overflow:hidden; text-overflow:ellipsis;
+    color:var(--text); font-weight:600;
+  }
+  .crumb-sep{flex:none; color:var(--stamp-dim); font-size:.85em;}
+
   .search-bar{
     position:relative;
     display:flex; align-items:center; gap:10px; width:100%; max-width:440px;
@@ -219,6 +248,19 @@
   .search-clear:hover{color:var(--text);}
   .search-clear svg{width:13px; height:13px; display:block;}
   .search-bar.has-value .search-clear{display:inline-flex;}
+
+  /* When the row can't spare the space either side of the centred search bar,
+     the trail moves onto its own line above it instead of shrinking into
+     stubs ("A… › P… › t…"), which reads as damage rather than as a path.
+     Everything left of the search bar is empty anyway, so the line only costs
+     the header a few pixels. */
+  @media (min-width:821px) and (hover:hover) and (max-width:1200px){
+    .search-bar-wrap{flex-direction:column; align-items:stretch; gap:8px;}
+    /* 26px of extra inset on top of the wrap's own 18px padding, so the trail
+       still lines up with the page's 44px gutter. */
+    .crumbs{position:static; transform:none; left:auto; max-width:none; order:-1; padding-left:26px;}
+    .search-bar{max-width:440px; width:100%; margin:0 auto;}
+  }
 
   .search-results{
     display:none;
@@ -1500,7 +1542,14 @@
        collapsed flag in storage from a desktop visit, and the rail rules are
        all undone here - so the bar has to go back to the full width too. */
     html.sb-collapsed .player{left:0;}
-    .search-bar-wrap{position:static; padding:12px 18px;}
+    .search-bar-wrap{position:static; padding:12px 18px; flex-direction:column; align-items:stretch; gap:9px;}
+    /* No empty space either side of a full-width search bar to sit in, so the
+       trail takes its own line above it - and lines up with the 18px gutter. */
+    .crumbs{position:static; transform:none; left:auto; max-width:100%; order:-1; font-size:.68rem;}
+    /* These are the only way back up a level on a phone, and at 14px tall the
+       text alone is a fiddly target. Pad the box out to ~26px and pull the same
+       amount back with a negative margin so the line still sits where it did. */
+    .crumb-link{padding:6px 0; margin:-6px 0;}
     .search-bar{max-width:none; flex:1 1 0; min-width:0; width:auto;}
     .case-file{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
@@ -1751,6 +1800,7 @@
   <main class="main">
     <button class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false">☰ menu</button>
     <div class="search-bar-wrap">
+      <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
       <div class="search-bar" id="searchBarWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" class="search-input" id="searchInput" placeholder="Search songs…" autocomplete="off">
@@ -3211,6 +3261,61 @@ function setActiveTab(tab){
     if (on) item.setAttribute('aria-current', 'page');
     else item.removeAttribute('aria-current');
   });
+  // Every route change comes through here, and by now the selection state is
+  // already updated, so this is the one place the trail has to be rebuilt.
+  renderCrumbs();
+}
+
+/* ---------------- breadcrumb ----------------
+   The "you are here" in the top bar, built from the same state the router
+   already keeps rather than from the hash, so it can never disagree with the
+   page that's actually on screen: a tab on its own, then Artists > artist on
+   an artist page, then Artists > artist > album. The artist and album crumbs
+   are the way back out; the last one is the page you're on and isn't a
+   target. */
+function renderCrumbs(){
+  const nav = el('crumbs');
+  if (!nav) return;
+
+  const artistName = selectedArtistPage || selectedArtistName;
+  const trail = [];
+  if (!artistName) {
+    // A tab: Home or Artists, with nothing to go back to.
+    trail.push({ label: activeTabName === 'artists' ? 'Artists' : 'Home' });
+  } else if (selectedArtistPage) {
+    trail.push({ label: 'Artists', go: showArtists });
+    trail.push({ label: artistName });
+  } else {
+    trail.push({ label: 'Artists', go: showArtists });
+    trail.push({ label: artistName, go: () => showArtist(artistName) });
+    trail.push({ label: selectedAlbumName });
+  }
+
+  nav.textContent = "";
+  trail.forEach((part, i) => {
+    if (i) {
+      const sep = document.createElement('span');
+      sep.className = 'crumb-sep';
+      sep.setAttribute('aria-hidden', 'true');
+      sep.textContent = '›';
+      nav.appendChild(sep);
+    }
+    if (part.go) {
+      const link = document.createElement('button');
+      link.type = 'button';
+      link.className = 'crumb-link';
+      link.textContent = part.label;
+      link.title = `Go to ${part.label}`;
+      link.addEventListener('click', part.go);
+      nav.appendChild(link);
+    } else {
+      const here = document.createElement('span');
+      here.className = 'crumb-current';
+      here.textContent = part.label;
+      here.setAttribute('aria-current', 'page');
+      nav.appendChild(here);
+    }
+  });
 }
 
 // The Home tab: three shelves - artists, comps, edits - rebuilt (and
@@ -3887,6 +3992,7 @@ function refreshInPlace(){
     if (still.name !== selectedArtistPage) {
       selectedArtistPage = still.name;
       updateArtistHash(still.name);
+      renderCrumbs();   // the sheet renamed this artist under us
     }
     renderArtistPage(still.name);
     return;
