@@ -390,10 +390,11 @@
     font-size:2.2rem; font-weight:700; color:rgba(255,255,255,.85); text-transform:uppercase;
     user-select:none;
   }
-  /* The player bar's own play glyph, parked on the cover. The whole card is
-     already the button, so this is an affordance, not a second control -
-     hence pointer-events:none rather than a nested <button>. It stays out of
-     the way until the cover is hovered or reached by keyboard. */
+  /* The player bar's own play glyph, parked on the cover. On the Home shelves
+     it is a control of its own - clicking it starts playback without opening
+     the card - so it takes clicks there. Everywhere else (the Artists tab, an
+     artist page's album cards) the card stays the only target and the badge
+     is just the affordance, hence pointer-events:none. */
   .home-card-play{
     position:absolute; right:7px; bottom:7px;
     width:38px; height:38px; color:#fff;
@@ -401,6 +402,7 @@
     opacity:0; pointer-events:none;
     transition:opacity .15s ease, transform .15s ease;
   }
+  .home-row .home-card-play{pointer-events:auto; cursor:pointer;}
   .home-card-play svg{width:100%; height:100%; display:block;}
   .home-card:hover .home-card-play,
   .home-card:focus-visible .home-card-play{opacity:1; transform:scale(1.06);}
@@ -867,7 +869,7 @@
   html.sb-collapsed .player{left:64px;}
   .player-left{display:flex; align-items:center; gap:16px; width:var(--player-side-w); flex-shrink:0; overflow:hidden;}
   .player-track{display:flex; align-items:center; gap:12px; min-width:0; overflow:hidden;}
-  .player-cover{width:56px; height:56px; background:var(--bg-elevated); flex-shrink:0; object-fit:cover; border-radius:6px;}
+  .player-cover{width:56px; height:56px; background:var(--bg-elevated); flex-shrink:0; object-fit:cover; border-radius:6px; cursor:pointer;}
   .player-text{overflow:hidden; min-width:0;}
   .marquee-mask{overflow:hidden; white-space:nowrap; position:relative; display:block;}
   /* Soft edge fade for the marquee, done with a real mask on the clipping box.
@@ -3524,11 +3526,17 @@ let homeNavSyncs = [];
 const CHEVRON_LEFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"></path></svg>`;
 const CHEVRON_RIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"></path></svg>`;
 
-// The player bar's play glyph, used as the cover's affordance. Decoration
-// only - the card itself is the button. Drawn as a solid disc plus the
-// triangle as its own black path rather than the bar's knocked-out version:
-// there the arrow is a hole, so it showed whatever cover was behind it.
-const PLAY_BADGE = `<span class="home-card-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"></path><path d="M15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="#111111"></path></svg></span>`;
+// The player bar's play glyph, reused as the badge parked on a card's cover.
+// Drawn as a solid disc plus the triangle as its own black path rather than
+// the bar's knocked-out version: there the arrow is a hole, so it showed
+// whatever cover was behind it. On the Home shelves it is a real control (see
+// the click handler in renderHome) and the title says what it does; where it
+// isn't - the Artists tab, an artist page's album cards - no title is passed
+// and it stays decoration for the card's own click.
+function playBadge(title){
+  const tip = title ? ` title="${esc(title)}"` : "";
+  return `<span class="home-card-play"${tip} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"></path><path d="M15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="#111111"></path></svg></span>`;
+}
 
 function homeAlbumCardHtml(rowKey, idx, artistName, album){
   const coverUrl = (album.cover || "").trim();
@@ -3541,7 +3549,7 @@ function homeAlbumCardHtml(rowKey, idx, artistName, album){
   const n = album.songs.length;
   return `
     <button class="home-card" type="button" data-row="${rowKey}" data-idx="${idx}" title="${esc(album.name)}">
-      <div class="home-card-art">${coverHtml}${PLAY_BADGE}</div>
+      <div class="home-card-art">${coverHtml}${playBadge("Play this album")}</div>
       <div class="home-card-name">${esc(album.name)}</div>
       <div class="home-card-meta">${esc(artistName)} • ${n} track${n === 1 ? "" : "s"}</div>
     </button>`;
@@ -3573,7 +3581,7 @@ function artistCardHtml(artistName, metaText, rowKey, idx){
   // document.
   return `
     <button class="home-card" type="button"${rowKey ? ` data-row="${rowKey}"` : ""} data-idx="${idx}" title="${esc(artistName)}">
-      <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${PLAY_BADGE}</div>
+      <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${playBadge(rowKey ? "Play a random track" : "")}</div>
       <div class="home-card-name">${esc(artistName)}</div>
       <div class="home-card-meta">${esc(metaText)}</div>
     </button>`;
@@ -3653,6 +3661,10 @@ function renderHome(){
     const list = homeRows[card.dataset.row];
     const item = list && list[parseInt(card.dataset.idx, 10)];
     if (!item) return;
+    // The play badge is its own control here: it starts a track and stays on
+    // Home. Only the badge takes this path - the rest of the card still
+    // navigates, which is why the badge had to be given pointer-events back.
+    if (e.target.closest('.home-card-play')) { playFromHomeCard(card.dataset.row, item); return; }
     if (card.dataset.row === 'artists') { goToArtist(item.name); return; }
     const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
     if (!match) { showToast("That album isn't on the sheet anymore."); return; }
@@ -3745,7 +3757,7 @@ function artistPageCardHtml(idx, album){
   const n = album.songs.length;
   return `
     <button class="home-card" type="button" data-idx="${idx}" title="${esc(album.name)}">
-      <div class="home-card-art">${coverHtml}${PLAY_BADGE}</div>
+      <div class="home-card-art">${coverHtml}${playBadge("")}</div>
       <div class="home-card-name">${esc(album.name)}</div>
       <div class="home-card-meta">${n} track${n === 1 ? "" : "s"}</div>
     </button>`;
@@ -4788,11 +4800,14 @@ function renderCaseFile(artistName, album){
 
   // If we've navigated back to the album that's actually playing, re-attach
   // the "now playing" row highlight to its freshly-rendered row (the old
-  // element was destroyed when this table was rebuilt).
+  // element was destroyed when this table was rebuilt). This is the only path
+  // that restores the tint for a track started from a Home card, since there
+  // was no row to mark at the time.
   if (currentAlbumSongs === album.songs && currentSongIndex >= 0) {
     const playingRow = tbody.querySelectorAll('tr')[currentSongIndex];
     if (playingRow) {
       currentRowEl = playingRow;
+      playingRow.classList.add('playing');
       setRowPlayingVisual(currentRowEl, !audioEl.paused);
     }
   }
@@ -5024,6 +5039,45 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   else downloadBtn.style.display = 'none';
 }
 
+/* ---------------- playing straight from a Home card ----------------
+
+   The badge on a Home card starts a track without opening anything, so the
+   row element these hand to playSongAt is null - there is no table on screen
+   to highlight. Everything else about the call stays explicit, so the player
+   bar, the queue and the media-session metadata all describe the right album,
+   and if that album is opened while the track is playing, renderCaseFile
+   re-attaches the row highlight by matching the songs array it was given. */
+
+function playFromHomeCard(rowKey, item){
+  if (rowKey === 'artists') { playRandomArtistTrack(item.name); return; }
+  // Re-resolved against DATA, exactly like the card's own click, so a
+  // background refresh that moved or deleted the album can't be played from a
+  // stale snapshot.
+  const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
+  if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+  // The first track that actually has a file, not literally row 1 - the same
+  // rule the album page's Play All button uses.
+  const idx = match.album.songs.findIndex(s => s.playLink);
+  if (idx < 0) { showToast("No source file linked for this album yet."); return; }
+  playSongAt(idx, null, match.album.songs, match.artistName,
+    (match.album.cover || "").trim(), match.album);
+}
+
+// "Play this artist": one track drawn from anywhere in their catalogue - every
+// non-divider album, cross-listed copies included, since those are songs their
+// page lists too.
+function playRandomArtistTrack(artistName){
+  const pool = [];
+  for (const album of DATA[artistName] || []) {
+    if (album.isDivider) continue;
+    album.songs.forEach((song, idx) => { if (song.playLink) pool.push({ album, idx }); });
+  }
+  if (!pool.length) { showToast(`No source file linked for ${artistName} yet.`); return; }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  playSongAt(pick.idx, null, pick.album.songs, artistName,
+    (pick.album.cover || "").trim(), pick.album);
+}
+
 // Where every artist link in the page goes: the player bar's credit line, the
 // artist cards on Home and the Artists tab, and the ARTIST: line of an album
 // page. Names arrive as text, so they're matched case-insensitively against
@@ -5063,12 +5117,12 @@ document.addEventListener('keydown', (e) => {
   goToArtist(hit.dataset.artist);
 });
 
-// Clicking the song name in the player bar jumps to the album the track is
-// playing from — same navigation as the search results' "go to album" button,
-// and it never touches playback. If that album is already the one on screen,
-// re-rendering it would only fling the page back to the top, so the playing
-// row is scrolled into view instead.
-el('playerTitle').addEventListener('click', () => {
+// Clicking the song name or the cover in the player bar jumps to the album the
+// track is playing from — same navigation as the search results' "go to album"
+// button, and it never touches playback. If that album is already the one on
+// screen, re-rendering it would only fling the page back to the top, so the
+// playing row is scrolled into view instead.
+function goToPlayingAlbum(){
   if (currentSongIndex < 0 || !currentAlbumName) return;
   const match = findAlbumByNames(currentArtistName, currentAlbumName, currentAlbumSection);
   if (!match) { showToast("That album isn't on the sheet anymore."); return; }
@@ -5080,7 +5134,9 @@ el('playerTitle').addEventListener('click', () => {
   } else {
     selectAlbum(match.artistName, match.album);
   }
-});
+}
+el('playerTitle').addEventListener('click', goToPlayingAlbum);
+el('playerCover').addEventListener('click', goToPlayingAlbum);
 
 el('playPauseBtn').addEventListener('click', () => {
   if (!audioEl.src) return;
