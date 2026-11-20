@@ -205,11 +205,18 @@
   .crumbs{
     position:absolute; left:44px; top:50%; transform:translateY(-50%);
     display:flex; align-items:center; gap:7px; min-width:0; overflow:hidden;
-    /* half the row, minus half the search bar, minus this left inset and a gap */
-    max-width:calc(50% - 276px);
-    font-family:var(--mono); font-size:.72rem; font-weight:500;
+    /* Half the row, minus half the search bar, minus this left inset and an
+       8px gap: the trail can grow right up to the bar but never over it. */
+    max-width:calc(50% - 272px);
+    font-family:var(--mono); font-size:.86rem; font-weight:500;
     color:var(--text-dim); white-space:nowrap;
   }
+  /* Every step is icon + label. The tab you came from wears the same glyph it
+     has in the sidebar, so the trail reads as the tab's own path rather than
+     as a generic list of words. */
+  .crumb-link, .crumb-current{display:inline-flex; align-items:center; gap:6px; min-width:0;}
+  .crumb-icon{flex:none; display:flex;}
+  .crumb-icon svg{width:16px; height:16px; display:block;}
   /* The way back keeps its full text; the page you're on is what gets
      ellipsised when the row runs out of width. */
   .crumb-link{
@@ -217,14 +224,15 @@
     font:inherit; color:inherit; cursor:pointer;
     transition:color .15s ease;
   }
-  .crumb-link:hover{color:var(--text); text-decoration:underline; text-underline-offset:2px;}
+  /* Brightening is the whole hover cue - no underline, which would read as a
+     link inside a bar that's already made of links. */
+  .crumb-link:hover{color:var(--text);}
   /* The page you're on: brighter than the links, and never a target. */
   .crumb-current{
-    flex:1 1 auto; min-width:0;
-    overflow:hidden; text-overflow:ellipsis;
-    color:var(--text); font-weight:600;
+    flex:1 1 auto; color:var(--text); font-weight:600;
   }
-  .crumb-sep{flex:none; color:var(--stamp-dim); font-size:.85em;}
+  .crumb-text{min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .crumb-sep{flex:none; color:var(--stamp-dim); font-size:.9em;}
 
   .search-bar{
     position:relative;
@@ -1545,7 +1553,7 @@
     .search-bar-wrap{position:static; padding:12px 18px; flex-direction:column; align-items:stretch; gap:9px;}
     /* No empty space either side of a full-width search bar to sit in, so the
        trail takes its own line above it - and lines up with the 18px gutter. */
-    .crumbs{position:static; transform:none; left:auto; max-width:100%; order:-1; font-size:.68rem;}
+    .crumbs{position:static; transform:none; left:auto; max-width:100%; order:-1; font-size:.8rem;}
     /* These are the only way back up a level on a phone, and at 14px tall the
        text alone is a fiddly target. Pad the box out to ~26px and pull the same
        amount back with a negative margin so the line still sits where it did. */
@@ -3253,8 +3261,19 @@ window.addEventListener('hashchange', () => {
 // Which tab is open. An album page isn't a tab, so opening one clears the
 // highlight instead of moving it.
 let activeTabName = null;
+
+// The tab the trail hangs off. Home and Artists both lead into artist pages,
+// so the first crumb has to be whichever tab the visitor actually set out
+// from - landing on Carti from Home should read "Home > Playboi Carti", not
+// claim they started in Artists. Artist and album pages pass null here, which
+// leaves the last real tab in place, so the root survives the whole descent.
+// A cold link straight to an artist has no tab to remember and falls back to
+// Artists, which is where that page sits in the tree.
+let crumbRootTab = 'artists';
+
 function setActiveTab(tab){
   activeTabName = tab || null;
+  if (tab) crumbRootTab = tab;
   document.querySelectorAll('#sidebarNav .nav-item').forEach(item => {
     const on = !!tab && item.dataset.tab === tab;
     item.classList.toggle('active', on);
@@ -3269,24 +3288,48 @@ function setActiveTab(tab){
 /* ---------------- breadcrumb ----------------
    The "you are here" in the top bar, built from the same state the router
    already keeps rather than from the hash, so it can never disagree with the
-   page that's actually on screen: a tab on its own, then Artists > artist on
-   an artist page, then Artists > artist > album. The artist and album crumbs
+   page that's actually on screen: a tab on its own, then <tab> > artist on an
+   artist page, then <tab> > artist > album. The tab, artist and album crumbs
    are the way back out; the last one is the page you're on and isn't a
-   target. */
+   target. The tab crumb is drawn with the sidebar's own glyph for that tab. */
+const CRUMB_GLYPHS = {
+  home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>'
+      + '<path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>',
+  artists: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>'
+      + '<circle cx="9" cy="7" r="4"></circle>'
+      + '<path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>'
+      + '<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>'
+};
+
+// Static markup only - the label itself always goes in as textContent.
+function crumbIcon(name){
+  const wrap = document.createElement('span');
+  wrap.className = 'crumb-icon';
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round" focusable="false">'
+    + (CRUMB_GLYPHS[name] || '') + '</svg>';
+  return wrap;
+}
+
 function renderCrumbs(){
   const nav = el('crumbs');
   if (!nav) return;
 
+  const root = crumbRootTab === 'home'
+    ? { label: 'Home', go: showHome, icon: 'home' }
+    : { label: 'Artists', go: showArtists, icon: 'artists' };
   const artistName = selectedArtistPage || selectedArtistName;
+
   const trail = [];
   if (!artistName) {
-    // A tab: Home or Artists, with nothing to go back to.
-    trail.push({ label: activeTabName === 'artists' ? 'Artists' : 'Home' });
+    // A tab: the root is the page you're on, so it isn't a target.
+    trail.push({ label: root.label, icon: root.icon });
   } else if (selectedArtistPage) {
-    trail.push({ label: 'Artists', go: showArtists });
+    trail.push(root);
     trail.push({ label: artistName });
   } else {
-    trail.push({ label: 'Artists', go: showArtists });
+    trail.push(root);
     trail.push({ label: artistName, go: () => showArtist(artistName) });
     trail.push({ label: selectedAlbumName });
   }
@@ -3300,21 +3343,29 @@ function renderCrumbs(){
       sep.textContent = '›';
       nav.appendChild(sep);
     }
+    // Only the first step is a tab, so only it carries a glyph; the artist and
+    // album steps are just names.
+    const icon = i === 0 && part.icon ? part.icon : null;
+    const step = document.createElement(part.go ? 'button' : 'span');
     if (part.go) {
-      const link = document.createElement('button');
-      link.type = 'button';
-      link.className = 'crumb-link';
-      link.textContent = part.label;
-      link.title = `Go to ${part.label}`;
-      link.addEventListener('click', part.go);
-      nav.appendChild(link);
+      step.type = 'button';
+      step.className = 'crumb-link';
+      step.title = `Go to ${part.label}`;
+      step.addEventListener('click', part.go);
     } else {
-      const here = document.createElement('span');
-      here.className = 'crumb-current';
-      here.textContent = part.label;
-      here.setAttribute('aria-current', 'page');
-      nav.appendChild(here);
+      step.className = 'crumb-current';
+      step.setAttribute('aria-current', 'page');
     }
+    if (icon) step.appendChild(crumbIcon(icon));
+    const text = document.createElement('span');
+    text.className = 'crumb-text';
+    text.textContent = part.label;
+    step.appendChild(text);
+    nav.appendChild(step);
+    // A title only earns its place when the name didn't fit - it's then the
+    // only way to read the whole thing without clicking through. Measured
+    // after the append, since nothing has a width until it's in the document.
+    if (!part.go && text.scrollWidth > text.clientWidth + 1) step.title = part.label;
   });
 }
 
@@ -3936,6 +3987,9 @@ window.addEventListener('resize', () => {
     // A different width means a different column count, so an artist block's
     // cut-off has to be re-counted.
     syncArtistSections();
+    // And a different width means the trail may or may not still fit, which
+    // decides whether the open page needs a title to reveal its full name.
+    renderCrumbs();
   }, 100);
 });
 
