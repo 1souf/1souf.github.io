@@ -12,6 +12,10 @@
   :root{
     --player-h:84px;     /* height of the fixed player bar */
     --player-gap:20px;   /* breathing room left between the page's last content and the player bar */
+    /* Width of the docked panel. Everything that has to line up with its right
+       edge reads this - the panel, the player bar's left edge, the off-canvas
+       drawer's parked position - so the three can't drift apart. */
+    --sidebar-w:210px;
     /* How long a surface takes to fade to a new album theme. Lives here
        rather than only in the JS-injected rule below so that surfaces which
        own their own transition (the mobile drawer) can reuse the same value
@@ -54,7 +58,7 @@
 
   /* ---------- sidebar / tab list ---------- */
   .sidebar{
-    position:relative; width:280px; flex-shrink:0; background:var(--sidebar);
+    position:relative; width:var(--sidebar-w); flex-shrink:0; background:var(--sidebar);
     border-right:1px solid var(--border); display:flex; flex-direction:column;
     /* width/left are the collapse/expand and the drawer slide. The three
        colour properties are restated because the album-theme script injects
@@ -431,25 +435,27 @@
   .artist-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
   body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
   .artist-head{position:relative; isolation:isolate; display:flex; gap:30px; align-items:stretch; flex-wrap:wrap; margin-bottom:30px;}
-  /* Soft wash behind the portrait and the name, dyed with the average colour
-     of the artist's picture (--artist-tint, set from JS). It hangs off the top
-     of the content column like a header band and dissolves downwards into the
-     page - both gradients are anchored at the box's top edge, so the colour is
-     at full strength where the search bar ends and gone by the section below. */
+  /* One flat band of the artist's colour (--artist-tint, the average of their
+     picture, set from JS) running the full width of the column. It used to be
+     two ellipses anchored top-left, which read as a spotlight sitting behind
+     the portrait rather than as the page's colour.
+     The band holds that colour from the top of the column down past the meta
+     line, then fades out inside the gap between the header and the first
+     section - hence --artist-fade is the same number as that gap, and `bottom`
+     is derived from it, so the wash is always gone exactly where Comps
+     starts. */
   .artist-banner{
     --artist-tint:120 120 120;
+    --artist-fade:34px;
     position:absolute; z-index:0; pointer-events:none;
-    /* Sits on the page's own padding box, so the soft edge on its left lines up
-       with the content column instead of running under the sidebar. */
-    left:-44px; right:-44px; top:-20px; bottom:-70px;
+    /* Sits on the page's own padding box, so the band reaches both edges of
+       the content column instead of stopping at the gutters. */
+    left:-44px; right:-44px; top:-20px; bottom:calc(-1 * var(--artist-fade));
     opacity:0; transition:opacity .5s ease;
-    background:
-      radial-gradient(ellipse 62% 104% at 15% 0%, rgb(var(--artist-tint) / .60) 0%, rgb(var(--artist-tint) / .26) 42%, rgb(var(--artist-tint) / 0) 84%),
-      radial-gradient(ellipse 95% 128% at 44% 0%, rgb(var(--artist-tint) / .22) 0%, rgb(var(--artist-tint) / 0) 74%);
-    /* The wash still holds colour where the box meets the sidebar, which would
-       read as a cut edge. This one fade eats it. */
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 96px);
-    mask-image: linear-gradient(to right, transparent 0, #000 96px);
+    background:linear-gradient(to bottom,
+      rgb(var(--artist-tint) / .45) 0,
+      rgb(var(--artist-tint) / .45) calc(100% - var(--artist-fade)),
+      rgb(var(--artist-tint) / 0) 100%);
   }
   .artist-banner.is-on{opacity:1;}
   /* Everything in the header paints above the wash. */
@@ -806,7 +812,7 @@
 
   /* ---------- player ---------- */
   .player{
-    position:fixed; left:280px; right:0; bottom:0; height:var(--player-h);
+    position:fixed; left:var(--sidebar-w); right:0; bottom:0; height:var(--player-h);
     background:linear-gradient(to top, rgba(var(--sidebar-rgb),1) 0%, rgba(var(--sidebar-rgb),.8) 65%, rgba(var(--sidebar-rgb),.72) 100%);
     backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border-top:1px solid var(--border);
@@ -1409,7 +1415,7 @@
   }
 
   /* A landscape phone is 844px wide, so a width-only breakpoint left it with
-     the full 280px desktop sidebar and a content column it could not fit.
+     the full desktop sidebar and a content column it could not fit.
      Touch devices get the drawer layout out to 900px; a desktop window of
      the same width keeps the sidebar. */
   @media (max-width:820px), (hover:none) and (max-width:900px){
@@ -1418,7 +1424,7 @@
        rule's list carries a width transition this layout never uses, and
        `left` runs on a different curve on the drawer. */
     .app > .sidebar{
-      position:fixed; left:-280px; top:0; bottom:0;
+      position:fixed; left:calc(-1 * var(--sidebar-w)); top:0; bottom:0;
       transition: left .22s cubic-bezier(.25,.85,.35,1),
                   background-color var(--theme-transition) ease,
                   color var(--theme-transition) ease,
@@ -1427,7 +1433,7 @@
     .sidebar.open{left:0;}
     /* A 64px drawer would be useless, so the collapsed rail is a docked-layout
        idea only: here every rule the toggle turns on is turned back off. */
-    html.sb-collapsed .app > .sidebar{width:280px;}
+    html.sb-collapsed .app > .sidebar{width:var(--sidebar-w);}
     html.sb-collapsed .sidebar-header{padding:20px 18px 8px;}
     html.sb-collapsed .header-top-row{justify-content:space-between;}
     html.sb-collapsed .sidebar-header .social-link{display:flex;}
@@ -1463,14 +1469,12 @@
     .artist-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .artist-page{padding-bottom:var(--player-gap);}
     .artist-head{gap:18px; margin-bottom:24px;}
-    /* The page's own padding is 18px here, and the header stacks (portrait
-       above the name), so the wash is re-shaped to reach down over the name
-       rather than running out of height half way. */
+    /* The page's own padding is 18px here and the header stacks, so the band
+       is re-anchored to that padding box; the fade stays matched to the gap
+       below the head (24 + 28 margins collapse to 28). */
     .artist-banner{
-      left:-18px; right:-18px; top:-46px; bottom:-40px;
-      background:
-        radial-gradient(ellipse 80% 112% at 20% 0%, rgb(var(--artist-tint) / .58) 0%, rgb(var(--artist-tint) / .24) 44%, rgb(var(--artist-tint) / 0) 86%),
-        radial-gradient(ellipse 112% 132% at 50% 0%, rgb(var(--artist-tint) / .20) 0%, rgb(var(--artist-tint) / 0) 78%);
+      --artist-fade:28px;
+      left:-18px; right:-18px; top:-16px;
     }
     .artist-portrait{width:120px; height:120px;}
     .artist-portrait .home-card-avatar{font-size:2.6rem;}
@@ -1501,18 +1505,10 @@
     .queue-drawer{width:100%; max-width:calc(100vw - var(--queue-left, 0px));}
   }
 
-  /* The 20px just above the drawer breakpoint are the one desktop band where
-     the manifest genuinely doesn't fit: the docked 280px sidebar plus the
-     case file's 44px gutters leave 438px of content for a table whose
-     min-content width is 499px, so it hung 17px past .main's right edge.
-     Same three columns go as below 820 - by 840 the table has shrunk back
-     inside the column and they come back. */
-  @media (min-width:821px) and (max-width:839px){
-    .manifest thead th:nth-child(3),
-    .manifest thead th:nth-child(4),
-    .manifest thead th:nth-child(5),
-    .credit-cell, .notes-cell, .release-cell{display:none;}
-  }
+  /* There used to be a 821-839px band here that dropped the release, credit
+     and notes columns: at a 280px panel the case file had 438px of content
+     for a 499px table, so it hung past .main's right edge. At 210px the
+     narrowest case (821px) leaves 508px, which fits - so the columns stay. */
 
   /* The drawer slide and its dimmer are the two longest-running motion on
      the page, so they honour the same switch as the equaliser and the
