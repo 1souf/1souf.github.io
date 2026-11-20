@@ -2454,6 +2454,31 @@ function songArtistName(song, tabArtistName){
   return (song && song.crossListed && song.fromArtist) ? song.fromArtist : tabArtistName;
 }
 
+/* ---------------- the ⭐ / ✨ in front of a song's name ----------------
+
+   A stand-out edit is marked by putting an emoji at the start of its Name
+   cell ("⭐ Perky Gon Grab On Meh"). It belongs on the sheet and in the row
+   that prints that cell, but not in two other places: the alphabetical sort,
+   where a pictograph comes before every letter and so drags the track to the
+   top of its album, and the plain-text titles - player bar, tab title, lock
+   screen - where it's only noise.
+
+   Only leading emoji are stripped. A star at the end of a name is part of the
+   name, and it never affected the sort anyway. */
+
+const LEADING_EMOJI = /^(?:[\p{Extended_Pictographic}\p{Emoji_Modifier}\uFE0F\u200D\u20E3]+\s*)+/u;
+
+function stripLeadingEmoji(name){
+  return String(name == null ? "" : name).replace(LEADING_EMOJI, "");
+}
+
+// The name as it should be spoken aloud, and never empty: a row that is
+// nothing but an emoji still has to print something.
+function plainSongName(name){
+  const raw = String(name == null ? "" : name).trim();
+  return stripLeadingEmoji(raw).trim() || raw;
+}
+
 // The second artist named in an album header's Feature(s) cell (see
 // parseArtistCell()), looked up by names rather than by object - the same
 // reason currentAlbumName/currentAlbumSection are stored as names: a
@@ -5057,7 +5082,9 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   if (rowEl) rowEl.classList.add('playing');
 
   el('player').style.display = 'flex';
-  el('playerTitle').textContent = song.name;
+  // The bar and the tab title speak the name, so the rating emoji stays out
+  // of them; the row it came from still shows it.
+  el('playerTitle').textContent = plainSongName(song.name);
   // The artist line names whoever the track is really by. A cross-listed
   // copy keeps its own artist here too (see songArtistName); the album
   // title, cover and share link still describe the tab it's filed under.
@@ -5078,7 +5105,7 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   el('playerSubFeatures').innerHTML = song.features ? ", " + creditLinksHtml(song.features) : "";
   // Tab title: the site's own title first, then what is playing.
   // "❤︎ — Song Title • Artist Name"
-  document.title = `${DEFAULT_TITLE} — ${song.name} • ${shownCredit}${song.features ? ", " + song.features : ""}`;
+  document.title = `${DEFAULT_TITLE} — ${plainSongName(song.name)} • ${shownCredit}${song.features ? ", " + song.features : ""}`;
   // Same title/artist/cover the player bar just took, handed to the OS -
   // this is what a phone's lock screen and a desktop's "now playing" panel
   // actually display.
@@ -5792,7 +5819,7 @@ function updateMediaSessionMetadata(song, artistLine, albumName, coverUrl){
   const artist = features ? `${artistLine}, ${features}` : artistLine;
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: song.name,
+      title: plainSongName(song.name),
       artist,
       album: albumName || "",
       artwork: mediaSessionArtwork(coverUrl)
@@ -6894,7 +6921,7 @@ function renderQueuePanel(){
         </span>
         ${coverHtml}
         <div class="queue-item-text">
-          <div class="queue-item-name">${esc(item.song.name)}${featuresHtml}</div>
+          <div class="queue-item-name">${esc(plainSongName(item.song.name))}${featuresHtml}</div>
           <div class="queue-item-meta">${esc(item.artistName)} — ${esc(item.album.name)}</div>
         </div>
         <button class="queue-remove" type="button" data-idx="${i}" title="Remove from queue">
@@ -7180,8 +7207,13 @@ function crossListAndFinalize(){
     (DATA[artistName] || []).forEach(album => {
       if (album.isDivider) return;
       const numbered = album.songs.filter(s => s.trackNum !== null).sort((x,y) => x.trackNum - y.trackNum);
+      // Sorted on the name with any leading ⭐ / ✨ taken off, so a marked
+      // track files under its first letter instead of jumping to the top of
+      // the album. Two names that differ only by emoji fall back to the raw
+      // string, which keeps the order stable rather than arbitrary.
       const unnumbered = album.songs.filter(s => s.trackNum === null)
-        .sort((x,y) => x.name.localeCompare(y.name, undefined, { sensitivity: 'base' }));
+        .sort((x,y) => stripLeadingEmoji(x.name).localeCompare(stripLeadingEmoji(y.name), undefined, { sensitivity: 'base' })
+          || x.name.localeCompare(y.name, undefined, { sensitivity: 'base' }));
       let nextNum = numbered.reduce((max,s) => Math.max(max, s.trackNum), 0) + 1;
       unnumbered.forEach(s => { s.trackNum = nextNum++; });
       album.songs = [...numbered, ...unnumbered];
