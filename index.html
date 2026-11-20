@@ -1169,7 +1169,26 @@
     display:flex; flex-direction:column; overflow:hidden;
   }
   .changelog-list{flex:1; min-height:0; overflow-y:auto;}
+  /* Two panes, one strip: the sheet's additions and the repo's commits are
+     different kinds of news, so they get a tab each rather than one long
+     mixed list. Underlined label tabs - the same uppercase mono micro-label
+     the section counts use. */
+  .changelog-tabs{
+    flex:none; display:flex; gap:2px; padding:0 12px;
+    border-bottom:1px solid var(--border);
+  }
+  .changelog-tab{
+    margin-bottom:-1px; padding:11px 10px 9px;
+    background:none; border:none; border-bottom:2px solid transparent;
+    font-family:var(--mono); font-size:.68rem; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase;
+    color:var(--text-dim); cursor:pointer;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .changelog-tab:hover{color:var(--text);}
+  .changelog-tab[aria-selected="true"]{color:var(--text); border-bottom-color:var(--stamp-fixed);}
   .changelog-empty{padding:26px 16px; color:var(--text-dim); font-size:.78rem; text-align:center; line-height:1.5;}
+  .changelog-empty a{color:var(--text); text-underline-offset:2px;}
   .changelog-item{
     display:flex; align-items:center; gap:10px; padding:11px 16px;
     cursor:pointer; border-bottom:1px solid var(--border); border-left:2px solid transparent;
@@ -1203,6 +1222,35 @@
   }
   .changelog-item-goto:hover{color:var(--stamp-fixed); background:rgba(255,255,255,.07);}
   .changelog-item-goto svg{width:15px; height:15px; display:block;}
+
+  /* Rows in the Site pane. Same rhythm as a song row, but the whole row is a
+     link out to the commit on GitHub, so the arrow is decoration and the
+     hover state covers the row. */
+  .commit-item{
+    display:flex; align-items:center; gap:10px; padding:11px 16px;
+    border-bottom:1px solid var(--border); text-decoration:none;
+    transition:background .15s ease;
+  }
+  .commit-item:hover{background:rgba(255,255,255,.05);}
+  .commit-text{min-width:0; flex:1;}
+  .commit-msg{
+    display:block; font-size:.82rem; font-weight:600; color:var(--text);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* Tabular figures keep the times in a column instead of jittering. */
+  .commit-meta{
+    display:block; margin-top:2px;
+    font-size:.7rem; color:var(--text-dim); font-variant-numeric:tabular-nums;
+  }
+  .commit-sha{color:var(--stamp-dim); letter-spacing:.02em;}
+  .commit-arrow{width:15px; height:15px; flex:none; color:var(--text-dim);}
+  .commit-item:hover .commit-arrow{color:var(--stamp-fixed);}
+  .commit-all{
+    display:block; padding:12px 16px; text-align:center; text-decoration:none;
+    font-size:.66rem; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--text-dim); transition:color .15s ease, background .15s ease;
+  }
+  .commit-all:hover{color:var(--text); background:rgba(255,255,255,.05);}
 
   /* ---------- queue button badge ---------- */
   #queueBtn{position:relative;}
@@ -1672,7 +1720,7 @@
     <div class="sidebar-tools">
       <!-- "What's new". The dot on the bell means there are songs dated after
            the last time this visitor opened the list. -->
-      <button class="nav-item" id="changelogBtn" type="button" title="What's new — recently added songs" aria-haspopup="dialog" aria-expanded="false" aria-controls="changelogModal">
+      <button class="nav-item" id="changelogBtn" type="button" title="What's new — recently added songs and site changes" aria-haspopup="dialog" aria-expanded="false" aria-controls="changelogModal">
         <span class="changelog-bell">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
           <span class="changelog-badge" id="changelogBadge"></span>
@@ -1861,16 +1909,22 @@
 <div class="desc-modal-backdrop" id="infoModalBackdrop"></div>
 
 <!-- "What's new", opened from the sidebar's Updates row. Same shell again; the
-     body drops its padding so the list rows run edge to edge. -->
+     body drops its padding so the list rows run edge to edge, and it carries
+     two panes: songs added to the sheet, and the repo's own commit history. -->
 <div class="desc-modal" id="changelogModal" aria-hidden="true" role="dialog" aria-labelledby="changelogModalTitle">
   <div class="desc-modal-header">
-    <span class="desc-modal-title" id="changelogModalTitle">Recently added</span>
+    <span class="desc-modal-title" id="changelogModalTitle">Updates</span>
     <button class="desc-modal-close" id="changelogCloseBtn" type="button" title="Close">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
   </div>
   <div class="desc-modal-body is-changelog">
-    <div class="changelog-list" id="changelogList"></div>
+    <div class="changelog-tabs" role="tablist" aria-label="Update type">
+      <button class="changelog-tab" id="changelogTabSongs" type="button" role="tab" aria-selected="true" aria-controls="changelogList">Songs</button>
+      <button class="changelog-tab" id="changelogTabSite" type="button" role="tab" aria-selected="false" aria-controls="changelogSiteList">Site</button>
+    </div>
+    <div class="changelog-list" id="changelogList" role="tabpanel" aria-labelledby="changelogTabSongs"></div>
+    <div class="changelog-list" id="changelogSiteList" role="tabpanel" aria-labelledby="changelogTabSite" hidden></div>
   </div>
 </div>
 <div class="desc-modal-backdrop" id="changelogModalBackdrop"></div>
@@ -4868,8 +4922,9 @@ document.addEventListener('keydown', (e) => {
   if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
   const changelogModal = el('changelogModal');
+  // Whichever pane is showing owns the scroll - the hidden one has no height.
   const scrollEl = (changelogModal && changelogModal.classList.contains('open'))
-    ? el('changelogList')
+    ? (changelogModal.querySelector('.changelog-list:not([hidden])') || el('changelogList'))
     : document.querySelector('.main');
   if (!scrollEl) return;
   e.preventDefault();
@@ -5782,6 +5837,10 @@ function openChangelogPanel(){
   // additions still show up highlighted), then stamp "seen" for next
   // time and clear the badge.
   renderChangelogList();
+  // Re-apply the pane the visitor was last on, so reopening doesn't bounce
+  // them back to Songs mid-read. Also what kicks off the commit fetch when
+  // that pane is the Site one.
+  setChangelogPane(changelogPane);
   const modal = el('changelogModal');
   modal.classList.add('open');
   el('changelogModalBackdrop').classList.add('open');
@@ -5811,6 +5870,129 @@ function toggleChangelogPanel(){
 el('changelogBtn').addEventListener('click', toggleChangelogPanel);
 el('changelogCloseBtn').addEventListener('click', () => closeChangelogPanel());
 el('changelogModalBackdrop').addEventListener('click', () => closeChangelogPanel());
+
+/* ---------------- site changelog (GitHub commits) ----------------
+   The Site pane reads the repo's own commit history from the public GitHub
+   API - no token, which also means the unauthenticated budget of 60 calls an
+   hour is per visitor, not per site. The list is cached in localStorage for
+   a quarter of an hour so a normal session costs one call, and the fetch
+   only happens the first time the Site tab is opened. */
+const GITHUB_REPO = '1souf/1souf.github.io';
+const SITE_COMMITS_KEY = 'archiveSiteCommits';
+const SITE_COMMITS_TTL = 15 * 60 * 1000;
+const SITE_COMMITS_LIMIT = 30;
+
+let siteCommits = null;
+let siteCommitsState = 'idle';   // idle | loading | ready | error
+let changelogPane = 'songs';     // remembered for the session, not persisted
+
+// "Nov 20, 2026 · 14:32" - the same date shape the sheet's own dates use,
+// with a 24-hour clock so the times line up in a column.
+function formatCommitStamp(iso){
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const time = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  return `${date} · ${time}`;
+}
+
+function readCachedCommits(){
+  try {
+    const raw = localStorage.getItem(SITE_COMMITS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.commits) || !parsed.commits.length) return null;
+    return parsed;
+  } catch (err) { return null; }
+}
+
+function renderSiteCommits(){
+  const listEl = el('changelogSiteList');
+  if (!listEl) return;
+  const repoUrl = `https://github.com/${GITHUB_REPO}`;
+
+  if (!siteCommits) {
+    listEl.innerHTML = siteCommitsState === 'error'
+      ? `<div class="changelog-empty">Couldn't reach GitHub.<br><a href="${repoUrl}/commits" target="_blank" rel="noopener">Open the commit history there</a></div>`
+      : `<div class="changelog-empty">Reading the repository…</div>`;
+    return;
+  }
+
+  const arrow = `<svg class="commit-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M8 7h9v9"></path></svg>`;
+  listEl.innerHTML = siteCommits.map(c => {
+    // Date first, short sha second - and never a dangling separator if
+    // GitHub hands back a row without one of them.
+    const meta = [
+      esc(formatCommitStamp(c.date)),
+      c.short ? `<span class="commit-sha">${esc(c.short)}</span>` : "",
+    ].filter(Boolean).join(" · ");
+    return `
+    <a class="commit-item" href="${esc(c.url)}" target="_blank" rel="noopener" title="Open this commit on GitHub">
+      <span class="commit-text">
+        <span class="commit-msg">${esc(c.message || "(no message)")}</span>
+        <span class="commit-meta">${meta}</span>
+      </span>
+      ${arrow}
+    </a>`;
+  }).join("") +
+    `<a class="commit-all" href="${repoUrl}/commits" target="_blank" rel="noopener">All commits on GitHub</a>`;
+}
+
+async function loadSiteCommits(){
+  if (siteCommitsState === 'loading' || siteCommitsState === 'ready') return;
+  const cached = readCachedCommits();
+  if (cached && Date.now() - (cached.fetchedAt || 0) < SITE_COMMITS_TTL) {
+    siteCommits = cached.commits;
+    siteCommitsState = 'ready';
+    renderSiteCommits();
+    return;
+  }
+
+  siteCommitsState = 'loading';
+  renderSiteCommits();
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits?per_page=${SITE_COMMITS_LIMIT}`, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) throw new Error(`GitHub returned ${res.status}`);
+    const rows = await res.json();
+    const commits = (Array.isArray(rows) ? rows : []).map(row => {
+      const meta = row.commit || {};
+      const stamp = (meta.author || meta.committer || {}).date || "";
+      return {
+        sha: row.sha || "",
+        short: (row.sha || "").slice(0, 7),
+        message: String(meta.message || "").split("\n")[0].trim(),
+        date: stamp,
+        url: row.html_url || `https://github.com/${GITHUB_REPO}/commit/${row.sha}`,
+      };
+    }).filter(c => c.message);
+    if (!commits.length) throw new Error('no commits');
+    siteCommits = commits;
+    siteCommitsState = 'ready';
+    try {
+      localStorage.setItem(SITE_COMMITS_KEY, JSON.stringify({ fetchedAt: Date.now(), commits }));
+    } catch (err) { /* quota / private mode: the pane just refetches next time */ }
+  } catch (err) {
+    // A cache older than the TTL still beats an empty pane.
+    siteCommits = cached ? cached.commits : null;
+    siteCommitsState = 'error';
+  }
+  renderSiteCommits();
+}
+
+function setChangelogPane(pane){
+  changelogPane = pane === 'site' ? 'site' : 'songs';
+  const showSongs = changelogPane === 'songs';
+  el('changelogTabSongs').setAttribute('aria-selected', String(showSongs));
+  el('changelogTabSite').setAttribute('aria-selected', String(!showSongs));
+  el('changelogList').hidden = !showSongs;
+  el('changelogSiteList').hidden = showSongs;
+  if (!showSongs) loadSiteCommits();
+}
+
+el('changelogTabSongs').addEventListener('click', () => setChangelogPane('songs'));
+el('changelogTabSite').addEventListener('click', () => setChangelogPane('site'));
 
 /* ---------------- queue drawer ---------------- */
 const queueDrawer = el('queueDrawer');
