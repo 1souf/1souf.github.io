@@ -54,7 +54,7 @@
 
   /* ---------- sidebar / tab list ---------- */
   .sidebar{
-    width:280px; flex-shrink:0; background:var(--sidebar);
+    position:relative; width:280px; flex-shrink:0; background:var(--sidebar);
     border-right:1px solid var(--border); display:flex; flex-direction:column;
     transition:left .2s ease; z-index:40;
   }
@@ -65,36 +65,23 @@
     background:rgba(0,0,0,.55); opacity:0; pointer-events:none;
     transition:opacity .2s ease;
   }
+  /* Top-right of the panel. Purely a control in waiting for now - the panel
+     is always docked on desktop, so there is nothing for it to collapse yet.
+     On the drawer layout it is the button that shuts the menu. */
   .sidebar-close{
-    display:none; align-items:center; justify-content:center; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
     width:32px; height:32px; padding:0; margin:-4px -6px -4px 0;
     background:none; border:none; border-radius:3px; color:var(--text-dim);
     cursor:pointer; transition:color .15s ease, background .15s ease;
   }
   .sidebar-close:hover{color:var(--text); background:rgba(255,255,255,.07);}
-  .sidebar-close svg{width:15px; height:15px; display:block;}
-  .sidebar-header{padding:22px 18px 16px; border-bottom:1px solid var(--border);}
-  .header-top-row{display:flex; align-items:center; justify-content:space-between; gap:14px;}
-  .edit-counter{display:flex; align-items:baseline; gap:9px;}
-  .edit-counter-num{
-    font-family:var(--display); font-weight:800; font-size:1.7rem; color:var(--stamp-fixed);
-    letter-spacing:.01em; line-height:1; font-variant-numeric:tabular-nums;
-  }
-  .edit-counter-label{font-size:.62rem; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase;}
-  .social-links{display:flex; align-items:center; gap:14px; margin-left:auto;}
-  .social-link svg{width:18px; height:18px;}
-  .header-icon-divider{width:1px; height:16px; background:var(--border); flex-shrink:0;}
-  .reload-btn{
-    margin-top:12px; width:100%; padding:7px 10px;
-    background:var(--bg-elevated); color:var(--text-dim); border:1px solid var(--border-light);
-    border-radius:3px; font-family:var(--mono); font-size:.68rem; letter-spacing:.03em;
-    cursor:pointer; transition:color .15s ease, border-color .15s ease;
-  }
-  .reload-btn:hover{color:var(--text); border-color:var(--stamp-fixed);}
-  .reload-btn:disabled{opacity:.5; cursor:default;}
-  /* The "Reloading…" label stays fixed white rather than picking up the album
-     theme's stamp colour. */
-  .reload-btn.spinning{color:var(--stamp-fixed);}
+  .sidebar-close svg{width:19px; height:19px; display:block;}
+  /* No rules between the header, the tabs and the bottom rows: the panel is
+     one continuous surface, and the only line left is the one against the
+     content column. */
+  .sidebar-header{padding:20px 18px 8px;}
+  .header-top-row{display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:32px;}
+  .sidebar-header .social-link svg{width:20px; height:20px;}
 
   /* Plain tab list. This used to be the two-pane artist/album tree; the
      artists no longer live in the sidebar at all, so all that's left is the
@@ -105,7 +92,8 @@
     display:flex; align-items:center; gap:12px; width:100%;
     padding:13px 18px; background:none; border:none; border-left:2px solid transparent;
     color:var(--text-dim); font-family:var(--mono); font-size:.9rem; font-weight:600;
-    letter-spacing:.01em; text-align:left; cursor:pointer; user-select:none;
+    letter-spacing:.01em; text-align:left; text-decoration:none;
+    cursor:pointer; user-select:none;
     transition:color .15s ease, background .15s ease;
   }
   .nav-item svg{width:20px; height:20px; flex:none; display:block;}
@@ -114,18 +102,31 @@
   /* The active tab's glyph stays pure white, like the old section labels -
      it never picks up the album theme's accent. */
   .nav-item.active svg{color:var(--stamp-fixed);}
-  /* Standing disclaimer, not a live count. It is one nowrap line inside a
-     marquee mask (the same treatment the player's title line gets), so a
-     sentence this long scrolls on its own instead of wrapping the footer
-     to three lines and eating the tab list's height. */
-  .sidebar-footer{
-    padding:12px 18px; border-top:1px solid var(--border); font-size:.65rem;
-    color:var(--text-dim); line-height:1.5;
-    display:flex; align-items:center; gap:7px;
+
+  /* ---------- bottom rows: reload, statistics, info ----------
+     Same rows as the tabs, stacked at the foot of the panel. All three are
+     ordinary controls; the info row opens the same centred modal the
+     description and changelog entries use (see .desc-modal). */
+  /* The drawer runs to the bottom of the screen on phones, so the last row
+     keeps clear of the home indicator. */
+  .sidebar-tools{flex:none; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));}
+  .sidebar-tools .nav-item:disabled{opacity:.55; cursor:default;}
+  .sidebar-tools .nav-item.spinning{color:var(--text);}
+
+  /* The reload row keeps the character glyph the old button used rather than
+     a stroke icon. Its ink is only ~0.65em tall, and the circle it draws is
+     smaller than the ring on the info icon (r 9.25 + 1 stroke = 17.5px in the
+     same 20px box), so the em size is set above the box: 1.46rem lands the
+     glyph's circle at that same 17.5px. */
+  .nav-glyph{
+    width:20px; height:20px; flex:none; display:flex;
+    align-items:center; justify-content:center;
+    font-size:1.46rem; line-height:1; font-weight:400;
+    /* The glyph's own stroke is thinner than the 2px stroke on the icons
+       beside it; a hairline outline brings it up to the same weight without
+       changing its size. */
+    -webkit-text-stroke:0.3px currentColor;
   }
-  .sidebar-footer > svg{width:12px; height:12px; flex:none; display:block;}
-  .sidebar-footer .marquee-mask{flex:1 1 auto; min-width:0;}
-  #footerText{display:block; width:max-content; white-space:nowrap;}
 
   /* ---------- main / case file ---------- */
   .main{flex:1; overflow-y:auto; position:relative;}
@@ -212,79 +213,31 @@
   .search-result-goto svg{width:15px; height:15px; display:block;}
   .search-result-empty{padding:14px 12px; font-size:.78rem; color:var(--text-dim);}
 
-  /* ---------- pillowcase status pill ---------- */
-  /* Absolutely positioned on the hard left of the search bar row (mirrors
-     the changelog "Updates" pill on the hard right), so the search bar
-     itself stays perfectly centered regardless of this pill's width.
-     Collapsed it keeps its own chip - border, background and all - but
-     squeezed down around the status dot alone, so it still reads as a
-     button sitting there rather than a bare dot floating on the
-     background. Hovering (or tabbing to it) widens the chip and slides
-     the label out beside the dot. */
-  .status-pill{
-    position:absolute; left:18px; top:50%; transform:translateY(-50%);
-    display:flex; align-items:center; gap:0;
-    height:30px;
-    background:var(--bg-elevated); color:var(--text-dim);
-    border:1px solid var(--border-light); border-radius:20px;
-    padding:0 10px;
-    font-family:var(--mono); font-weight:600; font-size:.68rem; letter-spacing:.03em;
-    white-space:nowrap; cursor:default;
-    transition:color .15s ease, border-color .15s ease, background .18s ease,
-               padding .22s ease, gap .22s ease;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  .status-pill:hover, .status-pill:focus-visible{
-    gap:7px;
-    padding:0 12px 0 10px;
-  }
-
+  /* ---------- pillowcase status dot ---------- */
+  /* The chip that used to hover over the search bar is gone - the status is
+     one line inside the sidebar's info panel now - so all that is left here
+     is the dot and its three states. */
   .status-dot{
     width:7px; height:7px; border-radius:50%; flex-shrink:0;
     background:var(--text-dim);
     transition:background .2s ease, box-shadow .2s ease;
   }
   /* checking = neutral grey, gentle pulse */
-  .status-pill.state-checking .status-dot{
+  .info-status.state-checking .status-dot{
     background:var(--text-dim);
     animation:status-pulse 1.2s ease-in-out infinite;
   }
   @keyframes status-pulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
   /* online = green */
-  .status-pill.state-online .status-dot{
+  .info-status.state-online .status-dot{
     background:#3fbf6f; box-shadow:0 0 0 3px rgba(63,191,111,.18);
   }
-  .status-pill.state-online{color:var(--text);}
   /* offline = red */
-  .status-pill.state-offline .status-dot{
+  .info-status.state-offline .status-dot{
     background:#e05a5a; box-shadow:0 0 0 3px rgba(224,90,90,.18);
   }
-  /* The red edge rides along on the collapsed chip too, so the state is
-     readable before the pointer ever gets there. */
-  .status-pill.state-offline{color:var(--text); border-color:#5a2f2f;}
 
-  /* The label is clipped to nothing while collapsed; hovering/focusing the
-     pill lets it out from under the dot. */
-  .status-label-wrap{
-    display:block; min-width:0; max-width:0; overflow:hidden;
-    opacity:0;
-    transition:max-width .25s ease, opacity .12s ease;
-  }
-  .status-label{display:block; white-space:nowrap;}
-  .status-pill:hover .status-label-wrap,
-  .status-pill:focus-visible .status-label-wrap{
-    max-width:160px; opacity:1;
-  }
-
-  /* A touch screen has no hover, so the label would never get its chance to
-     slide out - there the pill just stays open instead. */
-  @media (hover:none){
-    .status-pill{gap:7px; padding:0 12px 0 10px;}
-    .status-label-wrap{max-width:160px; opacity:1;}
-  }
-
-  @media (prefers-reduced-motion: reduce){ .status-pill.state-checking .status-dot{animation:none;} }
+  @media (prefers-reduced-motion: reduce){ .info-status.state-checking .status-dot{animation:none;} }
 
 
   .case-file{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
@@ -1017,6 +970,32 @@
      the warning colour it had in the old inline updates popover. */
   .desc-modal-body.is-updates{color:var(--hazard);}
 
+  /* ---------- info modal ----------
+     The same box again, opened by the sidebar's info row. The disclaimer is
+     plain prose here, so it gets a real paragraph instead of the pre-line
+     text the album description needs, and the two stats share a rule under
+     it. */
+  .info-modal-text{margin:0; font-size:.82rem; line-height:1.7; color:var(--text-dim);}
+  .info-modal-stats{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    margin-top:16px; padding-top:14px; border-top:1px solid var(--border);
+  }
+  .info-edits{display:flex; align-items:baseline; gap:6px;}
+  .info-edits-num{
+    font-family:var(--display); font-weight:700; font-size:1.15rem; line-height:1;
+    color:var(--stamp-fixed); font-variant-numeric:tabular-nums;
+  }
+  .info-edits-label{font-size:.6rem; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim);}
+  .info-status{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-weight:600; font-size:.7rem; letter-spacing:.03em;
+    color:var(--text-dim); text-decoration:none; white-space:nowrap; cursor:pointer;
+    transition:color .15s ease;
+  }
+  .info-status:hover{color:var(--text);}
+  .info-status.state-online{color:var(--text);}
+  .info-status.state-offline{color:var(--text);}
+
   /* While the description is open, only the description itself may be
      selected. Without this the backdrop and the page behind it stayed
      selectable, so a highlight drag that left the modal box - easy, since it
@@ -1418,7 +1397,6 @@
     .sidebar.open{left:0;}
     .sidebar-backdrop{display:block;}
     .sidebar-backdrop.open{opacity:1; pointer-events:auto;}
-    .sidebar-close{display:flex;}
     .menu-btn{display:block;}
     .player{left:0;}
     .search-bar-wrap{position:static; padding:12px 18px;}
@@ -1477,7 +1455,6 @@
     .changelog-btn-label{display:none;}
     .changelog-panel{top:52px; right:16px; left:10px; width:auto; max-width:none;}
     .queue-drawer{width:100%; max-width:calc(100vw - var(--queue-left, 0px));}
-    .status-pill{position:static; transform:none; margin-right:10px;}
   }
 
   /* The 20px just above the drawer breakpoint are the one desktop band where
@@ -1498,13 +1475,6 @@
      skeleton shimmer. The drawer still opens and closes, just instantly. */
   @media (prefers-reduced-motion: reduce){
     .app > .sidebar, .sidebar-backdrop{transition:none;}
-  }
-
-  /* Below ~480 the pill's label plus the search field no longer fit on one
-     line, so the pill drops back to its dot-only chip. */
-  @media (max-width:480px){
-    .status-pill{gap:0; padding:0 10px;}
-    .status-label-wrap{max-width:0; opacity:0;}
   }
 
   /* ---------- phone: the bar stacks into three rows ---------- */
@@ -1625,18 +1595,15 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="header-top-row">
-        <div class="edit-counter"><span class="edit-counter-num skel" id="editCounterNum" style="width:44px;height:22px;">—</span><span class="edit-counter-label">edits</span></div>
-        <div class="social-links">
-          <a href="https://www.youtube.com/@1souf/?sub_confirmation=1" class="link-icon social-link" target="_blank" rel="noopener" title="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg></a>
-          <a href="https://discord.com/users/1067812292512714802" class="link-icon social-link" target="_blank" rel="noopener" title="Discord"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.522 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"></path></svg></a>
-          <span class="header-icon-divider" aria-hidden="true"></span>
-          <a href="stats.html" class="link-icon social-link" title="Statistics"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4.5" y="13" width="3" height="8" rx="1.5"></rect><rect x="10.5" y="3" width="3" height="18" rx="1.5"></rect><rect x="16.5" y="9" width="3" height="12" rx="1.5"></rect></svg></a>
-        </div>
+        <a href="https://www.youtube.com/@1souf/?sub_confirmation=1" class="link-icon social-link" target="_blank" rel="noopener" title="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg></a>
         <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close menu" title="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M21.97 15V9C21.97 4 19.97 2 14.97 2H8.96997C3.96997 2 1.96997 4 1.96997 9V15C1.96997 20 3.96997 22 8.96997 22H14.97C19.97 22 21.97 20 21.97 15Z"></path>
+            <path d="M7.96997 2V22"></path>
+            <path d="M14.97 9.43994L12.41 11.99994L14.97 14.55994"></path>
+          </svg>
         </button>
       </div>
-      <button class="reload-btn" id="reloadBtn" title="Re-fetch the latest data from the spreadsheet">⟳ Reload Spreadsheet</button>
     </div>
     <!-- Tab list. Each tab is one .nav-item, named by its data-tab. -->
     <nav class="sidebar-nav" id="sidebarNav" aria-label="Browse">
@@ -1649,11 +1616,24 @@
         <span class="nav-label">Artists</span>
       </button>
     </nav>
-    <!-- The footer is a fixed disclaimer rather than a live count, so it needs
-         no skeleton: the text is the same on every load. -->
-    <div class="sidebar-footer" id="sidebarFooter">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.25"></circle><path d="M12 11.25v5.25"></path><path d="M12 7.6v.02"></path></svg>
-      <div class="marquee-mask" id="footerMask"><span id="footerText">Nothing is hosted here. Every file is streamed from a third-party server — this site only indexes and links to it.</span></div>
+    <!-- Foot of the panel, in the same row style as the tabs above. -->
+    <div class="sidebar-tools">
+      <button class="nav-item" id="reloadBtn" type="button" title="Re-fetch the latest data from the spreadsheet">
+        <span class="nav-glyph" aria-hidden="true">⟳</span>
+        <span class="nav-label">Reload</span>
+      </button>
+      <a class="nav-item" href="stats.html" title="Statistics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>
+        <span class="nav-label">Statistics</span>
+      </a>
+      <!-- The disclaimer, the edit count and the Pillowcase status all used to
+           be crammed into this row (and into the search bar, for the status).
+           They open in the centred info modal now, so the row itself is just
+           another control in the same shape as the two above it. -->
+      <button class="nav-item" id="infoBtn" type="button" aria-expanded="false" aria-controls="infoModal" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.25"></circle><path d="M12 11.25v5.25"></path><path d="M12 7.6v.02"></path></svg>
+        <span class="nav-label">Info</span>
+      </button>
     </div>
   </aside>
 
@@ -1662,10 +1642,6 @@
   <main class="main">
     <button class="menu-btn" id="menuBtn" aria-controls="sidebar" aria-expanded="false">☰ menu</button>
     <div class="search-bar-wrap">
-      <a class="status-pill state-checking" id="statusPill" href="archive-audit.html" title="Checking whether the audio host (Pillowcase) is reachable…">
-        <span class="status-dot" id="statusDot"></span>
-        <span class="status-label-wrap"><span class="status-label" id="statusLabel">Checking…</span></span>
-      </a>
       <div class="search-bar" id="searchBarWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" class="search-input" id="searchInput" placeholder="Search songs…" autocomplete="off">
@@ -1814,6 +1790,31 @@
      nearest text in document order - after the modal that is the end of the
      description instead of back at its start. -->
 <div class="desc-modal-backdrop" id="descModalBackdrop"></div>
+
+<!-- The sidebar's info row opens this one: the same box, same backdrop, same
+     dimming of the page behind it as a description or an album changelog. -->
+<div class="desc-modal" id="infoModal" aria-hidden="true" role="dialog" aria-labelledby="infoModalTitle">
+  <div class="desc-modal-header">
+    <span class="desc-modal-title" id="infoModalTitle">Info</span>
+    <button class="desc-modal-close" id="infoModalCloseBtn" type="button" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="desc-modal-body">
+    <p class="info-modal-text">Nothing is hosted here. Every file is streamed from a third-party server — this site only indexes and links to it.</p>
+    <div class="info-modal-stats">
+      <div class="info-edits">
+        <span class="info-edits-num skel" id="editCounterNum" style="width:24px;height:12px;">—</span>
+        <span class="info-edits-label">edits</span>
+      </div>
+      <a class="info-status state-checking" id="statusPill" href="archive-audit.html" title="Checking whether the audio host (Pillowcase) is reachable…">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label" id="statusLabel">Checking…</span>
+      </a>
+    </div>
+  </div>
+</div>
+<div class="desc-modal-backdrop" id="infoModalBackdrop"></div>
 
 <div class="cover-viewer" id="coverViewer" aria-hidden="true" role="dialog" aria-label="Album cover">
   <div class="cover-viewer-stage" id="coverViewerStage">
@@ -4534,66 +4535,10 @@ function startMarquees(){
 
 window.addEventListener('resize', () => { if (el('player').style.display !== 'none') startMarquees(); });
 
-/* ---------------- sidebar footer disclaimer ---------------- */
-// Same scroll-when-it-doesn't-fit behaviour as the player's title line (same
-// speed, same hold, same edge fades), but on its own generation counter and
-// timer: the footer has nothing to do with what's playing, so it must not be
-// paused or reset by startMarquees()/stopMarquees().
-const footerMarquee = makeMarquee('footerMask', 'footerText', 20);
-let footerMarqueeGeneration = 0;
-let footerMarqueeTimer = null;
-
-function stopFooterMarquee(){
-  footerMarqueeGeneration++;
-  if (footerMarqueeTimer) { clearTimeout(footerMarqueeTimer); footerMarqueeTimer = null; }
-  marqueeSetX(footerMarquee, 0, false);
-  marqueeSetFade(footerMarquee, FADE_NONE);
-}
-
-function footerMarqueeLeg(gen, forward){
-  if (gen !== footerMarqueeGeneration) return;
-  const m = footerMarquee;
-  if (m.distance <= 0) return;
-  marqueeSetFade(m, FADE_BOTH);
-  marqueeSetX(m, forward ? -m.distance : 0, true);
-  const onEnd = (e) => {
-    if (e.propertyName !== 'transform') return;
-    m.inner.removeEventListener('transitionend', onEnd);
-    if (gen !== footerMarqueeGeneration) return;
-    // Resting again: only the edge that's still hiding text keeps its fade.
-    marqueeSetFade(m, forward ? FADE_LEFT : FADE_RIGHT);
-    footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, !forward), MARQUEE_HOLD_MS);
-  };
-  m.inner.addEventListener('transitionend', onEnd);
-}
-
-function startFooterMarquee(){
-  stopFooterMarquee();
-  const gen = footerMarqueeGeneration;
-  // Two frames, like the player: the first paints the line, the second
-  // measures it once it has been laid out.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (gen !== footerMarqueeGeneration) return;
-    const m = footerMarquee;
-    const overflow = m.mask.scrollWidth - m.mask.clientWidth;
-    m.distance = overflow > 1 ? overflow : 0;
-    marqueeSetFade(m, m.distance > 0 ? FADE_RIGHT : FADE_NONE);
-    if (m.distance > 0) footerMarqueeTimer = setTimeout(() => footerMarqueeLeg(gen, true), MARQUEE_HOLD_MS);
-  }));
-}
-
-startFooterMarquee();
-// Web fonts can still swap in after first paint and change the measured
-// width, so re-measure once they're settled. Both calls are idempotent.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(startFooterMarquee);
-window.addEventListener('load', startFooterMarquee);
-// Restarting resets the line to its start, so wait for the resize to settle
-// rather than snapping the text back on every tick of a window drag.
-let footerResizeTimer = null;
-window.addEventListener('resize', () => {
-  clearTimeout(footerResizeTimer);
-  footerResizeTimer = setTimeout(startFooterMarquee, 200);
-});
+// The sidebar's disclaimer used to be a scrolling line (the same marquee the
+// player's title uses) because it had to fit in one 46px row. It wraps inside
+// the info panel now, so that whole second marquee - counter, timer and the
+// resize hook that re-measured it - is gone.
 
 function resetRowVisual(rowEl){
   if (!rowEl) return;
@@ -6351,6 +6296,38 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && sidebarEl.classList.contains('open')) closeSidebar();
 });
 
+/* ---------------- sidebar info modal ----------------
+   The info row opens the same box a description does: centred, over a dimmed
+   page, dismissed by its X, the backdrop or Escape. It holds the three things
+   that used to be spread across the panel - the standing disclaimer, the edit
+   count and the Pillowcase status - so the row itself is only a trigger. */
+const infoModalEl = el('infoModal');
+const infoModalBackdrop = el('infoModalBackdrop');
+const infoBtnEl = el('infoBtn');
+
+function openInfoModal(){
+  infoModalEl.classList.add('open');
+  infoModalBackdrop.classList.add('open');
+  infoModalEl.setAttribute('aria-hidden', 'false');
+  infoBtnEl.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('desc-modal-open');
+}
+function closeInfoModal(){
+  if (!infoModalEl.classList.contains('open')) return;
+  infoModalEl.classList.remove('open');
+  infoModalBackdrop.classList.remove('open');
+  infoModalEl.setAttribute('aria-hidden', 'true');
+  infoBtnEl.setAttribute('aria-expanded', 'false');
+  // Only hand selection back if the description modal isn't also up.
+  if (!descModal.classList.contains('open')) document.body.classList.remove('desc-modal-open');
+}
+infoBtnEl.addEventListener('click', openInfoModal);
+el('infoModalCloseBtn').addEventListener('click', closeInfoModal);
+infoModalBackdrop.addEventListener('click', closeInfoModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoModalEl.classList.contains('open')) closeInfoModal();
+});
+
 // One delegated handler for the tab list, so each tab added later is just
 // another .nav-item with its own data-tab - no extra listener to wire up.
 el('sidebarNav').addEventListener('click', (e) => {
@@ -6541,10 +6518,11 @@ async function silentlyRefreshCache(previousRowsByArtist){
 
 async function reloadData(){
   const btn = el('reloadBtn');
+  const label = btn.querySelector('.nav-label');
   btn.disabled = true;
   btn.classList.add('spinning');
-  const originalLabel = btn.textContent;
-  btn.textContent = '⟳ Reloading…';
+  const originalLabel = label.textContent;
+  label.textContent = 'Reloading…';
   try {
     await loadAllArtists();
     renderAll();
@@ -6554,7 +6532,7 @@ async function reloadData(){
   } finally {
     btn.disabled = false;
     btn.classList.remove('spinning');
-    btn.textContent = originalLabel;
+    label.textContent = originalLabel;
   }
 }
 el('reloadBtn').addEventListener('click', reloadData);
