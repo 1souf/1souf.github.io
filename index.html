@@ -453,6 +453,47 @@
      every album cover, so the tab reads as a wall of covers. */
   .artists-grid .home-artist-art{border-radius:7px;}
 
+  /* ---------- Best Of / Special / Worst Of ----------
+     One flat list of every marked track on the sheet, in the same .manifest
+     table an album page uses. The one difference is the first column: an album
+     already knows where its songs come from, this list doesn't, so the # is
+     replaced by the cover of the album the song lives on - and that cover is
+     the way back to it. */
+  .collection-page{padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+  body:not(.has-player) .collection-page{padding-bottom:var(--player-gap);}
+  .collection-head{display:flex; align-items:baseline; gap:12px; margin-bottom:12px;}
+  .collection-title{
+    margin:0; font-family:var(--display); font-size:1.6rem; font-weight:700;
+    letter-spacing:.01em; line-height:1.1; color:var(--text);
+  }
+  .collection-count{
+    font-family:var(--mono); font-size:.7rem; font-weight:600; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--text-dim);
+  }
+  .collection-empty{padding:34px 0 8px; font-family:var(--mono); font-size:.82rem; color:var(--text-dim);}
+  /* A cover is taller than the # line box it replaces, so the rows give back
+     some of their padding to stay close to an album's row height. */
+  .collection-manifest td{padding:8px 10px;}
+  .cover-cell{width:56px;}
+  /* The header icon centres over the 36px cover plate rather than over the
+     56px column: the column's padding matches the cells', so a 36px box is
+     exactly the track the covers sit in. */
+  .cover-head-icon{display:flex; justify-content:center; width:36px;}
+  .row-cover{
+    display:block; width:36px; height:36px; padding:0; border:0;
+    border-radius:5px; background:var(--bg-elevated); overflow:hidden;
+    cursor:pointer; transition:filter .15s ease;
+  }
+  .row-cover img{width:100%; height:100%; object-fit:cover; display:block;}
+  .row-cover:hover{filter:brightness(1.3);}
+  .row-cover-fallback{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:.4rem; letter-spacing:.02em; color:var(--text-dim);
+  }
+  /* Which album the song is from - the thing a row in this list can't say any
+     other way, since the cover is the only hint and it's 36px wide. */
+  .title-cell .t-features .t-from-album{color:var(--text-dim); opacity:.9;}
+
   /* ---------- one artist's page ----------
      Same paper-and-stamp furniture as an album page: a portrait where the
      album cover sits, the name where the album title sits, and the counts
@@ -1565,6 +1606,8 @@
     .home-row-scroller{gap:14px;}
     .artists-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .artists-page{padding-bottom:var(--player-gap);}
+    .collection-page{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    body:not(.has-player) .collection-page{padding-bottom:var(--player-gap);}
     /* The drawer layout gets the full window width back, so the column count
        is free again - but still capped at six. */
     .artists-grid{grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:24px 14px;}
@@ -1768,6 +1811,21 @@
       <button class="nav-item" type="button" data-tab="artists">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         <span class="nav-label">Artists</span>
+      </button>
+      <!-- The three marked-track tabs. A song lands in one of them purely by
+           the emoji in front of its Name cell on the sheet - the same ⭐ / ✨
+           the album sort ignores - so there's nothing else to keep in sync. -->
+      <button class="nav-item" type="button" data-tab="best" title="Every track marked with a star">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        <span class="nav-label">Best Of</span>
+      </button>
+      <button class="nav-item" type="button" data-tab="special" title="Every track marked with a sparkle">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><g transform="translate(12 12) scale(0.08) translate(-128 -128)"><path d="M199.77344,125.2334,149.3457,106.6543,130.7666,56.22656a19.9996,19.9996,0,0,0-37.5332,0L74.6543,106.6543,24.22656,125.2334a19.9996,19.9996,0,0,0,0,37.5332L74.6543,181.3457l18.5791,50.42774a19.9996,19.9996,0,0,0,37.5332,0l18.5791-50.42774,50.42774-18.5791a19.9996,19.9996,0,0,0,0-37.5332Zm-60.45606,34.22949a19.97179,19.97179,0,0,0-11.85449,11.85449l.001-.001L112,213.28906,96.53711,171.31738a19.96863,19.96863,0,0,0-11.85352-11.85351L42.71094,144l41.97168-15.46289a19.96863,19.96863,0,0,0,11.85351-11.85352L112,74.71094l15.46289,41.97168a19.96863,19.96863,0,0,0,11.85352,11.85351L181.28906,144ZM140,40a12.0006,12.0006,0,0,1,12-12h12V16a12,12,0,0,1,24,0V28h12a12,12,0,0,1,0,24H188V64a12,12,0,0,1-24,0V52H152A12.0006,12.0006,0,0,1,140,40ZM252,88a12.0006,12.0006,0,0,1-12,12h-4v4a12,12,0,0,1-24,0v-4h-4a12,12,0,0,1,0-24h4V72a12,12,0,0,1,24,0v4h4A12.0006,12.0006,0,0,1,252,88Z"></path></g></svg>
+        <span class="nav-label">Special</span>
+      </button>
+      <button class="nav-item" type="button" data-tab="worst" title="Every track marked with a bin">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6M18 6V16.2C18 17.8802 18 18.7202 17.673 19.362C17.3854 19.9265 16.9265 20.3854 16.362 20.673C15.7202 21 14.8802 21 13.2 21H10.8C9.11984 21 8.27976 21 7.63803 20.673C7.07354 20.3854 6.6146 19.9265 6.32698 19.362C6 18.7202 6 17.8802 6 16.2V6M14 10V17M10 10V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span class="nav-label">Worst Of</span>
       </button>
     </nav>
     <!-- Foot of the panel, in the same row style as the tabs above. -->
@@ -2479,6 +2537,34 @@ function plainSongName(name){
   return stripLeadingEmoji(raw).trim() || raw;
 }
 
+/* ---------------- the three marked-track tabs ----------------
+
+   The same leading emoji does a second job here: a ⭐ files the song under Best
+   Of, a ✨ under Special, a 🗑 under Worst Of. There is no second list to keep
+   on the sheet - marking a track is still just typing an emoji into its Name
+   cell, and it lands in the right tab on the next load.
+
+   The tab's own id doubles as the value songMarker() returns, so a tab and its
+   marker can't drift apart. */
+const COLLECTION_TABS = [
+  { id: 'best',    hash: 'best-of',  label: 'Best Of',  marker: 'best',    emoji: '\u2B50' },
+  { id: 'special', hash: 'special',  label: 'Special',  marker: 'special', emoji: '\u2728' },
+  { id: 'worst',   hash: 'worst-of', label: 'Worst Of', marker: 'worst',   emoji: '\u{1F5D1}\uFE0F' }
+];
+
+// Which tab a name belongs in, read off the emoji it starts with. Anything
+// else - no emoji, or one that isn't one of these three - belongs in none.
+function songMarker(name){
+  const lead = String(name == null ? "" : name).match(LEADING_EMOJI);
+  if (!lead) return null;
+  const run = lead[0];
+  if (run.includes('\u2B50')) return 'best';
+  if (run.includes('\u2728')) return 'special';
+  // 🗑 and 🚮, with or without the variation selector a keyboard may add.
+  if (/[\u{1F5D1}\u{1F6AE}]/u.test(run)) return 'worst';
+  return null;
+}
+
 // The second artist named in an album header's Feature(s) cell (see
 // parseArtistCell()), looked up by names rather than by object - the same
 // reason currentAlbumName/currentAlbumSection are stored as names: a
@@ -3159,6 +3245,12 @@ function parseHashParams(){
       const artist = decodeHashPart(parts[0]);
       if (!artist) return null;
       if (artist.trim().toLowerCase() === ARTISTS_TAB_HASH) return { kind: 'tab', tab: 'artists' };
+      // "#best-of" arrives here already decoded, dashes and all: decodeHashPart
+      // turns every "-" back into a space, so it reads "best of". Compared
+      // through the same transform rather than against the raw hash.
+      const asked = artist.trim().toLowerCase();
+      const collection = COLLECTION_TABS.find(t => t.hash.replace(/-/g, ' ') === asked);
+      if (collection) return { kind: 'tab', tab: collection.id };
       return { kind: 'artist', artist };
     }
     // Two or more parts name an album: artist, an optional section, album.
@@ -3303,7 +3395,7 @@ window.addEventListener('hashchange', () => {
   // where the back button lands, since our own navigation replaces the entry
   // instead of stacking a new one. Home is the page that belongs there.
   if (!hashParams) { showHome(); return; }
-  if (hashParams.kind === 'tab') { showArtists(); return; }
+  if (hashParams.kind === 'tab') { showTab(hashParams.tab); return; }
   if (hashParams.kind === 'artist') {
     const artist = findArtistByName(hashParams.artist);
     if (artist && artistAlbumCount(artist.name)) showArtist(artist.name);
@@ -3325,6 +3417,16 @@ let activeTabName = null;
 // A cold link straight to an artist has no tab to remember and falls back to
 // Artists, which is where that page sits in the tree.
 let crumbRootTab = 'artists';
+
+// The tabs the trail can hang off. Each one is the way back to its own page
+// when it isn't the page you're on (see renderCrumbs).
+const CRUMB_ROOTS = {
+  home:    { label: 'Home',     go: showHome,                  icon: 'home' },
+  artists: { label: 'Artists',  go: showArtists,               icon: 'artists' },
+  best:    { label: 'Best Of',  go: () => showCollection('best'),    icon: 'best' },
+  special: { label: 'Special',  go: () => showCollection('special'), icon: 'special' },
+  worst:   { label: 'Worst Of', go: () => showCollection('worst'),   icon: 'worst' }
+};
 
 function setActiveTab(tab){
   activeTabName = tab || null;
@@ -3353,7 +3455,15 @@ const CRUMB_GLYPHS = {
   artists: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>'
       + '<circle cx="9" cy="7" r="4"></circle>'
       + '<path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>'
-      + '<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>'
+      + '<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
+  best: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>',
+  // The sparkle is a solid glyph on its own 256 grid, so it's scaled into the
+  // 24 box and filled rather than stroked - hence the object form.
+  special: {
+    filled: true,
+    body: '<g transform="translate(12 12) scale(0.08) translate(-128 -128)"><path d="M199.77344,125.2334,149.3457,106.6543,130.7666,56.22656a19.9996,19.9996,0,0,0-37.5332,0L74.6543,106.6543,24.22656,125.2334a19.9996,19.9996,0,0,0,0,37.5332L74.6543,181.3457l18.5791,50.42774a19.9996,19.9996,0,0,0,37.5332,0l18.5791-50.42774,50.42774-18.5791a19.9996,19.9996,0,0,0,0-37.5332Zm-60.45606,34.22949a19.97179,19.97179,0,0,0-11.85449,11.85449l.001-.001L112,213.28906,96.53711,171.31738a19.96863,19.96863,0,0,0-11.85352-11.85351L42.71094,144l41.97168-15.46289a19.96863,19.96863,0,0,0,11.85351-11.85352L112,74.71094l15.46289,41.97168a19.96863,19.96863,0,0,0,11.85352,11.85351L181.28906,144ZM140,40a12.0006,12.0006,0,0,1,12-12h12V16a12,12,0,0,1,24,0V28h12a12,12,0,0,1,0,24H188V64a12,12,0,0,1-24,0V52H152A12.0006,12.0006,0,0,1,140,40ZM252,88a12.0006,12.0006,0,0,1-12,12h-4v4a12,12,0,0,1-24,0v-4h-4a12,12,0,0,1,0-24h4V72a12,12,0,0,1,24,0v4h4A12.0006,12.0006,0,0,1,252,88Z"></path></g>'
+  },
+  worst: '<path d="M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6M18 6V16.2C18 17.8802 18 18.7202 17.673 19.362C17.3854 19.9265 16.9265 20.3854 16.362 20.673C15.7202 21 14.8802 21 13.2 21H10.8C9.11984 21 8.27976 21 7.63803 20.673C7.07354 20.3854 6.6146 19.9265 6.32698 19.362C6 18.7202 6 17.8802 6 16.2V6M14 10V17M10 10V17"></path>'
 };
 
 // Static markup only - the label itself always goes in as textContent.
@@ -3361,9 +3471,14 @@ function crumbIcon(name){
   const wrap = document.createElement('span');
   wrap.className = 'crumb-icon';
   wrap.setAttribute('aria-hidden', 'true');
-  wrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
-    + ' stroke-linecap="round" stroke-linejoin="round" focusable="false">'
-    + (CRUMB_GLYPHS[name] || '') + '</svg>';
+  const glyph = CRUMB_GLYPHS[name];
+  const filled = !!glyph && typeof glyph === 'object' && glyph.filled;
+  const body = typeof glyph === 'string' ? glyph : (glyph ? glyph.body : '');
+  wrap.innerHTML = '<svg viewBox="0 0 24 24" '
+    + (filled
+        ? 'fill="currentColor" focusable="false">'
+        : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">')
+    + body + '</svg>';
   return wrap;
 }
 
@@ -3371,9 +3486,9 @@ function renderCrumbs(){
   const nav = el('crumbs');
   if (!nav) return;
 
-  const root = crumbRootTab === 'home'
-    ? { label: 'Home', go: showHome, icon: 'home' }
-    : { label: 'Artists', go: showArtists, icon: 'artists' };
+  // Whichever tab the trail hangs off, in one table - a collection tab is a
+  // root in exactly the same way Home and Artists are.
+  const root = CRUMB_ROOTS[crumbRootTab] || CRUMB_ROOTS.artists;
   const artistName = selectedArtistPage || selectedArtistName;
 
   const trail = [];
@@ -3481,6 +3596,245 @@ function showArtists(){
   const mainEl = document.querySelector('.main');
   if (mainEl) mainEl.scrollTop = 0;
   if (isDrawerLayout()) closeSidebar();
+}
+
+/* ---------- Best Of / Special / Worst Of ---------- */
+
+// Everything marked for one tab, in the order it should be read: by song name,
+// with the artist breaking ties. Cross-listed copies collapse onto the song
+// they came from - a track filed on three albums is one song, and the row
+// should show the album it actually lives on, which is where the star was
+// typed. The native row wins over any copy of itself; a copy that is the only
+// marked occurrence (its own name was overridden to carry the emoji) is kept.
+function collectionEntries(marker){
+  const byOrigin = new Map();
+  ARTISTS.forEach(a => {
+    (DATA[a.name] || []).forEach(album => {
+      if (album.isDivider) return;
+      album.songs.forEach((song, idx) => {
+        if (songMarker(song.name) !== marker) return;
+        const originArtist = (song.crossListed && song.fromArtist) || a.name;
+        const originAlbum = (song.crossListed && song.fromAlbum) || album.name;
+        const key = `${originArtist}||${originAlbum}||${stripLeadingEmoji(song.name)}`.toLowerCase();
+        const prev = byOrigin.get(key);
+        if (!prev || (prev.song.crossListed && !song.crossListed)) {
+          byOrigin.set(key, { song, idx, album, artistName: a.name });
+        }
+      });
+    });
+  });
+  return Array.from(byOrigin.values()).sort((x, y) =>
+    stripLeadingEmoji(x.song.name).localeCompare(stripLeadingEmoji(y.song.name), undefined, { sensitivity: 'base' })
+    || x.artistName.localeCompare(y.artistName));
+}
+
+// Which collection tab, if any, the current playback was started from.
+//
+// A tab is a playlist in its own right: its rows are the order the listener
+// is reading, drawn from a dozen different albums. So when a track started
+// there finishes, the next track is the next *row*, not the next track of the
+// album that row happens to be filed under. Holding { tabId, entries, i } -
+// i being the entry index, not the album's track index - is all stepCollection()
+// needs to walk it, and it stays null for every other way of starting playback
+// so album pages, cards and search results keep advancing inside their album.
+let collectionPlayback = null;
+
+function renderCollection(tabId){
+  const tab = COLLECTION_TABS.find(t => t.id === tabId) || COLLECTION_TABS[0];
+  const entries = collectionEntries(tab.marker);
+
+  const rowsHtml = entries.map((entry, i) => {
+    const { song, album, artistName } = entry;
+    const coverUrl = (album.cover || "").trim();
+    // Same cover test and inline fallback as an album page's rows.
+    const coverHtml = /^https?:\/\//i.test(coverUrl)
+      ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.outerHTML='<div class=&quot;row-cover-fallback&quot;>NO COVER</div>'">`
+      : `<div class="row-cover-fallback">NO COVER</div>`;
+
+    // This list draws from every album on the sheet, so the artist is the one
+    // thing a reader can never infer from the row - it prints on all of them,
+    // not only the ones that happen to have features.
+    const rowArtist = songArtistName(song, artistName);
+    const extraArtists = song.features
+      ? coArtistNames(album.coArtist).filter(n => n.toLowerCase() !== rowArtist.trim().toLowerCase()
+          && !song.features.toLowerCase().includes(n.toLowerCase()))
+      : [];
+    const creditNames = [rowArtist, ...extraArtists].join(", ");
+    const artistLine = song.features
+      ? `${creditLinksHtml(creditNames, 't-credit')}, ${creditLinksHtml(song.features, 't-credit')}`
+      : creditLinksHtml(creditNames, 't-credit');
+    const ytMark = song.ytLink
+      ? `<a class="t-yt" href="${esc(song.ytLink)}" target="_blank" rel="noopener" title="Watch on YouTube"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path fill="currentColor" d="M0 4.75C0 3.784.784 3 1.75 3h20.5c.966 0 1.75.784 1.75 1.75v14.5A1.75 1.75 0 0 1 22.25 21H1.75A1.75 1.75 0 0 1 0 19.25Zm1.75-.25a.25.25 0 0 0-.25.25v14.5c0 .138.112.25.25.25h20.5a.25.25 0 0 0 .25-.25V4.75a.25.25 0 0 0-.25-.25Z"/><path fill="currentColor" d="M9 15.584V8.416a.5.5 0 0 1 .77-.42l5.576 3.583a.5.5 0 0 1 0 .842L9.77 16.005a.5.5 0 0 1-.77-.42Z"/></svg>YouTube Video</a>`
+      : "";
+    // The album closes the credit line after an em dash, so the whole thing
+    // reads as one attribution - "Artist — Album" - instead of three facts
+    // strung together with bullets. The cover is 36px, far too small to say
+    // which album a row came from on its own.
+    const fromAlbum = `<span class="t-from-album" title="From &quot;${esc(album.name)}&quot;">— ${esc(album.name)}</span>`;
+    const creditHead = [ytMark, artistLine].filter(Boolean).join(" • ");
+    const featuresHtml = `<div class="t-features">${creditHead ? creditHead + " " : ""}${fromAlbum}</div>`;
+
+    const newTagHtml = isRecentDate(song.releaseDate) ? `<span class="t-new-tag" title="File date within the last week">New</span>` : "";
+    const linkMenuItems = [
+      song.ytLink ? `<a class="link-menu-item" href="${esc(song.ytLink)}" target="_blank" rel="noopener">${ICONS.youtube}<span>Watch on YouTube</span></a>` : "",
+      song.discordLink ? `<a class="link-menu-item" href="${esc(song.discordLink)}" target="_blank" rel="noopener">${ICONS.discord}<span>View Discord Message</span></a>` : "",
+      song.playLink ? `<a class="link-menu-item" href="${esc(toDownloadUrl(song.playLink))}" target="_blank" rel="noopener">${ICONS.download}<span>Download</span></a>` : "",
+      song.playLink ? `<button type="button" class="link-menu-item queue-next-item" data-entry="${i}">${ICONS.queueNext}<span>Add to Queue</span></button>` : "",
+    ].filter(Boolean).join("");
+    const linksMenuHtml = linkMenuItems ? `
+      <div class="link-menu-wrap">
+        <button class="link-menu-btn" type="button" title="Links" aria-label="Song links">⋯</button>
+        <div class="link-menu">${linkMenuItems}</div>
+      </div>` : "";
+    const playable = !!song.playLink;
+    const hasManualLength = !!(song.length && song.length.trim());
+    const timeHtml = hasManualLength
+      ? esc(song.length)
+      : (playable ? `<span class="t-loading">…</span>` : "");
+
+    return `
+      <tr data-entry="${i}" class="${playable ? "" : "no-file"}" title="${playable ? "" : "No source file linked yet"}">
+        <td class="cover-cell">
+          <button class="row-cover" type="button" data-entry="${i}" title="Open &quot;${esc(album.name)}&quot;" aria-label="Open ${esc(album.name)}">${coverHtml}</button>
+        </td>
+        <td class="title-cell"><div class="t-name">${esc(song.name)}${newTagHtml}</div>${featuresHtml}</td>
+        <td class="notes-cell">${esc(song.notes)}</td>
+        <td class="credit-cell">${esc(song.credits)}</td>
+        <td class="release-cell">${esc(song.releaseDate)}</td>
+        <td class="time-cell">${timeHtml}</td>
+        <td class="discord-cell">${linksMenuHtml}</td>
+      </tr>`;
+  }).join("");
+
+  el('content').innerHTML = `<div class="collection-page" id="collectionView" data-tab="${tab.id}">
+    <div class="collection-head">
+      <h1 class="collection-title">${esc(tab.label)}</h1>
+      <span class="collection-count">${entries.length} track${entries.length === 1 ? "" : "s"}</span>
+    </div>
+    ${entries.length ? `
+    <table class="manifest collection-manifest">
+      <thead><tr><th class="cover-cell" title="Cover"><span class="cover-head-icon"><svg class="th-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.2639 15.9375L12.5958 14.2834C11.7909 13.4851 11.3884 13.086 10.9266 12.9401C10.5204 12.8118 10.0838 12.8165 9.68048 12.9536C9.22188 13.1095 8.82814 13.5172 8.04068 14.3326L4.04409 18.2801M14.2639 15.9375L14.6053 15.599C15.4112 14.7998 15.8141 14.4002 16.2765 14.2543C16.6831 14.126 17.12 14.1311 17.5236 14.2687C17.9824 14.4251 18.3761 14.8339 19.1634 15.6514L20 16.4934M14.2639 15.9375L18.275 19.9565M18.275 19.9565C17.9176 20 17.4543 20 16.8 20H7.2C6.07989 20 5.51984 20 5.09202 19.782C4.71569 19.5903 4.40973 19.2843 4.21799 18.908C4.12796 18.7313 4.07512 18.5321 4.04409 18.2801M18.275 19.9565C18.5293 19.9256 18.7301 19.8727 18.908 19.782C19.2843 19.5903 19.5903 19.2843 19.782 18.908C20 18.4802 20 17.9201 20 16.8V16.4934M4.04409 18.2801C4 17.9221 4 17.4575 4 16.8V7.2C4 6.0799 4 5.51984 4.21799 5.09202C4.40973 4.71569 4.71569 4.40973 5.09202 4.21799C5.51984 4 6.07989 4 7.2 4H16.8C17.9201 4 18.4802 4 18.908 4.21799C19.2843 4.40973 19.5903 4.71569 19.782 5.09202C20 5.51984 20 6.0799 20 7.2V16.4934M17 8.99989C17 10.1045 16.1046 10.9999 15 10.9999C13.8954 10.9999 13 10.1045 13 8.99989C13 7.89532 13.8954 6.99989 15 6.99989C16.1046 6.99989 17 7.89532 17 8.99989Z"></path></svg></span></th><th>Title</th><th>Notes</th><th>Credits</th><th>File Date</th><th style="text-align:center;" title="Time"><svg class="th-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7V12L14.5 13.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"></path></svg></th><th style="text-align:right;"></th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>` : `
+    <div class="collection-empty">Nothing marked with ${tab.emoji} yet — put it in front of a song's name on the sheet and it shows up here.</div>`}
+  </div>`;
+
+  const tbody = el('content').querySelector('tbody');
+  if (!tbody) return;
+
+  // The # column is a cover here, so a row has no number to print and the
+  // album page's row helpers (which rewrite that cell) are told to stand down
+  // - see the .num-cell guards on setRowPlayingVisual()/resetRowVisual().
+  const startEntry = (entry, tr, pauseIfPlaying) => {
+    if (!entry.song.playLink) { showToast("No source file linked for this track yet."); return; }
+    const isCurrent = currentAlbumSongs === entry.album.songs && currentSongIndex === entry.idx;
+    if (pauseIfPlaying && isCurrent && !audioEl.paused) { audioEl.pause(); return; }
+    const wasPlaying = isCurrent && !audioEl.paused;
+    playSongAt(entry.idx, tr, entry.album.songs, entry.artistName,
+      (entry.album.cover || "").trim(), entry.album);
+    // Armed after the call, not before: playSongAt() clears the context on
+    // every start, so that any other way of pressing play ends it.
+    collectionPlayback = { tabId: tab.id, entries, i: entries.indexOf(entry) };
+    if (wasPlaying) audioEl.currentTime = 0;
+  };
+  const entryOf = (node) => {
+    const holder = node.closest('[data-entry]');
+    return holder ? entries[parseInt(holder.dataset.entry, 10)] : null;
+  };
+
+  tbody.addEventListener('click', (e) => {
+    // The cover is the album link, and the only control in this cell.
+    const coverBtn = e.target.closest('.row-cover');
+    if (coverBtn) {
+      const entry = entryOf(coverBtn);
+      if (!entry) return;
+      const match = findAlbumByNames(entry.artistName, entry.album.name, entry.album.section);
+      if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+      selectAlbum(match.artistName, match.album);
+      return;
+    }
+    const queueBtn = e.target.closest('.queue-next-item');
+    if (queueBtn) {
+      const entry = entryOf(queueBtn);
+      if (entry) queueSongNext(entry.artistName, entry.album, entry.idx);
+      return;
+    }
+    // Touch has no double-click, so a single tap on the row plays - the same
+    // rule the album table uses, minus the cells that are their own controls.
+    if (!matchMedia('(hover:none)').matches) return;
+    if (e.target.closest('.link-menu-wrap, .t-credit, .row-cover, a')) return;
+    const row = e.target.closest('tr[data-entry]');
+    const entry = row && entryOf(row);
+    if (entry) startEntry(entry, row, true);
+  });
+
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); });
+    tr.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.link-menu-wrap, .row-cover, .t-credit, a')) return;
+      const entry = entries[parseInt(tr.dataset.entry, 10)];
+      if (entry) startEntry(entry, tr, false);
+    });
+  });
+
+  // Durations the sheet doesn't carry, probed exactly as an album page does it
+  // - the cache means a second visit costs nothing.
+  entries.forEach((entry, i) => {
+    const song = entry.song;
+    if (!song.playLink || (song.length && song.length.trim())) return;
+    probeDuration(song, (secs) => {
+      song.length = formatSeconds(secs);
+      const cell = tbody.querySelector(`tr[data-entry="${i}"] .time-cell`);
+      if (cell) cell.textContent = song.length;
+    });
+  });
+
+  // Coming back to this tab while one of its tracks is playing re-marks the
+  // row: playSongAt() only paints the row it was handed, and that element is
+  // long gone by the time the tab is rendered again.
+  if (currentAlbumSongs && currentSongIndex >= 0) {
+    entries.forEach((entry, i) => {
+      if (entry.album.songs !== currentAlbumSongs || entry.idx !== currentSongIndex) return;
+      const tr = tbody.querySelector(`tr[data-entry="${i}"]`);
+      if (!tr) return;
+      currentRowEl = tr;
+      tr.classList.add('playing');
+    });
+  }
+
+  // Every render rebuilds `entries`, so a tab that is still the running
+  // order has to be pointed at the new list - and let go of it if the track
+  // it was following is no longer in this tab (the sheet changed underneath).
+  if (collectionPlayback && collectionPlayback.tabId === tab.id) {
+    const at = entries.findIndex(e => e.album.songs === currentAlbumSongs && e.idx === currentSongIndex);
+    collectionPlayback = at === -1 ? null : { tabId: tab.id, entries, i: at };
+  }
+}
+
+// One tab, by id. Keeps the hash so the tab can be linked to and a reload
+// comes back to it - Home is the only page that lives without one.
+function showCollection(tabId){
+  const tab = COLLECTION_TABS.find(t => t.id === tabId) || COLLECTION_TABS[0];
+  selectedArtistPage = null;
+  selectedArtistName = null;
+  selectedAlbumName = null;
+  selectedAlbumSection = null;
+  displayedAlbumSongs = null;
+  setActiveTab(tab.id);
+  renderCollection(tab.id);
+  const newHash = '#' + tab.hash;
+  if (location.hash !== newHash) history.replaceState(null, '', newHash);
+  const mainEl = document.querySelector('.main');
+  if (mainEl) mainEl.scrollTop = 0;
+  if (isDrawerLayout()) closeSidebar();
+}
+
+// Every data-tab in the sidebar, in one place: Home and Artists have pages of
+// their own, the three collections share one renderer.
+function showTab(tabId){
+  if (!tabId || tabId === 'home') { showHome(); return; }
+  if (tabId === 'artists') { showArtists(); return; }
+  if (COLLECTION_TABS.some(t => t.id === tabId)) showCollection(tabId);
 }
 
 /* ---------- home ---------- */
@@ -4122,7 +4476,7 @@ function renderAll(){
   const hashParams = parseHashParams();
   if (hashParams) {
     if (hashParams.kind === 'tab') {
-      showArtists();
+      showTab(hashParams.tab);
       return;
     }
     if (hashParams.kind === 'artist') {
@@ -4176,6 +4530,7 @@ function refreshInPlace(){
   // the sheet, so it has to be redrawn too - otherwise a background refresh
   // leaves it showing artists that were renamed or emptied.
   if (activeTabName === 'artists') { renderArtists(); return; }
+  if (COLLECTION_TABS.some(t => t.id === activeTabName)) { renderCollection(activeTabName); return; }
 
   if (!selectedArtistName || !selectedAlbumName) return;
 
@@ -5015,13 +5370,17 @@ window.addEventListener('resize', () => { if (el('player').style.display !== 'no
 function resetRowVisual(rowEl){
   if (!rowEl) return;
   rowEl.classList.remove('playing');
+  // A row on one of the collection tabs has a cover where the # was, so there
+  // is no number to put back (and no data-idx to look one up with).
   const cell = rowEl.querySelector('.num-cell');
+  if (!cell) return;
   const num = currentAlbumSongs[parseInt(rowEl.dataset.idx,10)].trackNum;
   cell.innerHTML = `<button type="button" class="row-play" aria-label="Play"><span class="n">${num}</span><span class="p">▶</span></button>`;
 }
 
 function setRowPlayingVisual(rowEl, playing){
   const cell = rowEl.querySelector('.num-cell');
+  if (!cell) return;   // collection rows: the cover stays put, only the tint changes
   if (playing) {
     // Equaliser normally; the pause glyph takes over on row hover via CSS.
     cell.innerHTML = `<button type="button" class="row-play" aria-label="Pause"><span class="eq"><span></span><span></span><span></span></span><svg class="row-pause" viewBox="0 0 10.1 11.25" aria-hidden="true"><rect x="0" y="0" width="3.4" height="11.25" rx="0.9"/><rect x="6.7" y="0" width="3.4" height="11.25" rx="0.9"/></svg></button>`;
@@ -5037,6 +5396,11 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   // continuing whatever's already playing (prev/next/shuffle/repeat) omit
   // them, so they fall back to whatever album is actually loaded right
   // now — never to whatever the user happens to be browsing.
+  // Every start ends whatever tab-playlist behaviour was in force. The two
+  // callers that mean to keep it (renderCollection's startEntry and
+  // stepCollection) re-arm it immediately after this call returns.
+  collectionPlayback = null;
+
   const explicitSongs = songs !== undefined;
   if (songs === undefined) songs = currentAlbumSongs;
   if (artistName === undefined) artistName = currentArtistName;
@@ -5449,6 +5813,9 @@ function saveResumeContextIfNeeded(){
     albumCoverUrl: currentAlbumCover,
     albumName: currentAlbumName,
     albumSection: currentAlbumSection,
+    // Queued tracks play from their own albums; once the queue drains, the
+    // tab that was playing before it takes the running order back.
+    collectionPlayback,
   };
 }
 
@@ -5466,6 +5833,7 @@ function restoreResumeContext(){
   currentAlbumCover = ctx.albumCoverUrl;
   currentAlbumName = ctx.albumName;
   currentAlbumSection = ctx.albumSection;
+  collectionPlayback = ctx.collectionPlayback;
 }
 
 let isShuffle = false;
@@ -5511,6 +5879,11 @@ audioEl.addEventListener('ended', () => {
     return;
   }
 
+  // A track that started in a collection tab hands over to the next row of
+  // that tab, not to the next track of its album. Falls through to the album
+  // order only if the tab has no other playable row.
+  if (stepCollection(1)) return;
+
   const playable = playableIndices();
   if (playable.length === 0) return;
 
@@ -5547,6 +5920,46 @@ el('prevBtn').addEventListener('click', () => {
   stepTrack(-1);
 });
 el('nextBtn').addEventListener('click', () => stepTrack(1));
+// Next/previous row inside the tab playback came from, wrapping at both ends.
+// Returns false when there is no tab context or nothing else in it has a file,
+// which lets the caller fall back to the album's own order.
+function stepCollection(dir){
+  if (!collectionPlayback) return false;
+  const { tabId, entries, i } = collectionPlayback;
+
+  const playable = [];
+  entries.forEach((e, j) => { if (e.song.playLink) playable.push(j); });
+  if (!playable.length) return false;
+
+  let j;
+  if (isShuffle && dir === 1) {
+    // Shuffle still only touches the "next" direction, same rule as an album.
+    const others = playable.filter(n => n !== i);
+    j = others.length ? others[Math.floor(Math.random() * others.length)] : i;
+  } else {
+    const total = entries.length;
+    for (let n = 1; n <= total; n++) {
+      const cand = ((i + dir * n) % total + total) % total;
+      if (entries[cand].song.playLink) { j = cand; break; }
+    }
+  }
+  if (j === undefined) return false;
+
+  const entry = entries[j];
+  // The row element only exists while this exact tab is the one on screen - a
+  // row in a *different* tab carries the same data-entry numbers, so it must
+  // never be painted. Navigating away just means nothing is highlighted.
+  const view = el('collectionView');
+  const tr = (view && view.dataset.tab === tabId)
+    ? view.querySelector(`tr[data-entry="${j}"]`)
+    : null;
+
+  playSongAt(entry.idx, tr, entry.album.songs, entry.artistName,
+    (entry.album.cover || "").trim(), entry.album);
+  collectionPlayback = { tabId, entries, i: j };
+  return true;
+}
+
 function stepTrack(dir){
   if (!currentAlbumSongs || currentSongIndex < 0) return;
 
@@ -5566,6 +5979,10 @@ function stepTrack(dir){
   // took over, same as when that track finishes on its own, so this skip
   // advances within the original album instead of the queued one.
   if (dir === 1 && resumeContext) restoreResumeContext();
+
+  // Skipping inside a collection tab walks the tab, the same order a track
+  // finishing on its own takes.
+  if (stepCollection(dir)) return;
 
   const playable = playableIndices();
   if (playable.length === 0) return;
@@ -7113,8 +7530,7 @@ document.addEventListener('keydown', (e) => {
 el('sidebarNav').addEventListener('click', (e) => {
   const item = e.target.closest('.nav-item');
   if (!item || !item.dataset.tab) return;
-  if (item.dataset.tab === 'home') showHome();
-  else if (item.dataset.tab === 'artists') showArtists();
+  showTab(item.dataset.tab);
 });
 
 /* ---------------- boot ---------------- */
