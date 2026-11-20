@@ -232,7 +232,11 @@
     flex:1 1 auto; color:var(--text); font-weight:600;
   }
   .crumb-text{min-width:0; overflow:hidden; text-overflow:ellipsis;}
-  .crumb-sep{flex:none; color:var(--stamp-dim); font-size:.9em;}
+  /* Fixed grey, not --stamp-dim: the separator is punctuation between the
+     links, not part of the themed stamp, and letting the album colour reach
+     it turned the chevrons red on a red album. Same reasoning as
+     .commit-sha. */
+  .crumb-sep{flex:none; color:#555555; font-size:.9em;}
 
   .search-bar{
     position:relative;
