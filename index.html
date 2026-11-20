@@ -390,19 +390,16 @@
     font-size:2.2rem; font-weight:700; color:rgba(255,255,255,.85); text-transform:uppercase;
     user-select:none;
   }
-  /* The player bar's own play glyph, parked on the cover. On the Home shelves
-     it is a control of its own - clicking it starts playback without opening
-     the card - so it takes clicks there. Everywhere else (the Artists tab, an
-     artist page's album cards) the card stays the only target and the badge
-     is just the affordance, hence pointer-events:none. */
+  /* The player bar's own play glyph, parked on the cover. It is a control of
+     its own: clicking it starts playback without opening the card, and on the
+     card that's playing right now it turns into a pause button. */
   .home-card-play{
     position:absolute; right:7px; bottom:7px;
     width:38px; height:38px; color:#fff;
     filter:drop-shadow(0 1px 4px rgba(0,0,0,.7));
-    opacity:0; pointer-events:none;
+    opacity:0; pointer-events:auto; cursor:pointer;
     transition:opacity .15s ease, transform .15s ease;
   }
-  .home-row .home-card-play{pointer-events:auto; cursor:pointer;}
   .home-card-play svg{width:100%; height:100%; display:block;}
   .home-card:hover .home-card-play,
   .home-card:focus-visible .home-card-play{opacity:1; transform:scale(1.06);}
@@ -411,10 +408,6 @@
   @media (hover:none){
     .home-card-play{opacity:.9;}
   }
-  /* Artist covers keep the badge in the same corner as the albums'. A circle
-     has nothing there, so it hangs a little outside the picture - which reads
-     as a badge pinned to the portrait rather than floating in the middle of
-     it. */
   .home-card-name{
     margin-top:10px; font-size:.86rem; font-weight:600; line-height:1.3; color:var(--text);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -2109,6 +2102,13 @@ function esc(s){
 // message / YouTube / download) plus the player bar's transport and
 // utility controls. Generic shapes on purpose (a chat bubble, a play
 // circle, a download tray, etc.) rather than any brand's actual logo.
+
+// The pause bars, as one path: two 3.2-wide stadiums 8 units tall, centred on
+// the 24 grid. It lives out here because it's drawn twice - as holes knocked
+// out of the player bar's disc (ICONS.pause) and as solid black bars on a card
+// badge (CARD_GLYPH.pause) - and the two have to read as the same glyph.
+const PAUSE_BARS = 'M7.9 9.6A1.6 1.6 0 0 1 11.1 9.6L11.1 14.4A1.6 1.6 0 0 1 7.9 14.4Z M12.9 9.6A1.6 1.6 0 0 1 16.1 9.6L16.1 14.4A1.6 1.6 0 0 1 12.9 14.4Z';
+
 const ICONS = {
   discord: `<svg viewBox="0 0 32 32" fill="currentColor"><path d="M20.992 20.163c-1.511-0.099-2.699-1.349-2.699-2.877 0-0.051 0.001-0.102 0.004-0.153l-0 0.007c-0.003-0.048-0.005-0.104-0.005-0.161 0-1.525 1.19-2.771 2.692-2.862l0.008-0c1.509 0.082 2.701 1.325 2.701 2.847 0 0.062-0.002 0.123-0.006 0.184l0-0.008c0.003 0.050 0.005 0.109 0.005 0.168 0 1.523-1.191 2.768-2.693 2.854l-0.008 0zM11.026 20.163c-1.511-0.099-2.699-1.349-2.699-2.877 0-0.051 0.001-0.102 0.004-0.153l-0 0.007c-0.003-0.048-0.005-0.104-0.005-0.161 0-1.525 1.19-2.771 2.692-2.862l0.008-0c1.509 0.082 2.701 1.325 2.701 2.847 0 0.062-0.002 0.123-0.006 0.184l0-0.008c0.003 0.048 0.005 0.104 0.005 0.161 0 1.525-1.19 2.771-2.692 2.862l-0.008 0zM26.393 6.465c-1.763-0.832-3.811-1.49-5.955-1.871l-0.149-0.022c-0.005-0.001-0.011-0.002-0.017-0.002-0.035 0-0.065 0.019-0.081 0.047l-0 0c-0.234 0.411-0.488 0.924-0.717 1.45l-0.043 0.111c-1.030-0.165-2.218-0.259-3.428-0.259s-2.398 0.094-3.557 0.275l0.129-0.017c-0.27-0.63-0.528-1.142-0.813-1.638l0.041 0.077c-0.017-0.029-0.048-0.047-0.083-0.047-0.005 0-0.011 0-0.016 0.001l0.001-0c-2.293 0.403-4.342 1.060-6.256 1.957l0.151-0.064c-0.017 0.007-0.031 0.019-0.040 0.034l-0 0c-2.854 4.041-4.562 9.069-4.562 14.496 0 0.907 0.048 1.802 0.141 2.684l-0.009-0.11c0.003 0.029 0.018 0.053 0.039 0.070l0 0c2.14 1.601 4.628 2.891 7.313 3.738l0.176 0.048c0.008 0.003 0.018 0.004 0.028 0.004 0.032 0 0.060-0.015 0.077-0.038l0-0c0.535-0.72 1.044-1.536 1.485-2.392l0.047-0.1c0.006-0.012 0.010-0.027 0.010-0.043 0-0.041-0.026-0.075-0.062-0.089l-0.001-0c-0.912-0.352-1.683-0.727-2.417-1.157l0.077 0.042c-0.029-0.017-0.048-0.048-0.048-0.083 0-0.031 0.015-0.059 0.038-0.076l0-0c0.157-0.118 0.315-0.24 0.465-0.364 0.016-0.013 0.037-0.021 0.059-0.021 0.014 0 0.027 0.003 0.038 0.008l-0.001-0c2.208 1.061 4.8 1.681 7.536 1.681s5.329-0.62 7.643-1.727l-0.107 0.046c0.012-0.006 0.025-0.009 0.040-0.009 0.022 0 0.043 0.008 0.059 0.021l-0-0c0.15 0.124 0.307 0.248 0.466 0.365 0.023 0.018 0.038 0.046 0.038 0.077 0 0.035-0.019 0.065-0.046 0.082l-0 0c-0.661 0.395-1.432 0.769-2.235 1.078l-0.105 0.036c-0.036 0.014-0.062 0.049-0.062 0.089 0 0.016 0.004 0.031 0.011 0.044l-0-0.001c0.501 0.96 1.009 1.775 1.571 2.548l-0.040-0.057c0.017 0.024 0.046 0.040 0.077 0.040 0.010 0 0.020-0.002 0.029-0.004l-0.001 0c2.865-0.892 5.358-2.182 7.566-3.832l-0.065 0.047c0.022-0.016 0.036-0.041 0.039-0.069l0-0c0.087-0.784 0.136-1.694 0.136-2.615 0-5.415-1.712-10.43-4.623-14.534l0.052 0.078c-0.008-0.016-0.022-0.029-0.038-0.036l-0-0z"></path></svg>`,
   youtube: `<svg viewBox="0 -3 20 20"><g fill="none" fill-rule="evenodd"><g transform="translate(-300,-7442)" fill="currentColor"><g transform="translate(56,160)"><path d="M251.988432,7291.58588 L251.988432,7285.97425 C253.980638,7286.91168 255.523602,7287.8172 257.348463,7288.79353 C255.843351,7289.62824 253.980638,7290.56468 251.988432,7291.58588 M263.090998,7283.18289 C262.747343,7282.73013 262.161634,7282.37809 261.538073,7282.26141 C259.705243,7281.91336 248.270974,7281.91237 246.439141,7282.26141 C245.939097,7282.35515 245.493839,7282.58153 245.111335,7282.93357 C243.49964,7284.42947 244.004664,7292.45151 244.393145,7293.75096 C244.556505,7294.31342 244.767679,7294.71931 245.033639,7294.98558 C245.376298,7295.33761 245.845463,7295.57995 246.384355,7295.68865 C247.893451,7296.0008 255.668037,7296.17532 261.506198,7295.73552 C262.044094,7295.64178 262.520231,7295.39147 262.895762,7295.02447 C264.385932,7293.53455 264.28433,7285.06174 263.090998,7283.18289"></path></g></g></g></svg>`,
@@ -2135,7 +2135,7 @@ const ICONS = {
   prev: `<svg viewBox="0 0 24 24" fill="none"><path d="M8.09015 14.6474C6.30328 13.4935 6.30328 10.5065 8.09015 9.35258L18.8792 2.38548C20.6158 1.26402 22.75 2.72368 22.75 5.0329V18.9671C22.75 21.2763 20.6158 22.736 18.8792 21.6145L8.09015 14.6474Z" fill="currentColor"></path><path d="M2 5C2 4.58579 2.33579 4.25 2.75 4.25C3.16421 4.25 3.5 4.58579 3.5 5V19C3.5 19.4142 3.16421 19.75 2.75 19.75C2.33579 19.75 2 19.4142 2 19V5Z" fill="currentColor"></path></svg>`,
   next: `<svg viewBox="0 0 24 24" fill="none"><path d="M16.6598 14.6474C18.4467 13.4935 18.4467 10.5065 16.6598 9.35258L5.87083 2.38548C4.13419 1.26402 2 2.72368 2 5.0329V18.9671C2 21.2763 4.13419 22.736 5.87083 21.6145L16.6598 14.6474Z" fill="currentColor"></path><path d="M22.75 5C22.75 4.58579 22.4142 4.25 22 4.25C21.5858 4.25 21.25 4.58579 21.25 5V19C21.25 19.4142 21.5858 19.75 22 19.75C22.4142 19.75 22.75 19.4142 22.75 19V5Z" fill="currentColor"></path></svg>`,
   play: `<svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="currentColor"></path></svg>`,
-  pause: `<svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z M7.9 9.6A1.6 1.6 0 0 1 11.1 9.6L11.1 14.4A1.6 1.6 0 0 1 7.9 14.4Z M12.9 9.6A1.6 1.6 0 0 1 16.1 9.6L16.1 14.4A1.6 1.6 0 0 1 12.9 14.4Z" fill="currentColor"></path></svg>`,
+  pause: `<svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z ${PAUSE_BARS}" fill="currentColor"></path></svg>`,
   volumeOn: `<svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.1657 2.14424C12.8728 2.50021 13 3.27314 13 3.7446V20.2561C13 20.7286 12.8717 21.4998 12.1656 21.8554C11.416 22.2331 10.7175 21.8081 10.3623 21.4891L4.95001 16.6248H3.00001C1.89544 16.6248 1.00001 15.7293 1.00001 14.6248L1 9.43717C1 8.3326 1.89543 7.43717 3 7.43717H4.94661L10.3623 2.51158C10.7163 2.19354 11.4151 1.76635 12.1657 2.14424ZM11 4.63507L6.00618 9.17696C5.82209 9.34439 5.58219 9.43717 5.33334 9.43717H3L3.00001 14.6248H5.33334C5.58015 14.6248 5.81823 14.716 6.00179 14.881L11 19.3731V4.63507Z" fill="currentColor"></path><path d="M16.0368 4.73124C16.1852 4.19927 16.7368 3.88837 17.2688 4.03681C20.6116 4.9696 23 8.22106 23 12C23 15.779 20.6116 19.0304 17.2688 19.9632C16.7368 20.1117 16.1852 19.8007 16.0368 19.2688C15.8884 18.7368 16.1993 18.1852 16.7312 18.0368C19.1391 17.3649 21 14.9567 21 12C21 9.04332 19.1391 6.63512 16.7312 5.96321C16.1993 5.81477 15.8884 5.2632 16.0368 4.73124Z" fill="currentColor"></path><path d="M16.2865 8.04192C15.7573 7.88372 15.2001 8.18443 15.0419 8.71357C14.8837 9.24271 15.1844 9.79992 15.7136 9.95812C16.3702 10.1544 17 10.9209 17 12C17 13.0791 16.3702 13.8456 15.7136 14.0419C15.1844 14.2001 14.8837 14.7573 15.0419 15.2865C15.2001 15.8156 15.7573 16.1163 16.2865 15.9581C17.9301 15.4667 19 13.8076 19 12C19 10.1924 17.9301 8.53333 16.2865 8.04192Z" fill="currentColor"></path></svg>`,
   volumeOff: `<svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M13 3.7446C13 3.27314 12.8728 2.50021 12.1657 2.14424C11.4151 1.76635 10.7163 2.19354 10.3623 2.51158L4.94661 7.43717H3C1.89543 7.43717 1 8.3326 1 9.43717L1.00001 14.6248C1.00001 15.7293 1.89544 16.6248 3.00001 16.6248H4.95001L10.3623 21.4891C10.7175 21.8081 11.416 22.2331 12.1656 21.8554C12.8717 21.4998 13 20.7286 13 20.2561V3.7446ZM6.00618 9.17696L11 4.63507V19.3731L6.00179 14.881C5.81823 14.716 5.58015 14.6248 5.33334 14.6248H3.00001L3 9.43717H5.33334C5.58219 9.43717 5.82209 9.34439 6.00618 9.17696Z" fill="currentColor"></path><path d="M15.2929 8.29289C15.6834 7.90237 16.3166 7.90237 16.7071 8.29289L19 10.5858L21.2929 8.29289C21.6834 7.90237 22.3166 7.90237 22.7071 8.29289C23.0976 8.68342 23.0976 9.31658 22.7071 9.70711L20.4142 12L22.7071 14.2929C23.0976 14.6834 23.0976 15.3166 22.7071 15.7071C22.3166 16.0976 21.6834 16.0976 21.2929 15.7071L19 13.4142L16.7071 15.7071C16.3166 16.0976 15.6834 16.0976 15.2929 15.7071C14.9024 15.3166 14.9024 14.6834 15.2929 14.2929L17.5858 12L15.2929 9.70711C14.9024 9.31658 14.9024 8.68342 15.2929 8.29289Z" fill="currentColor"></path></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
@@ -3526,16 +3526,28 @@ let homeNavSyncs = [];
 const CHEVRON_LEFT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"></path></svg>`;
 const CHEVRON_RIGHT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"></path></svg>`;
 
-// The player bar's play glyph, reused as the badge parked on a card's cover.
-// Drawn as a solid disc plus the triangle as its own black path rather than
-// the bar's knocked-out version: there the arrow is a hole, so it showed
-// whatever cover was behind it. On the Home shelves it is a real control (see
-// the click handler in renderHome) and the title says what it does; where it
-// isn't - the Artists tab, an artist page's album cards - no title is passed
-// and it stays decoration for the card's own click.
+// The badge parked on a card's cover. One disc for both states, so only the
+// glyph inside it changes - the play triangle, or two bars once that card is
+// the thing playing. Drawn as a solid disc plus a black glyph rather than the
+// player bar's knocked-out version: there the arrow is a hole, so it showed
+// whatever cover was behind it. The glyphs themselves are the bar's own - the
+// triangle is the same path, and the pause bars are PAUSE_BARS, the very path
+// the bar knocks out of its disc, so the two states match it exactly. data-tip
+// keeps the "what does this do" line so syncCardPlayBadges() can put it back
+// after a spell as a pause button.
+const CARD_DISC = '<path d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"></path>';
+const CARD_GLYPH = {
+  play: '<path d="M15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="#111111"></path>',
+  pause: `<path d="${PAUSE_BARS}" fill="#111111"></path>`
+};
+
+function cardBadgeSvg(state){
+  return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${CARD_DISC}${CARD_GLYPH[state] || CARD_GLYPH.play}</svg>`;
+}
+
 function playBadge(title){
-  const tip = title ? ` title="${esc(title)}"` : "";
-  return `<span class="home-card-play"${tip} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12Z" fill="currentColor"></path><path d="M15.5963 10.3318C16.8872 11.0694 16.8872 12.9307 15.5963 13.6683L11.154 16.2068C9.9715 16.8825 8.5002 16.0287 8.5002 14.6667L8.5002 9.33339C8.5002 7.97146 9.9715 7.11762 11.154 7.79333L15.5963 10.3318Z" fill="#111111"></path></svg></span>`;
+  const tip = title ? ` data-tip="${esc(title)}" title="${esc(title)}"` : "";
+  return `<span class="home-card-play" data-state="play"${tip} aria-hidden="true">${cardBadgeSvg('play')}</span>`;
 }
 
 function homeAlbumCardHtml(rowKey, idx, artistName, album){
@@ -3581,7 +3593,7 @@ function artistCardHtml(artistName, metaText, rowKey, idx){
   // document.
   return `
     <button class="home-card" type="button"${rowKey ? ` data-row="${rowKey}"` : ""} data-idx="${idx}" title="${esc(artistName)}">
-      <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${playBadge(rowKey ? "Play a random track" : "")}</div>
+      <div class="home-card-art home-artist-art"><div class="home-card-avatar"></div>${playBadge("Play a random track")}</div>
       <div class="home-card-name">${esc(artistName)}</div>
       <div class="home-card-meta">${esc(metaText)}</div>
     </button>`;
@@ -3640,6 +3652,15 @@ function renderHome(){
 
   const homeEl = el('homeView');
 
+  // Each card keeps a reference to what it stands for, so the badge can tell
+  // whether it's the card that's playing without re-resolving the row.
+  homeEl.querySelectorAll('.home-card').forEach(card => {
+    const item = homeRows[card.dataset.row] && homeRows[card.dataset.row][parseInt(card.dataset.idx, 10)];
+    if (!item) return;
+    if (card.dataset.row === 'artists') card._playArtist = item.name;
+    else card._playAlbum = item.album;
+  });
+
   homeEl.querySelectorAll('.home-card-avatar').forEach(avatarEl => {
     const card = avatarEl.closest('.home-card');
     const item = homeRows.artists[parseInt(card.dataset.idx, 10)];
@@ -3662,9 +3683,12 @@ function renderHome(){
     const item = list && list[parseInt(card.dataset.idx, 10)];
     if (!item) return;
     // The play badge is its own control here: it starts a track and stays on
-    // Home. Only the badge takes this path - the rest of the card still
-    // navigates, which is why the badge had to be given pointer-events back.
-    if (e.target.closest('.home-card-play')) { playFromHomeCard(card.dataset.row, item); return; }
+    // Home, or toggles playback when this is already the card that's loaded.
+    // Only the badge takes this path - the rest of the card still navigates.
+    if (e.target.closest('.home-card-play')) {
+      if (!toggleCardPlayback(card)) playFromHomeCard(card.dataset.row, item);
+      return;
+    }
     if (card.dataset.row === 'artists') { goToArtist(item.name); return; }
     const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
     if (!match) { showToast("That album isn't on the sheet anymore."); return; }
@@ -3703,6 +3727,8 @@ function renderHome(){
     homeNavSyncs.push(sync);
     sync();
   });
+
+  syncCardPlayBadges();
 }
 
 // The Artists tab's grid. Same cards as the Home shelf, but they wrap onto as
@@ -3728,6 +3754,11 @@ function renderArtists(){
 
   const pageEl = el('artistsView');
 
+  pageEl.querySelectorAll('.home-card').forEach(card => {
+    const item = list[parseInt(card.dataset.idx, 10)];
+    if (item) card._playArtist = item.name;
+  });
+
   pageEl.querySelectorAll('.home-card-avatar').forEach(avatarEl => {
     const card = avatarEl.closest('.home-card');
     const item = list[parseInt(card.dataset.idx, 10)];
@@ -3738,8 +3769,16 @@ function renderArtists(){
     const card = e.target.closest('.home-card');
     if (!card) return;
     const item = list[parseInt(card.dataset.idx, 10)];
-    if (item) goToArtist(item.name);
+    if (!item) return;
+    // Same split as the Home shelf: the badge plays, the card opens the page.
+    if (e.target.closest('.home-card-play')) {
+      if (!toggleCardPlayback(card)) playRandomArtistTrack(item.name);
+      return;
+    }
+    goToArtist(item.name);
   });
+
+  syncCardPlayBadges();
 }
 
 // The albums the artist page is currently showing, in render order, so a card
@@ -3757,7 +3796,7 @@ function artistPageCardHtml(idx, album){
   const n = album.songs.length;
   return `
     <button class="home-card" type="button" data-idx="${idx}" title="${esc(album.name)}">
-      <div class="home-card-art">${coverHtml}${playBadge("")}</div>
+      <div class="home-card-art">${coverHtml}${playBadge("Play this album")}</div>
       <div class="home-card-name">${esc(album.name)}</div>
       <div class="home-card-meta">${n} track${n === 1 ? "" : "s"}</div>
     </button>`;
@@ -3877,6 +3916,12 @@ function renderArtistPage(artistName){
   if (portraitEl) applyArtistAvatar(portraitEl, artistName);
   applyArtistBanner(pageEl.querySelector('.artist-head'), artistName);
 
+  // What each card stands for, so its badge knows whether it's the one loaded.
+  pageEl.querySelectorAll('.home-card').forEach(card => {
+    const album = artistPageAlbums[parseInt(card.dataset.idx, 10)];
+    if (album) card._playAlbum = album;
+  });
+
   // Clamp before the browser paints, so a long block never flashes open first.
   syncArtistSections();
   if (document.fonts && document.fonts.ready) {
@@ -3903,8 +3948,16 @@ function renderArtistPage(artistName){
     if (!album) return;
     const match = findAlbumByNames(artistName, album.name, album.section);
     if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+    // The badge is a control here too: play this album without opening it, or
+    // toggle when it's already the one loaded.
+    if (e.target.closest('.home-card-play')) {
+      if (!toggleCardPlayback(card)) playAlbumFirstTrack(match.artistName, match.album);
+      return;
+    }
     selectAlbum(match.artistName, match.album);
   });
+
+  syncCardPlayBadges();
 }
 
 // The row arrows' glide. Same easeOutCubic shape as the rest of the page's
@@ -5037,16 +5090,71 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   const downloadBtn = el('playerDownload');
   if (song.playLink) { downloadBtn.href = toDownloadUrl(song.playLink); downloadBtn.style.display = 'inline-flex'; }
   else downloadBtn.style.display = 'none';
+  // The card that owns this album (or artist) now wears the pause glyph. Done
+  // here as well as on the play/pause events, because swapping one track for
+  // another while it's playing fires neither.
+  syncCardPlayBadges();
 }
 
-/* ---------------- playing straight from a Home card ----------------
+/* ---------------- playing straight from a card ----------------
 
-   The badge on a Home card starts a track without opening anything, so the
-   row element these hand to playSongAt is null - there is no table on screen
-   to highlight. Everything else about the call stays explicit, so the player
-   bar, the queue and the media-session metadata all describe the right album,
-   and if that album is opened while the track is playing, renderCaseFile
-   re-attaches the row highlight by matching the songs array it was given. */
+   The badge on a card starts a track without opening anything, so the row
+   element these hand to playSongAt is null - there is no table on screen to
+   highlight. Everything else about the call stays explicit, so the player bar,
+   the queue and the media-session metadata all describe the right album, and
+   if that album is opened while the track is playing, renderCaseFile
+   re-attaches the row highlight by matching the songs array it was given.
+
+   The card whose album (or artist) is the one currently loaded is the
+   exception: there the badge is a pause button instead, and clicking it
+   toggles - pause while it plays, resume while it's paused - rather than
+   starting something else. */
+
+// Is this card the thing that's loaded right now? Album cards are matched by
+// the songs array itself, the same identity the album page uses; artist cards
+// by the artist the playing album is filed under.
+function cardIsCurrent(card){
+  if (currentSongIndex < 0 || !currentAlbumSongs) return false;
+  if (card._playAlbum) return card._playAlbum.songs === currentAlbumSongs;
+  if (card._playArtist) return card._playArtist === currentArtistName;
+  return false;
+}
+
+// Hands the badge's clicks back to playback when it already owns the track.
+// Returns false when it didn't handle it, so the caller can start something.
+function toggleCardPlayback(card){
+  if (!cardIsCurrent(card)) return false;
+  if (audioEl.paused) audioEl.play().catch(() => {});
+  else audioEl.pause();
+  return true;
+}
+
+// Keeps every badge in step with playback: the loaded card wears a pause
+// glyph while it plays, everything else a play glyph. Cheap enough to run on
+// each play/pause and at the end of every render - it only walks the cards on
+// screen and bails out of the ones already showing the right state.
+function syncCardPlayBadges(){
+  const playing = !!currentAlbumSongs && currentSongIndex >= 0 && !audioEl.paused;
+  document.querySelectorAll('.home-card').forEach(card => {
+    const badge = card.querySelector('.home-card-play');
+    if (!badge) return;
+    const state = cardIsCurrent(card) && playing ? 'pause' : 'play';
+    if (badge.dataset.state === state) return;
+    badge.dataset.state = state;
+    badge.innerHTML = cardBadgeSvg(state);
+    if (state === 'pause') badge.title = 'Pause';
+    else if (badge.dataset.tip) badge.title = badge.dataset.tip;
+    else badge.removeAttribute('title');
+  });
+}
+
+function playAlbumFirstTrack(artistName, album){
+  // The first track that actually has a file, not literally row 1 - the same
+  // rule the album page's Play All button uses.
+  const idx = album.songs.findIndex(s => s.playLink);
+  if (idx < 0) { showToast("No source file linked for this album yet."); return; }
+  playSongAt(idx, null, album.songs, artistName, (album.cover || "").trim(), album);
+}
 
 function playFromHomeCard(rowKey, item){
   if (rowKey === 'artists') { playRandomArtistTrack(item.name); return; }
@@ -5055,12 +5163,7 @@ function playFromHomeCard(rowKey, item){
   // stale snapshot.
   const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
   if (!match) { showToast("That album isn't on the sheet anymore."); return; }
-  // The first track that actually has a file, not literally row 1 - the same
-  // rule the album page's Play All button uses.
-  const idx = match.album.songs.findIndex(s => s.playLink);
-  if (idx < 0) { showToast("No source file linked for this album yet."); return; }
-  playSongAt(idx, null, match.album.songs, match.artistName,
-    (match.album.cover || "").trim(), match.album);
+  playAlbumFirstTrack(match.artistName, match.album);
 }
 
 // "Play this artist": one track drawn from anywhere in their catalogue - every
@@ -5234,12 +5337,14 @@ document.addEventListener('keydown', (e) => {
 audioEl.addEventListener('play', () => {
   el('playPauseBtn').innerHTML = ICONS.pause;
   if (currentRowEl) setRowPlayingVisual(currentRowEl, true);
+  syncCardPlayBadges();
   syncMediaSessionState();
   syncMediaSessionPosition(true);
 });
 audioEl.addEventListener('pause', () => {
   el('playPauseBtn').innerHTML = ICONS.play;
   if (currentRowEl) setRowPlayingVisual(currentRowEl, false);
+  syncCardPlayBadges();
   syncMediaSessionState();
 });
 
@@ -5630,6 +5735,7 @@ el('closeBtn').addEventListener('click', () => {
   stopMarquees();
   if (currentRowEl) { resetRowVisual(currentRowEl); currentRowEl = null; }
   currentSongIndex = -1;
+  syncCardPlayBadges();
   document.title = DEFAULT_TITLE;
   // Hand the audio session back to the OS too, or the lock screen keeps
   // showing a track that's no longer loaded anywhere.
