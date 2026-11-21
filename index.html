@@ -409,14 +409,19 @@
      .has-player is toggled by a MutationObserver on the player's style. */
   body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
   /* ---------- home ----------
-     Three rows of cards. --home-card is the square art size and
+     The three playlist tiles, then four rows of cards.
+     --home-card is the square art size and
      --home-row-gap the space between the shelves: sizeHomeRows() sets both
      from the measured page, keeping the covers small enough to read a shelf
-     at a glance and letting the leftover height go into the gaps. */
+     at a glance. --home-pad-top is the air between the top bar and the first
+     thing on the page; the tiles reuse it underneath themselves, so the space
+     they open with and the space they hand to the first shelf are the same
+     measurement rather than two numbers that have to be kept in step. */
   .home{
     --home-card:200px;
     --home-row-gap:42px;
-    padding:20px 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));
+    --home-pad-top:20px;
+    padding:var(--home-pad-top) 44px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));
   }
   body:not(.has-player) .home{padding-bottom:var(--player-gap);}
   .home-row + .home-row{margin-top:var(--home-row-gap);}
@@ -513,6 +518,38 @@
   .home-row-artists .home-card-name,
   .home-row-artists .home-card-meta{text-align:center;}
   .home-row-empty{font-size:.78rem; color:var(--text-dim);}
+
+  /* ---------- the three marked-track tabs, at the top of Home ----------
+     Best Of, Special and Worst Of live in a drawer in the sidebar, which is the
+     least discoverable corner of the site. These are the same three
+     destinations, in the same order, with their sizes, and they lead the page
+     rather than closing it. No heading above them: they are the first thing on
+     screen, and a title over three tiles that already name themselves only
+     pushes the shelves down. The gap under them is --home-pad-top, the same
+     air they open with, so the tiles read as a band across the top of the page
+     rather than as a block with a shelf bolted underneath. */
+  .home-tiles-section{margin:0 0 var(--home-pad-top);}
+  /* auto-fit rather than three fixed columns: on a phone the tiles stack
+     instead of squeezing to a third of 390px. */
+  /* 200px rather than something smaller so a phone gets one tile per line: at
+     170 a 390px screen fits two, and the third then sits alone on a row of
+     its own, which reads as a mistake rather than as a layout. */
+  .home-tiles{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px;}
+  .home-tile{
+    display:flex; align-items:center; gap:12px;
+    padding:15px 16px; border-radius:9px; text-align:left;
+    background:none; border:1px solid var(--border);
+    color:var(--text); font-family:inherit; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .home-tile:hover{background:var(--bg-elevated); border-color:var(--border-light);}
+  .home-tile-mark{font-size:1.05rem; line-height:1; flex:none;}
+  .home-tile-text{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .home-tile-name{font-family:var(--display); font-size:.92rem; font-weight:700; line-height:1.2;}
+  .home-tile-count{font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; color:var(--text-dim);}
+  .home-tile svg{margin-left:auto; width:15px; height:15px; flex:none; color:var(--text-dim);}
+  .home-tile:hover svg{color:var(--text);}
 
   /* ---------- artists tab ----------
      The Home shelf's artist cards, laid out as a grid that wraps rather than
@@ -1745,7 +1782,7 @@
     .search-bar{max-width:none; flex:1 1 0; min-width:0; width:auto;}
     .case-file{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .case-file{padding-bottom:var(--player-gap);}
-    .home{padding:16px 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
+    .home{--home-pad-top:16px; padding:var(--home-pad-top) 18px calc(var(--player-h) + var(--player-gap) + env(safe-area-inset-bottom, 0px));}
     body:not(.has-player) .home{padding-bottom:var(--player-gap);}
     .home-row-head{margin-bottom:13px;}
     .home-row-title{font-size:1.16rem;}
@@ -4217,6 +4254,34 @@ function homeAlbumCardHtml(rowKey, idx, artistName, album){
     </button>`;
 }
 
+// How long ago a file date was, in the words the shelf wants. The window is a
+// week, so there is no need for weeks or months here.
+function addedAgo(dateStr){
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return "";
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+
+// The New shelf's card. Same shell as an album card, but it stands for one
+// track: the cover is the album's, the caption is the song, and the meta line
+// says who it is by and when it landed.
+function homeSongCardHtml(rowKey, idx, track){
+  const coverUrl = (track.album.cover || "").trim();
+  const coverHtml = /^https?:\/\//i.test(coverUrl)
+    ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.outerHTML='<div class=&quot;home-card-fallback&quot;>NO COVER</div>'">`
+    : `<div class="home-card-fallback">NO COVER</div>`;
+  const name = plainSongName(track.song.name);
+  return `
+    <button class="home-card" type="button" data-row="${rowKey}" data-idx="${idx}" title="${esc(name)}">
+      <div class="home-card-art">${coverHtml}${playBadge("Play this track")}</div>
+      <div class="home-card-name">${esc(name)}</div>
+      <div class="home-card-meta">${esc(songArtistName(track.song, track.artistName))} • ${esc(addedAgo(track.song.releaseDate))}</div>
+    </button>`;
+}
+
 function artistAlbumCount(artistName){
   return (DATA[artistName] || []).filter(a => !a.isDivider).length;
 }
@@ -4271,6 +4336,27 @@ function homeRowHtml(rowKey, title, cardsHtml, emptyText){
     </section>`;
 }
 
+// The three marked-track tabs as destinations rather than as a drawer. Their
+// sizes come from the same collectionEntries() the tabs themselves render, so
+// a count here can never disagree with the page it opens.
+function homeTilesHtml(){
+  return `<section class="home-tiles-section">
+    <div class="home-tiles">
+      ${COLLECTION_TABS.map(tab => {
+        const n = collectionEntries(tab.marker).length;
+        return `<button class="home-tile" type="button" data-tab="${tab.id}">
+          <span class="home-tile-mark" aria-hidden="true">${tab.emoji}</span>
+          <span class="home-tile-text">
+            <span class="home-tile-name">${esc(tab.label)}</span>
+            <span class="home-tile-count">${n} track${n === 1 ? "" : "s"}</span>
+          </span>
+          ${CHEVRON_RIGHT}
+        </button>`;
+      }).join("")}
+    </div>
+  </section>`;
+}
+
 // A shelf is a sampler, not the whole catalogue: ten cards is enough to see
 // what's in the row and scroll a little, and short enough that each visit to
 // Home shows a different slice of a big sheet.
@@ -4286,9 +4372,15 @@ function renderHome(){
   );
   const comps = homeOrdered(albumsInSection("Comps"), it => albumEditCount(it.album), HOME_ROW_LIMIT);
   const edits = homeOrdered(albumsInSection("Edits"), it => albumEditCount(it.album), HOME_ROW_LIMIT);
-  homeRows = { artists, comps, edits };
+  // The New shelf is a straight chronological cut, not a draw: "new" is a
+  // fact about the sheet, and shuffling it would make the row lie about what
+  // landed when. An empty month drops the whole shelf rather than leaving a
+  // title with nothing under it.
+  const fresh = recentlyAddedTracks();
+  homeRows = { artists, comps, edits, new: fresh };
 
   el('content').innerHTML = `<div class="home" id="homeView">
+    ${homeTilesHtml()}
     ${homeRowHtml("artists", "Artists",
       artists.map((a, i) => artistCardHtml(a.name, artistReleasesText(a.name), "artists", i)).join(""),
       "No artists on the sheet yet.")}
@@ -4298,6 +4390,9 @@ function renderHome(){
     ${homeRowHtml("edits", "Edits",
       edits.map((it, i) => homeAlbumCardHtml("edits", i, it.artistName, it.album)).join(""),
       "No edits on the sheet yet.")}
+    ${fresh.length ? homeRowHtml("new", "New",
+      fresh.slice(0, HOME_ROW_LIMIT).map((t, i) => homeSongCardHtml("new", i, t)).join(""),
+      "Nothing new this month.") : ""}
   </div>`;
 
   const homeEl = el('homeView');
@@ -4308,6 +4403,10 @@ function renderHome(){
     const item = homeRows[card.dataset.row] && homeRows[card.dataset.row][parseInt(card.dataset.idx, 10)];
     if (!item) return;
     if (card.dataset.row === 'artists') card._playArtist = item.name;
+    // A New-shelf card stands for a single track out of an album, so it holds
+    // both halves: the songs array is what the player bar says is loaded, and
+    // the row index is what keeps the badge off its siblings on the shelf.
+    else if (card.dataset.row === 'new') card._playSong = { album: item.album, idx: item.idx };
     else card._playAlbum = item.album;
   });
 
@@ -4317,7 +4416,8 @@ function renderHome(){
     if (item) applyArtistAvatar(avatarEl, item.name);
   });
 
-  // One delegated handler for all three shelves. Artist cards go through
+  // One delegated handler for all four shelves plus the Playlists tiles.
+  // Artist cards go through
   // goToArtist(), which is the single place that knows artist pages aren't
   // built yet - so these report the same thing the player bar's credit link
   // does, and start working the day that page exists.
@@ -4327,6 +4427,10 @@ function renderHome(){
   // while Home is on screen, and this way the click either opens the album as
   // it is now or says it's gone, instead of rendering a stale snapshot.
   homeEl.addEventListener('click', (e) => {
+    // A tile is a destination, not a card: pressing one is the same thing as
+    // picking that row in the sidebar, down to the hash it leaves behind.
+    const tile = e.target.closest('.home-tile');
+    if (tile) { showTab(tile.dataset.tab); return; }
     const card = e.target.closest('.home-card');
     if (!card) return;
     const list = homeRows[card.dataset.row];
@@ -4340,6 +4444,9 @@ function renderHome(){
       return;
     }
     if (card.dataset.row === 'artists') { goToArtist(item.name); return; }
+    // A New-shelf card has no page behind it, so the card itself is the play
+    // button - same as pressing the badge, minus the toggle.
+    if (card.dataset.row === 'new') { playHomeTrack(item); return; }
     const match = findAlbumByNames(item.artistName, item.album.name, item.album.section);
     if (!match) { showToast("That album isn't on the sheet anymore."); return; }
     selectAlbum(match.artistName, match.album);
@@ -4637,11 +4744,12 @@ function syncHomeNavs(){
 
 // The covers are sized from the page's height, but capped: letting the height
 // drive them unchecked is what made them enormous on a big monitor. The
-// height left over after the cap goes into the space *between* the shelves, so
-// the last row's covers still land about half below the fold - the gaps are
-// the flexible part. Two gaps sit above that row, so:
-//
-//   artTop + 2·Δgap + S/2 = cut      ⇒   Δgap = (cut - artTop - S/2) / 2
+// leftover height after the cap used to be handed to the gaps between the
+// shelves, back when the last cover could hang half below the fold and the
+// gaps were the only flexible thing on the page. The page is a fixed stack
+// now, so the last cover has to finish inside the window instead: the gap is
+// fixed and the covers are what stretch, which is why there is no gap ceiling
+// left.
 //
 // Everything is measured from the .home box, so the page's scroll offset
 // cancels out.
@@ -4651,17 +4759,17 @@ const HOME_CARD_MAX = 180;
 // that a second card can't peek in beside the first.
 const HOME_CARDS_ACROSS = { wide: 4.2, drawer: 2.5 };
 const HOME_GAP_BASE = 56;
-const HOME_GAP_MAX = 88;
-// The composed gap comes out ~28% tighter than what a perfect half-cut would
-// need: a full half left the page feeling airy, and the height is better spent
-// showing more of the last row than sitting between shelves.
-const HOME_GAP_TIGHTEN = 0.65;
 
 function sizeHomeRows(){
   const homeEl = el('homeView');
   const mainEl = document.querySelector('.main');
   if (!homeEl || !mainEl) return;
-  const lastArt = homeEl.querySelector('.home-row:last-child .home-card-art');
+  // The last *shelf*, read as the last .home-row rather than as the page's
+  // last child, so anything added below the shelves can't retarget the solve
+  // by accident.
+  const rows = Array.from(homeEl.querySelectorAll('.home-row'));
+  const lastRow = rows[rows.length - 1];
+  const lastArt = lastRow ? lastRow.querySelector('.home-card-art') : null;
   // Nothing to solve against when the last shelf is empty (no comps or no
   // edits on the sheet) - the CSS defaults stay.
   if (!lastArt) { syncHomeNavs(); return; }
@@ -4675,11 +4783,20 @@ function sizeHomeRows(){
   // rest of the cover.
   const homeTop = homeEl.getBoundingClientRect().top;
   const playerH = document.body.classList.contains('has-player') ? (el('player').offsetHeight || 0) : 0;
+  // The tiles sit above the shelves, so they are already inside artTop and
+  // there is nothing to reserve at the bottom: cut is simply where the page
+  // stops.
   const cut = mainEl.getBoundingClientRect().bottom - playerH - homeTop;
 
   // Every shelf above the last one grows by exactly as much as the covers do
-  // (an empty one has no cover to grow), plus half a cover for the last row's
-  // own midpoint.
+  // (an empty one has no cover to grow), so the last cover's own growth is the
+  // one share left over:
+  //
+  //   artTop + n·Δ + (S + Δ) = cut   ⇒   S + Δ = S + (cut - artTop - S) / (n+1)
+  //
+  // Note that artTop itself carries n·S, so the right-hand side cancels down
+  // to (cut - artTop + n·S) / (n+1) and comes out the same whatever size the
+  // previous solve left behind.
   const growingRows = Array.from(homeEl.querySelectorAll('.home-row'))
     .slice(0, -1)
     .filter(rowEl => rowEl.querySelector('.home-card-art')).length;
@@ -4688,27 +4805,29 @@ function sizeHomeRows(){
   // skew the solve by a couple of pixels.
   const sizeNow = lastArt.offsetHeight;
   const artTopNow = lastArt.getBoundingClientRect().top - homeTop;
-  const ideal = sizeNow + (cut - artTopNow - sizeNow / 2) / (growingRows + 0.5);
+  const ideal = sizeNow + (cut - artTopNow - sizeNow) / (growingRows + 1);
 
   const scroller = lastArt.closest('.home-row-scroller');
   const cardGap = parseFloat(getComputedStyle(scroller).columnGap) || 0;
   const across = isDrawerLayout() ? HOME_CARDS_ACROSS.drawer : HOME_CARDS_ACROSS.wide;
   const byWidth = (scroller.clientWidth + cardGap) / across - cardGap;
 
-  const size = Math.round(Math.max(HOME_CARD_MIN, Math.min(HOME_CARD_MAX, byWidth, ideal)));
+  // Filling the window exactly was the whole job when Home was three shelves.
+  // With the stats line, the New shelf and the tiles on it, most windows run
+  // out of height before the covers run out of room - and a solve that keeps
+  // shrinking to chase a fit it can never reach would just print tiny cards on
+  // a page that scrolls anyway. So when the ideal size falls under the floor,
+  // the fill is abandoned and the covers take their plain width-based size.
+  const fits = ideal >= HOME_CARD_MIN;
+  const size = Math.round(fits
+    ? Math.max(HOME_CARD_MIN, Math.min(HOME_CARD_MAX, byWidth, ideal))
+    : Math.max(HOME_CARD_MIN, Math.min(HOME_CARD_MAX, byWidth)));
   homeEl.style.setProperty('--home-card', size + 'px');
 
-  // The cap bit, so the shelves are shorter than the page: hand the rest to
-  // the gaps. Measured again because the covers just changed size. A phone
-  // gets a tighter ceiling - the same 88px that reads as generous on a desktop
-  // window reads as a hole between two rows on a 390px screen.
-  if (ideal > size + 0.5) {
-    const artTop = lastArt.getBoundingClientRect().top - homeTop;
-    const push = (cut - artTop - size / 2) / 2;
-    const gapMax = isDrawerLayout() ? 64 : HOME_GAP_MAX;
-    const gap = Math.round(Math.max(HOME_GAP_BASE, Math.min(gapMax, HOME_GAP_BASE + push)) * HOME_GAP_TIGHTEN);
-    homeEl.style.setProperty('--home-row-gap', gap + 'px');
-  }
+  // When the cap bites the page simply ends a little above the fold - the
+  // covers are as big as they're allowed to get, and the space that would have
+  // gone into the gaps is left under the last shelf, which is where a page's
+  // leftover height belongs anyway.
 
   // A narrower window means a shorter row, so a shelf that was already at its
   // end can suddenly have more to show (or stop being scrollable at all).
@@ -6045,6 +6164,9 @@ document.addEventListener('visibilitychange', () => {
 // by the artist the playing album is filed under.
 function cardIsCurrent(card){
   if (currentSongIndex < 0 || !currentAlbumSongs) return false;
+  if (card._playSong) {
+    return card._playSong.album.songs === currentAlbumSongs && card._playSong.idx === currentSongIndex;
+  }
   if (card._playAlbum) return card._playAlbum.songs === currentAlbumSongs;
   if (card._playArtist) return card._playArtist === currentArtistName;
   return false;
@@ -6086,8 +6208,17 @@ function playAlbumFirstTrack(artistName, album){
   playSongAt(idx, null, album.songs, artistName, (album.cover || "").trim(), album);
 }
 
+// One track, straight off a card that stands for that track. No row element
+// is handed over: the card lives on Home rather than on the album page, so
+// there is no track row anywhere to paint as the one playing.
+function playHomeTrack(track){
+  playSongAt(track.idx, null, track.album.songs, track.artistName,
+    (track.album.cover || "").trim(), track.album);
+}
+
 function playFromHomeCard(rowKey, item){
   if (rowKey === 'artists') { playRandomArtistTrack(item.name); return; }
+  if (rowKey === 'new') { playHomeTrack(item); return; }
   // Re-resolved against DATA, exactly like the card's own click, so a
   // background refresh that moved or deleted the album can't be played from a
   // stale snapshot.
@@ -6320,14 +6451,15 @@ function rowElForSongs(songs, idx){
    Rebuilt on every draw rather than cached — the Reload row rebuilds DATA
    wholesale, and a cached array would keep pointing at album objects that are
    no longer in it. */
-function allPlayableTracks(){
+function allTracks(playableOnly){
   const byOrigin = new Map();
   ARTISTS.forEach(a => {
     (DATA[a.name] || []).forEach(album => {
       if (album.isDivider) return;
       (album.songs || []).forEach((song, idx) => {
-        if (!song.playLink) return;
-        if (isDemoMode && song.playLink === '#') return;
+        // A row with no file still counts as a song that exists - only the
+        // random draw needs it to be startable.
+        if (playableOnly && (!song.playLink || (isDemoMode && song.playLink === '#'))) return;
         const originArtist = (song.crossListed && song.fromArtist) || a.name;
         const originAlbum = (song.crossListed && song.fromAlbum) || album.name;
         const key = `${originArtist}||${originAlbum}||${stripLeadingEmoji(song.name)}`.toLowerCase();
@@ -6341,6 +6473,17 @@ function allPlayableTracks(){
     });
   });
   return Array.from(byOrigin.values());
+}
+
+function allPlayableTracks(){ return allTracks(true); }
+
+// What arrived in the last week, newest first - the Home "New" shelf. Sorted on
+// the parsed date rather than the string: the file dates are typed by hand and
+// are not all the same shape.
+function recentlyAddedTracks(maxDays = 30){
+  return allTracks(false)
+    .filter(t => isRecentDate(t.song.releaseDate, maxDays))
+    .sort((x, y) => new Date(y.song.releaseDate) - new Date(x.song.releaseDate));
 }
 
 function playRandomSong(){
