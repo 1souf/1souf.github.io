@@ -261,7 +261,27 @@
     backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
     border-bottom:1px solid var(--border);
     padding:14px 18px;
+    transition:border-bottom-color .3s ease;
   }
+  /* On an artist page the bar wears the artist's own colour while their banner
+     is still behind it, so the band reads as running up behind the bar rather
+     than stopping at a seam under it. Once the band has scrolled past, the
+     class comes off and the usual blur is back.
+     A pseudo-element rather than a background swap, because opacity is the one
+     part of this that can fade - and `z-index:-1` still paints it above the
+     wrap's own background but under the search bar and the crumbs.
+     --artist-tint is published on <html> by applyArtistBanner(). */
+  .search-bar-wrap::before{
+    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:rgb(var(--artist-tint, 120 120 120) / .45);
+    opacity:0; transition:opacity .3s ease;
+  }
+  .search-bar-wrap.artist-tinted::before{opacity:1;}
+  /* There's no line across the middle of the band, so the bar's border takes
+     the tint as well. Transparent would not do: a transparent border shows the
+     page behind the bar, not the band below it, which reads as a thin dark
+     seam right where the two colours meet. */
+  .search-bar-wrap.artist-tinted{border-bottom-color:rgb(var(--artist-tint, 120 120 120) / .45);}
   /* Where you are, on the left of the bar - the same idea as an address bar.
      Absolutely positioned so the search keeps sitting dead centre of the
      column: the trail only ever occupies the space that was already empty
@@ -684,7 +704,10 @@
      and the name are wrapped in one link, so this restores the 5px gap the
      wrapper's own display would otherwise collapse. */
   .fm-artist-link{display:inline-flex; align-items:center; gap:5px; cursor:pointer;}
-  .fm-artist-link:hover, .fm-artist-link:focus-visible{text-decoration:underline;}
+  /* The decoration belongs to the wrapper, but the name inside it is a <b> at
+     --text - so the default currentColor drew a dim grey line under white text.
+     Pin it to the name's own colour instead. */
+  .fm-artist-link:hover, .fm-artist-link:focus-visible{text-decoration:underline; text-decoration-color:var(--text);}
   /* The dot between an album's two artist names: fixed white (never themed),
      pulled in a hair tighter than the flex gap on either side. */
   .fm-sep{color:var(--stamp-fixed); margin:0 -1px;}
@@ -3569,6 +3592,10 @@ function setActiveTab(tab){
   // Every route change comes through here, and by now the selection state is
   // already updated, so this is the one place the trail has to be rebuilt.
   renderCrumbs();
+  // The content swap that follows happens in the same task, so a microtask
+  // lands after it: the bar can then tell whether the page it is sitting over
+  // still has a banner behind it (see syncTopBarTint).
+  queueMicrotask(syncTopBarTint);
 }
 
 /* ---------------- breadcrumb ----------------
@@ -4892,7 +4919,11 @@ function applyArtistBanner(headEl, artistName){
   if (!banner) return;
   const setTint = tint => {
     banner.style.setProperty('--artist-tint', tint);
+    // The top bar reads the same variable off the root - the banner's own copy
+    // only reaches its own subtree - so publish it there before anything looks.
+    document.documentElement.style.setProperty('--artist-tint', tint);
     banner.classList.add('is-on');
+    syncTopBarTint();
   };
   const known = ARTIST_PFP_AVERAGE[artistName];
   if (known) { setTint(bannerTint(known)); return; }
@@ -4904,6 +4935,35 @@ function applyArtistBanner(headEl, artistName){
     setTint(rgb ? bannerTint(rgb) : fallbackBannerTint(artistName));
   });
 }
+
+/* The sticky top bar on an artist page: it takes the artist's own colour while
+   their banner is still behind it, then hands back to the usual blur once the
+   band has scrolled past. Everything is read from the DOM - the band's own
+   position, and whether the tint has arrived yet - so the scroll handler, the
+   late-sampled colour and navigation all land on the same answer. */
+function syncTopBarTint(){
+  const wrap = document.querySelector('.search-bar-wrap');
+  if (!wrap) return;
+  const band = document.querySelector('.artist-head .artist-banner');
+  if (!band || !band.classList.contains('is-on')) {
+    wrap.classList.remove('artist-tinted');
+    document.documentElement.style.removeProperty('--artist-tint');
+    return;
+  }
+  // The band's bottom edge is the last of it, fade and all: while any of that
+  // is still behind the bar, the bar is part of it.
+  const past = band.getBoundingClientRect().bottom <= wrap.getBoundingClientRect().bottom + 1;
+  wrap.classList.toggle('artist-tinted', !past);
+}
+
+// Same once-per-frame throttle as the queue bounds - scroll fires in bursts,
+// and this can only change twice per page.
+let topBarTintFrame = null;
+function scheduleTopBarTintSync(){
+  if (topBarTintFrame !== null) return;
+  topBarTintFrame = requestAnimationFrame(() => { topBarTintFrame = null; syncTopBarTint(); });
+}
+document.querySelector('.main').addEventListener('scroll', scheduleTopBarTintSync, { passive: true });
 
 function selectAlbum(artistName, album){
   selectedArtistPage = null;
