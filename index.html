@@ -5711,7 +5711,7 @@ function setRowPlayingVisual(rowEl, playing){
   }
 }
 
-function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQueue){
+function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQueue, autoplay = true){
   // songs/artistName/albumCoverUrl/album are only passed explicitly when the user
   // is starting playback from an album's page (a real click) or when the
   // queue is being consumed (see fromQueue below). Calls that are just
@@ -5757,7 +5757,9 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   if (currentSongIndex !== idx || currentAlbumSongs !== songs || !audioEl.src.includes(src)) {
     audioEl.src = src;
   }
-  audioEl.play().catch(() => showToast("Couldn't start playback — the source link may be broken."));
+  // autoplay:false is only used when the bar is being put back the way the
+  // visitor left it - the track is loaded and seeked, not started.
+  if (autoplay) audioEl.play().catch(() => showToast("Couldn't start playback — the source link may be broken."));
 
   currentAlbumSongs = songs;
   currentAlbumCover = albumCoverUrl;
@@ -5811,7 +5813,131 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   // here as well as on the play/pause events, because swapping one track for
   // another while it's playing fires neither.
   syncCardPlayBadges();
+  // A fresh start remembers this track from second zero, so closing right after
+  // picking something can't restore the previous song's position.
+  if (autoplay) savePlaybackState(0);
 }
+
+/* ---------------- what was playing last time ----------------
+
+   The bar comes back the way it was left: same track, same timestamp, paused.
+   It has to be paused - a page load carries no user gesture, so starting sound
+   on its own would be blocked by the browser anyway, and would be rude besides.
+   Only the player is restored; the route is left alone, so a link to an album
+   still lands on that album.
+
+   Written on a 5s throttle while playing, and immediately on pause, on a seek,
+   and on pagehide - that last one is what catches "closed the tab mid-song",
+   including the mobile case where the page is killed rather than unloaded. */
+
+const LAST_PLAYBACK_KEY = 'archiveLastPlayback';
+const LAST_PLAYBACK_SAVE_MS = 5000;
+let lastPlaybackSavedAt = 0;
+let pendingRestoreTime = 0;
+
+function savePlaybackState(timeOverride){
+  if (!currentAlbumSongs || currentSongIndex < 0) return;
+  const song = currentAlbumSongs[currentSongIndex];
+  if (!song || !song.playLink) return;
+  // A finished track is remembered from the top: restoring the last frame of
+  // it would leave the bar one press away from firing 'ended' again.
+  const time = Number.isFinite(timeOverride)
+    ? timeOverride
+    : (audioEl.ended ? 0 : audioEl.currentTime);
+  try {
+    localStorage.setItem(LAST_PLAYBACK_KEY, JSON.stringify({
+      artist: currentArtistName || '',
+      album: currentAlbumName || '',
+      section: currentAlbumSection || '',
+      idx: currentSongIndex,
+      // The raw name, so it can be matched back to a row later - the sheet is
+      // free to reorder an album between visits.
+      name: song.name || '',
+      time: Number.isFinite(time) && time > 0 ? time : 0
+    }));
+    lastPlaybackSavedAt = Date.now();
+  } catch (err) { /* storage unavailable - nothing to remember with */ }
+}
+
+function readLastPlayback(){
+  try {
+    const raw = localStorage.getItem(LAST_PLAYBACK_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    return saved && typeof saved === 'object' ? saved : null;
+  } catch (err) { return null; }
+}
+
+function clearLastPlayback(){
+  try { localStorage.removeItem(LAST_PLAYBACK_KEY); } catch (err) { /* ignore */ }
+}
+
+/* Repaints the bar for a position set while paused - a paused element doesn't
+   reliably emit timeupdate for a seek. */
+function paintSeekUI(){
+  const dur = audioEl.duration;
+  if (!Number.isFinite(dur) || dur <= 0) return;
+  el('seek').value = (audioEl.currentTime / dur) * 1000;
+  seekLastValue = parseFloat(el('seek').value) || 0;
+  updateRangeFill(el('seek'));
+  el('curTime').textContent = formatSeconds(audioEl.currentTime);
+  el('durTime').textContent = formatSeconds(dur);
+  syncMediaSessionPosition(true);
+}
+
+function applyPendingRestoreTime(){
+  if (!pendingRestoreTime) return;
+  const wanted = pendingRestoreTime;
+  pendingRestoreTime = 0;
+  const dur = audioEl.duration;
+  if (!Number.isFinite(dur) || dur <= 0) return;
+  // Stopping inside the last second and a half would just fire 'ended' the
+  // moment anything was pressed, so treat that as "start it over".
+  audioEl.currentTime = wanted >= dur - 1.5 ? 0 : Math.min(wanted, dur);
+  paintSeekUI();
+}
+
+function restorePlaybackState(){
+  // Something is already loaded (a very slow boot, or the visitor got there
+  // first) - theirs wins.
+  if (currentSongIndex >= 0) return false;
+  const saved = readLastPlayback();
+  if (!saved) return false;
+  const found = findAlbumByNames(saved.artist, saved.album, saved.section);
+  if (!found) { clearLastPlayback(); return false; }
+  const songs = found.album.songs || [];
+  // Name first: an album that gained or lost a track since last visit would
+  // make the saved index point at a different song.
+  let idx = songs.findIndex(s => String(s.name || '') === String(saved.name || ''));
+  if (idx === -1) idx = Number(saved.idx);
+  const song = songs[idx];
+  if (!song || !song.playLink) { clearLastPlayback(); return false; }
+  if (isDemoMode && song.playLink === '#') return false;
+
+  pendingRestoreTime = Math.max(0, Number(saved.time) || 0);
+  // Trailing false is autoplay: load it, don't start it.
+  playSongAt(idx, null, songs, found.artistName, (found.album.cover || '').trim(), found.album, false, false);
+  // A reload on the album's own page already has the row on screen to mark;
+  // playSongAt() was handed no row, so it can't do it itself.
+  const row = currentPlayingRowEl(currentSongIndex);
+  if (row) { currentRowEl = row; row.classList.add('playing'); }
+  // Metadata may already be there (a cached file), in which case the seek can
+  // happen now rather than in the loadedmetadata handler.
+  if (audioEl.readyState >= 1) applyPendingRestoreTime();
+  else savePlaybackState(pendingRestoreTime);
+  return true;
+}
+
+audioEl.addEventListener('timeupdate', () => {
+  if (Date.now() - lastPlaybackSavedAt < LAST_PLAYBACK_SAVE_MS) return;
+  savePlaybackState();
+});
+audioEl.addEventListener('pause', () => savePlaybackState());
+audioEl.addEventListener('seeked', () => savePlaybackState());
+window.addEventListener('pagehide', () => savePlaybackState());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') savePlaybackState();
+});
 
 /* ---------------- playing straight from a card ----------------
 
@@ -6443,6 +6569,9 @@ audioEl.addEventListener('timeupdate', () => {
 });
 audioEl.addEventListener('loadedmetadata', () => {
   el('durTime').textContent = formatSeconds(audioEl.duration);
+  // Restoring the last session lands here: the position it asks for can only
+  // be applied once there is a duration to check it against.
+  applyPendingRestoreTime();
   // The duration only becomes known here, so this is the first moment the
   // OS can be given a position at all.
   syncMediaSessionPosition(true);
@@ -8302,6 +8431,10 @@ function positionLinkMenuAt(menu, x, y){
     await loadAllArtists();
     renderAll();
   }
+  // The page has painted, so the player can be put back the way it was left.
+  // Deliberately after renderAll(): on a reload of an album page the row it
+  // belongs to has to exist before it can be marked.
+  restorePlaybackState();
   // The page has painted with whatever the hash asked for and the saved drawer
   // state has survived it, so from here the sidebar belongs to the visitor.
   moreAutoOpen = true;
