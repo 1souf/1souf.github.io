@@ -150,6 +150,40 @@
      it never picks up the album theme's accent. */
   .nav-item.active svg{color:var(--stamp-fixed);}
 
+  /* "More" is a drawer, not a tab: no data-tab, so the nav's click handler
+     ignores it and setActiveTab never marks it. It only opens and closes the
+     three marked-track rows nested under it. Its ⋯ shares the existing
+     .nav-glyph box further down, which is what keeps this label on the same
+     x as every other one. */
+  /* Two classes deep because `.nav-item svg` pins every glyph in a row at 20px,
+     and this one has to stay small enough to read as a caret rather than a
+     third tab glyph. The path itself points right, so the resting state is a
+     quarter turn clockwise (down = "there's more under here") and opening it
+     turns the other way, to point up at the row you came from. */
+  .nav-item .nav-caret{
+    width:14px; height:14px; flex:none; margin-left:auto;
+    transform:rotate(90deg);
+    transition:transform .18s ease, color .15s ease;
+  }
+  .nav-group-toggle[aria-expanded="true"] .nav-caret{transform:rotate(-90deg);}
+  .nav-group-toggle:hover .nav-caret{color:var(--text);}
+  /* Only while the drawer is shut. One of its three tabs is the page you're
+     on and its own row is out of sight, so the toggle wears the same pill the
+     active row would have worn - and drops it the instant the drawer opens,
+     because then the real row is right there doing that job. */
+  .nav-group-toggle.has-active{color:var(--text); background:var(--bg-elevated);}
+  /* Matches `.nav-item.active svg`: on the pill the glyph goes pure white with
+     the label rather than staying grey. */
+  .nav-group-toggle.has-active .nav-glyph{color:var(--stamp-fixed);}
+  /* Same 4px rhythm as the tab list itself. The rows are not indented - the
+     caret on the toggle is the whole nesting cue, and keeping the icons on the
+     same x as Home and Artists is what makes them read as siblings. */
+  .nav-group{display:flex; flex-direction:column; gap:4px;}
+  .nav-group[hidden]{display:none;}
+  /* The rail has no labels to nest under, so the caret would only crowd the
+     dots. */
+  html.sb-collapsed .nav-caret{display:none;}
+
   /* ---------- bottom rows: reload, statistics, info ----------
      Same rows as the tabs, stacked at the foot of the panel. All three are
      ordinary controls; the info row opens the same centred modal the
@@ -1840,6 +1874,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         <span class="nav-label">Artists</span>
       </button>
+      <!-- A drawer rather than a tab: it carries no data-tab, so the nav's
+           click handler skips it and setActiveTab never marks it active.
+           The dots are the same glyph as a row's ⋯ menu button. -->
+      <button class="nav-item nav-group-toggle" id="moreToggle" type="button"
+              aria-expanded="true" aria-controls="moreGroup"
+              title="Best Of, Special and Worst Of">
+        <span class="nav-glyph" aria-hidden="true">⋯</span>
+        <span class="nav-label">More</span>
+        <svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+      <div class="nav-group" id="moreGroup">
       <!-- The three marked-track tabs. A song lands in one of them purely by
            the emoji in front of its Name cell on the sheet - the same ⭐ / ✨
            the album sort ignores - so there's nothing else to keep in sync. -->
@@ -1855,6 +1900,7 @@
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6M18 6V16.2C18 17.8802 18 18.7202 17.673 19.362C17.3854 19.9265 16.9265 20.3854 16.362 20.673C15.7202 21 14.8802 21 13.2 21H10.8C9.11984 21 8.27976 21 7.63803 20.673C7.07354 20.3854 6.6146 19.9265 6.32698 19.362C6 18.7202 6 17.8802 6 16.2V6M14 10V17M10 10V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <span class="nav-label">Worst Of</span>
       </button>
+      </div>
     </nav>
     <!-- Foot of the panel, in the same row style as the tabs above. -->
     <div class="sidebar-tools">
@@ -3441,6 +3487,12 @@ window.addEventListener('hashchange', () => {
 // highlight instead of moving it.
 let activeTabName = null;
 
+// Whether landing on one of the drawer's tabs should pull the drawer open.
+// False until boot() has painted: arriving on the site must not undo a drawer
+// the visitor shut last time. True from then on, where the only thing left
+// that can reach setActiveTab() is the visitor themselves.
+let moreAutoOpen = false;
+
 // The tab the trail hangs off. Home and Artists both lead into artist pages,
 // so the first crumb has to be whichever tab the visitor actually set out
 // from - landing on Carti from Home should read "Home > Playboi Carti", not
@@ -3463,6 +3515,14 @@ const CRUMB_ROOTS = {
 function setActiveTab(tab){
   activeTabName = tab || null;
   if (tab) crumbRootTab = tab;
+  // A drawer can't hold the active row while it is shut, so navigating to one
+  // of its three tabs opens it - a link straight to #best-of lands with the row
+  // visible and marked. Kept out of the saved state: this is a side effect of
+  // navigating, not a change of preference.
+  const moreGroup = el('moreGroup');
+  const inMoreDrawer = !!tab && !!moreGroup && !!moreGroup.querySelector(`[data-tab="${tab}"]`);
+  if (inMoreDrawer && moreAutoOpen) setMoreExpanded(true, false);
+  syncMoreToggleActive();
   document.querySelectorAll('#sidebarNav .nav-item').forEach(item => {
     const on = !!tab && item.dataset.tab === tab;
     item.classList.toggle('active', on);
@@ -7598,6 +7658,38 @@ el('sidebarNav').addEventListener('click', (e) => {
   showTab(item.dataset.tab);
 });
 
+// "More" opens and closes the three marked-track rows. The state is remembered
+// so the sidebar looks the same on the next visit; the elements are looked up
+// each time because setActiveTab() calls this long before this point in the
+// script has run.
+function setMoreExpanded(open, remember){
+  const toggle = el('moreToggle'), group = el('moreGroup');
+  if (!toggle || !group) return;
+  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  group.hidden = !open;
+  syncMoreToggleActive();
+  if (!remember) return;
+  try { localStorage.setItem('archiveMoreExpanded', open ? '1' : '0'); } catch {}
+}
+
+// The toggle only wears the active pill while the drawer is SHUT - once it's
+// open the marked row is on screen and does the job itself. Hoisted so
+// setActiveTab(), which runs long before this point in the script, can call it.
+function syncMoreToggleActive(){
+  const toggle = el('moreToggle'), group = el('moreGroup');
+  if (!toggle || !group) return;
+  const inside = !!activeTabName && !!group.querySelector(`[data-tab="${activeTabName}"]`);
+  toggle.classList.toggle('has-active', inside && group.hidden);
+}
+
+el('moreToggle').addEventListener('click', () => {
+  setMoreExpanded(el('moreToggle').getAttribute('aria-expanded') !== 'true', true);
+});
+
+let moreExpandedSaved = true;
+try { moreExpandedSaved = localStorage.getItem('archiveMoreExpanded') !== '0'; } catch {}
+setMoreExpanded(moreExpandedSaved, false);
+
 /* ---------------- boot ---------------- */
 
 // Runs once every artist tab is sitting in DATA. Split out from
@@ -8013,6 +8105,9 @@ function positionLinkMenuAt(menu, x, y){
     await loadAllArtists();
     renderAll();
   }
+  // The page has painted with whatever the hash asked for and the saved drawer
+  // state has survived it, so from here the sidebar belongs to the visitor.
+  moreAutoOpen = true;
 })();
 
 </script>
