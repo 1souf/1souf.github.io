@@ -3818,6 +3818,16 @@ let collectionPlayback = null;
 // "switch a mode on". The only thing that shows a run is running is the music.
 let randomPlayback = false;
 
+// The run's own trail: every track it has played, oldest first, and which of
+// them is playing now. Prev and next walk this instead of the album the track
+// happens to belong to - in a run that ignores albums, "the previous track" can
+// only mean the one that was playing before this one. playSongAt() drops the
+// mode but leaves the trail alone, so a queue detour can hand the run back with
+// its way back intact; a run that starts from cold throws the trail away on its
+// first draw (see playRandomSong).
+let randomHistory = [];
+let randomPos = -1;
+
 function renderCollection(tabId){
   const tab = COLLECTION_TABS.find(t => t.id === tabId) || COLLECTION_TABS[0];
   const entries = collectionEntries(tab.marker);
@@ -6290,6 +6300,13 @@ function playRandomSong(){
   const pick = choices.length
     ? choices[Math.floor(Math.random() * choices.length)]
     : pool[Math.floor(Math.random() * pool.length)];
+  // A run that wasn't already going starts a new trail. One that was keeps it
+  // and abandons whatever lay ahead of the cursor, because this draw has just
+  // taken a different branch.
+  if (!randomPlayback) { randomHistory = []; randomPos = -1; }
+  randomHistory = randomHistory.slice(0, randomPos + 1);
+  randomHistory.push(pick);
+  randomPos = randomHistory.length - 1;
   // The row is only highlighted when the album it lives on happens to be the
   // page on screen; rowElForSongs() returns null otherwise, which is exactly
   // what an album page for a different album should show.
@@ -6297,6 +6314,21 @@ function playRandomSong(){
     pick.artistName, (pick.album.cover || "").trim(), pick.album);
   // Armed after the call, never before: playSongAt() clears the mode on every
   // start, so that any other way of pressing play ends the run.
+  randomPlayback = true;
+  return true;
+}
+
+// Walks the trail one step. Returns false when there is nothing that way,
+// which is the caller's cue to draw a new song (forward) or restart the
+// current one (back).
+function stepRandomHistory(dir){
+  const target = randomPos + dir;
+  if (target < 0 || target >= randomHistory.length) return false;
+  const entry = randomHistory[target];
+  randomPos = target;
+  playSongAt(entry.idx, rowElForSongs(entry.album.songs, entry.idx), entry.album.songs,
+    entry.artistName, (entry.album.cover || "").trim(), entry.album);
+  // Re-armed after the call, same as a draw: playSongAt() ends the run.
   randomPlayback = true;
   return true;
 }
@@ -6505,18 +6537,7 @@ function stepCollection(dir){
   return true;
 }
 
-// Stepping back inside a random run is allowed to leave the run intact: it
-// walks the album of the track that is playing - the one predictable move the
-// run still offers - and re-arms the mode afterwards, so a single press of
-// prev doesn't quietly end it. Forward never reaches here (see the random
-// branch below), so the wrapper only ever has work to do on the way back.
 function stepTrack(dir){
-  const keepRandom = randomPlayback && dir === -1;
-  stepTrackInner(dir);
-  if (keepRandom && currentSongIndex >= 0) randomPlayback = true;
-}
-
-function stepTrackInner(dir){
   if (!currentAlbumSongs || currentSongIndex < 0) return;
 
   // The queue wins over the normal forward step, shuffle included — but
@@ -6536,10 +6557,18 @@ function stepTrackInner(dir){
   // advances within the original album instead of the queued one.
   if (dir === 1 && resumeContext) restoreResumeContext();
 
-  // Skipping forward inside a random run draws again, so "next" stays random.
-  // Backward is handled by the wrapper around this function - it walks the
-  // album of the track that is playing and then re-arms the run.
-  if (randomPlayback && dir === 1) { playRandomSong(); return; }
+  // Inside a random run both directions walk the run's own trail first: back to
+  // the track that was playing before this one, forward again to the one you
+  // left. Only a "next" past the end of the trail draws a new song, and a
+  // "prev" at the very start restarts the current track instead of dropping
+  // into the album it came from.
+  if (randomPlayback) {
+    if (stepRandomHistory(dir)) return;
+    if (dir === 1) { playRandomSong(); return; }
+    audioEl.currentTime = 0;
+    paintSeekUI();
+    return;
+  }
 
   // Skipping inside a collection tab walks the tab, the same order a track
   // finishing on its own takes.
