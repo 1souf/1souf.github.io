@@ -1052,8 +1052,11 @@
       #000 calc(100% - var(--mq-fade-r)),
       rgba(0,0,0,.55) calc(100% - var(--mq-fade-r) * .45),
       rgba(0,0,0,0) 100%);
-    /* One duration and one curve for both directions: the edge has to look like
-       the same dissolve whether it is growing in or collapsing out. */
+    /* The resting timing: one duration and one curve for both edges, used
+       whenever a fade is set outside a scroll (song change, resize, the player
+       opening). During a leg the JS overrides duration and delay per edge -
+       marqueeSetLegFade - because the edge the text is running into and the
+       edge it is leaving behind are not doing the same thing at the same time. */
     transition:--mq-fade-l .32s cubic-bezier(.4,0,.2,1), --mq-fade-r .32s cubic-bezier(.4,0,.2,1);
   }
   /* width:max-content keeps the clickable/hoverable area to the text itself
@@ -5470,15 +5473,27 @@ function renderCaseFile(artistName, album){
 /* Marquee scrolling for the title/sub line when text is wider than its box.
    Both lines are held in sync: each waits for the other to finish its leg
    of the trip before either one pauses and reverses. A soft fade is shown
-   only on the edge(s) that are actually clipping text at that moment. */
+   only on the edge(s) that are actually clipping text at that moment, and the
+   fade on the edge the text is leaving is gone by the time the text lands -
+   never after it (see marqueeSetLegFade). */
 const MARQUEE_HOLD_MS = 3000;
 const MARQUEE_SPEED_PX_S = 45;
-/* Which edge(s) are clipping right now. Only ever used as tokens: the actual
-   gradient lives in CSS, where --mq-fade-l/-r are the animatable part. */
+/* How long a fade takes to appear when it is set outside a scroll. Mirrors the
+   .32s on .marquee-mask; a leg overrides it per edge (see marqueeSetLegFade). */
+const MQ_FADE_MS = 320;
+/* The curve the retiring edge collapses on. NOT the same ease-in-out the
+   appearing edge uses, and not an ease-in either - see the note on
+   marqueeSetLegFade for why the release has to be spent evenly. This is
+   fitted so the last character's opacity rises in a straight line from the
+   moment the release starts to the moment the text lands. */
+const MQ_RETIRE_EASE = 'cubic-bezier(.1, .25, .65, .85)';
+/* Which edge is clipping while the line rests. Only ever used as tokens: the
+   actual gradient lives in CSS, where --mq-fade-l/-r are the animatable part.
+   There is deliberately no "both" resting state - mid-leg the two edges are
+   on different clocks, which marqueeSetLegFade owns. */
 const FADE_NONE = 'none';
 const FADE_RIGHT = 'right';
 const FADE_LEFT = 'left';
-const FADE_BOTH = 'both';
 let marqueeGeneration = 0;
 
 /* fadePx is the width of the dissolve at a clipping edge; it is scaled per
@@ -5489,22 +5504,104 @@ function makeMarquee(maskId, innerId, fadePx){
 const titleMarquee = makeMarquee('playerTitleMask', 'playerTitle', 26);
 const subMarquee = makeMarquee('playerSubMask', 'playerSub', 20);
 
+/* Resting states, and every fade that is not part of a scroll: both edges use
+   the .32s duration and curve declared on .marquee-mask, in either direction.
+   They used to differ (a quicker, front-loaded ease-out for the collapse) so
+   the fade would "get out of the way" after the text parked, but that made the
+   two halves of the same movement look like different animations: the
+   appearing edge glided, the disappearing one dumped most of its change into
+   the first few frames and then crawled. */
 function marqueeSetFade(m, mode){
-  const l = (mode === FADE_LEFT || mode === FADE_BOTH) ? m.fade + 'px' : '0px';
-  const r = (mode === FADE_RIGHT || mode === FADE_BOTH) ? m.fade + 'px' : '0px';
-  // Both directions share the duration and curve declared on .marquee-mask.
-  // They used to differ (a quicker, front-loaded ease-out for the collapse) so
-  // the fade would "get out of the way" after the text parked, but that made
-  // the two halves of the same movement look like different animations: the
-  // appearing edge glided, the disappearing one dumped most of its change into
-  // the first few frames and then crawled. Identical timing is what makes it
-  // read as one continuous dissolve.
-  if (m.mask.style.getPropertyValue('--mq-fade-l') !== l) m.mask.style.setProperty('--mq-fade-l', l);
-  if (m.mask.style.getPropertyValue('--mq-fade-r') !== r) m.mask.style.setProperty('--mq-fade-r', r);
+  // A leg leaves per-edge duration/delay/curve inline on the mask
+  // (marqueeSetLegFade); those must not carry into a resting state, or a later
+  // collapse would start late, run long, and on the wrong curve.
+  if (m.mask.style.transitionDuration) m.mask.style.transitionDuration = '';
+  if (m.mask.style.transitionDelay) m.mask.style.transitionDelay = '';
+  if (m.mask.style.transitionTimingFunction) m.mask.style.transitionTimingFunction = '';
+  const l = mode === FADE_LEFT ? m.fade + 'px' : '0px';
+  const r = mode === FADE_RIGHT ? m.fade + 'px' : '0px';
+  // A leg retires an edge by writing 0px straight away and delaying the
+  // transition, so that edge's inline value is *already* the new target. When a
+  // track change lands mid-leg, writing 0px again is then a no-op and the
+  // pending transition keeps its old delay: the fade would sit at full width
+  // for the rest of a five-second leg before collapsing. Dropping that
+  // transition first makes the value land where this state says it should.
+  // Only when the write would be a no-op, though - a real change of value
+  // restarts the transition on its own, and cancelling there would turn an
+  // ordinary collapse (a window resize, say) into a snap.
+  const settle = (prop, value) => {
+    if (m.mask.style.getPropertyValue(prop) === value) {
+      m.mask.getAnimations().forEach(a => { if (a.transitionProperty === prop) a.cancel(); });
+      return;
+    }
+    m.mask.style.setProperty(prop, value);
+  };
+  settle('--mq-fade-l', l);
+  settle('--mq-fade-r', r);
+}
+
+/* Length of one leg, at the fixed scroll speed. */
+function marqueeLegMs(m){
+  return Math.max(300, (m.distance / MARQUEE_SPEED_PX_S) * 1000);
+}
+
+/* The two edges are not doing the same job at the same moment, so they cannot
+   share one timing during a leg:
+   - the edge the text is running *into* starts clipping on the first frame, so
+     it has to arrive at full width straight away;
+   - the edge it is running *away from* only stops clipping when the text
+     lands. Its collapse used to be kicked off from the transitionend handler,
+     i.e. .32s of dissolve that began *after* the text had already parked - a
+     smudge that lingered over the final characters and then slid off them.
+     That is the ugly half of the movement.
+   So the retiring edge is scheduled backwards from the end instead: it shrinks
+   over the last MQ_FADE_MS of travel, landing on 0 on the same frame the text
+   stops. Same duration and curve as the edge that grows in - the two halves of
+   the movement are mirror images, which is what made the growing one read as
+   smooth in the first place.
+
+   Why not size the window to the travel the tail needs to reach the band
+   (fade / speed)? Tried it: that keeps the band shrinking exactly in step with
+   the gap, so the tail sits on the band's inner edge the whole way in and its
+   brightness never changes. The release became invisible - the fade just
+   quietly stopped being needed.
+
+   Why not let the collapse accelerate towards the end, "slow then fast"? Also
+   tried, and it looks worse than it sounds: while the band is still wider than
+   the gap the tail sits *inside* it, so holding the band back makes the last
+   characters get steadily dimmer for half a second and then snap to full in
+   one frame. The fade has to be spent, not deferred.
+
+   So the window is a flat .32s and the curve is fitted to spend it evenly: the
+   last character's opacity climbs in a straight line from ~63% (where it sits
+   when the release starts) to 100%, arriving on the frame the text stops.
+   Ease-in-out - the default for the appearing edge - dumps that whole climb
+   into the first 120ms and leaves a quarter of a second of nothing, which is
+   what made it read as "no animation at all". */
+function marqueeSetLegFade(m, direction, legMs){
+  const forward = direction === 'forward';
+  const retireMs = Math.min(legMs, MQ_FADE_MS);
+  const delayMs = legMs - retireMs;
+  // Per-property lists, in the order .marquee-mask declares them: -l first.
+  m.mask.style.transitionDuration = forward
+    ? `${MQ_FADE_MS}ms, ${retireMs}ms`
+    : `${retireMs}ms, ${MQ_FADE_MS}ms`;
+  m.mask.style.transitionDelay = forward
+    ? `0ms, ${delayMs}ms`
+    : `${delayMs}ms, 0ms`;
+  const arrive = forward ? '--mq-fade-l' : '--mq-fade-r';
+  const retire = forward ? '--mq-fade-r' : '--mq-fade-l';
+  // The appearing edge keeps the mask's own ease; only the retiring one gets
+  // the fitted curve. Lists are matched to transition-property by index.
+  m.mask.style.transitionTimingFunction = forward
+    ? `cubic-bezier(.4,0,.2,1), ${MQ_RETIRE_EASE}`
+    : `${MQ_RETIRE_EASE}, cubic-bezier(.4,0,.2,1)`;
+  m.mask.style.setProperty(arrive, m.fade + 'px');
+  m.mask.style.setProperty(retire, '0px');
 }
 
 function marqueeSetX(m, x, animated){
-  m.inner.style.transition = animated ? `transform ${Math.max(300, (m.distance / MARQUEE_SPEED_PX_S) * 1000)}ms linear` : 'none';
+  m.inner.style.transition = animated ? `transform ${marqueeLegMs(m)}ms linear` : 'none';
   if (!animated) void m.inner.offsetWidth; // force reflow so the next transition isn't skipped
   m.inner.style.transform = `translateX(${x}px)`;
 }
@@ -5533,7 +5630,10 @@ function marqueeRunLeg(gen, direction){
   };
 
   movers.forEach(m => {
-    marqueeSetFade(m, FADE_BOTH); // in transit: both the trailing and leading edges are clipping
+    const legMs = marqueeLegMs(m);
+    // In transit both edges clip, but the one behind the text is already on its
+    // way out - see marqueeSetLegFade.
+    marqueeSetLegFade(m, direction, legMs);
     const targetX = direction === 'forward' ? -m.distance : 0;
     marqueeSetX(m, targetX, true);
     const onEnd = (e) => {
