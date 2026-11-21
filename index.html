@@ -1930,6 +1930,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         <span class="nav-label">Artists</span>
       </button>
+      <!-- An action rather than a place: no data-tab, so the nav's delegated
+           click handler skips it and setActiveTab never marks it — the same
+           trick the More toggle below uses. The glyph is the player bar's own
+           shuffle icon, so the two read as one idea. It also never lights up
+           while a run is going: a row that stayed white until something else
+           was played read as a mode, and this is meant to read as a button. -->
+      <button class="nav-item" id="playRandomBtn" type="button"
+              title="Play a random track from the whole archive — and another one when it ends">
+        <svg viewBox="-2.5 0 25 25" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M98.343,6929.77732 L96.929,6931.33865 L100.171,6934.69955 L99,6934.69955 C95.686,6934.69955 93,6932.05533 93,6928.79287 C93,6924.44359 89.418,6920.91731 85,6920.91731 L84,6920.91731 L84,6922.8862 L85,6922.8862 C88.314,6922.8862 91,6925.53042 91,6928.79287 C91,6933.14215 94.582,6936.66844 99,6936.66844 L100.171,6936.66844 L96.929,6939.69167 L98.343,6941 C102.955,6936.40854 101.764,6937.5948 104,6935.367 C102.185,6933.56743 103.327,6934.69659 98.343,6929.77732 M93.285,6923.11754 C93.684,6923.69738 94.015,6924.40815 94.282,6925.06675 C96.188,6922.6775 98.852,6922.8862 100.171,6922.8862 L96.929,6925.90943 L98.343,6927.21776 C103.325,6922.26304 102.181,6923.40205 104,6921.58476 C101.773,6919.3796 103.009,6920.59933 98.343,6916 L96.929,6917.55838 L100.171,6920.91731 C98.759,6920.91731 95.687,6920.70171 93.285,6923.11754 M84,6934.69955 L84,6936.66844 C85.139,6936.66844 87.949,6936.91652 90.719,6934.12463 C90.321,6933.54578 89.983,6933.00925 89.716,6932.35164 C87.649,6934.94172 85.019,6934.69955 84,6934.69955" transform="translate(-84,-6916)"></path></svg>
+        <span class="nav-label">Play Random</span>
+      </button>
       <!-- A drawer rather than a tab: it carries no data-tab, so the nav's
            click handler skips it and setActiveTab never marks it active.
            The dots are the same glyph as a row's ⋯ menu button. -->
@@ -3797,6 +3808,15 @@ function collectionEntries(marker){
 // needs to walk it, and it stays null for every other way of starting playback
 // so album pages, cards and search results keep advancing inside their album.
 let collectionPlayback = null;
+
+// Whether playback is currently a "Play Random" run — see playRandomSong().
+// Session-only, like the shuffle and repeat switches: a reload starts a fresh
+// mode rather than restoring one from a previous visit.
+//
+// Deliberately invisible: the sidebar row has no lit state, no dot and no
+// pressed attribute, so pressing it reads as "start this track" rather than
+// "switch a mode on". The only thing that shows a run is running is the music.
+let randomPlayback = false;
 
 function renderCollection(tabId){
   const tab = COLLECTION_TABS.find(t => t.id === tabId) || COLLECTION_TABS[0];
@@ -5722,6 +5742,9 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   // callers that mean to keep it (renderCollection's startEntry and
   // stepCollection) re-arm it immediately after this call returns.
   collectionPlayback = null;
+  // Same rule for a random run: starting one specific track is a decision, and
+  // it ends the mode. playRandomSong() re-arms it after this call returns.
+  randomPlayback = false;
 
   const explicitSongs = songs !== undefined;
   if (songs === undefined) songs = currentAlbumSongs;
@@ -6218,6 +6241,66 @@ function rowElForSongs(songs, idx){
   return el('content').querySelectorAll('tbody tr')[idx] || null;
 }
 
+/* ---------------- Play Random ----------------
+
+   One pool: every playable track on the sheet, from every artist and every
+   album. Pressing the row starts one drawn from it, and when that track ends
+   the next is drawn again from the same pool — deliberately not the next track
+   of the album it happened to come from, which is what separates this from
+   shuffle (shuffle reorders one album; this ignores albums entirely).
+
+   Cross-listed copies collapse onto the song they came from, exactly as
+   collectionEntries() does: a track filed on three albums is one song, so it
+   gets one entry in the pool and starts where it actually lives.
+
+   Rebuilt on every draw rather than cached — the Reload row rebuilds DATA
+   wholesale, and a cached array would keep pointing at album objects that are
+   no longer in it. */
+function allPlayableTracks(){
+  const byOrigin = new Map();
+  ARTISTS.forEach(a => {
+    (DATA[a.name] || []).forEach(album => {
+      if (album.isDivider) return;
+      (album.songs || []).forEach((song, idx) => {
+        if (!song.playLink) return;
+        if (isDemoMode && song.playLink === '#') return;
+        const originArtist = (song.crossListed && song.fromArtist) || a.name;
+        const originAlbum = (song.crossListed && song.fromAlbum) || album.name;
+        const key = `${originArtist}||${originAlbum}||${stripLeadingEmoji(song.name)}`.toLowerCase();
+        const prev = byOrigin.get(key);
+        // The native row wins over a copy of itself, same rule the collection
+        // tabs use: the copy's file is not the one that was linked first.
+        if (!prev || (prev.song.crossListed && !song.crossListed)) {
+          byOrigin.set(key, { song, idx, album, artistName: a.name });
+        }
+      });
+    });
+  });
+  return Array.from(byOrigin.values());
+}
+
+function playRandomSong(){
+  const pool = allPlayableTracks();
+  if (!pool.length) { showToast("No playable tracks on the sheet yet."); return false; }
+  // Never the track that is already running — a "random" pick that repeats
+  // itself reads as a bug. Everything else is fair game, including whichever
+  // track played before this one.
+  const choices = pool.filter(t =>
+    !(t.album.songs === currentAlbumSongs && t.idx === currentSongIndex));
+  const pick = choices.length
+    ? choices[Math.floor(Math.random() * choices.length)]
+    : pool[Math.floor(Math.random() * pool.length)];
+  // The row is only highlighted when the album it lives on happens to be the
+  // page on screen; rowElForSongs() returns null otherwise, which is exactly
+  // what an album page for a different album should show.
+  playSongAt(pick.idx, rowElForSongs(pick.album.songs, pick.idx), pick.album.songs,
+    pick.artistName, (pick.album.cover || "").trim(), pick.album);
+  // Armed after the call, never before: playSongAt() clears the mode on every
+  // start, so that any other way of pressing play ends the run.
+  randomPlayback = true;
+  return true;
+}
+
 // The "Add to Queue" row-menu item. A real queue now — picking a track
 // appends it after whatever's already queued instead of bumping it, so
 // any number of tracks (from any albums) can be lined up. Picking a
@@ -6264,6 +6347,9 @@ function saveResumeContextIfNeeded(){
     // Queued tracks play from their own albums; once the queue drains, the
     // tab that was playing before it takes the running order back.
     collectionPlayback,
+    // A random run survives a detour through the queue: the queued tracks are
+    // one-time requests, and the run picks up again once they have drained.
+    randomPlayback,
   };
 }
 
@@ -6282,6 +6368,7 @@ function restoreResumeContext(){
   currentAlbumName = ctx.albumName;
   currentAlbumSection = ctx.albumSection;
   collectionPlayback = ctx.collectionPlayback;
+  randomPlayback = !!ctx.randomPlayback;
 }
 
 let isShuffle = false;
@@ -6294,6 +6381,10 @@ el('repeatBtn').addEventListener('click', () => {
   isRepeat = !isRepeat;
   el('repeatBtn').classList.toggle('active', isRepeat);
 });
+// Pressing it again re-rolls rather than switching the run off: the row says
+// "play a random song", so that is what a second press does. Starting a track
+// any other way (a row, a card, a queued entry) is what ends the run.
+el('playRandomBtn').addEventListener('click', () => { playRandomSong(); });
 
 audioEl.addEventListener('ended', () => {
   // The queue (see queueSongNext()) always wins here, even over
@@ -6326,6 +6417,12 @@ audioEl.addEventListener('ended', () => {
     audioEl.play().catch(() => showToast("Couldn't restart playback — the source link may be broken."));
     return;
   }
+
+  // A random run draws its next track from the whole pool instead of following
+  // the album the track that just finished happened to come from. It is
+  // checked before the shuffle switch below, which only reorders one album - a
+  // run that is already ignoring albums shouldn't fall back to them.
+  if (randomPlayback) { playRandomSong(); return; }
 
   // A track that started in a collection tab hands over to the next row of
   // that tab, not to the next track of its album. Falls through to the album
@@ -6408,7 +6505,18 @@ function stepCollection(dir){
   return true;
 }
 
+// Stepping back inside a random run is allowed to leave the run intact: it
+// walks the album of the track that is playing - the one predictable move the
+// run still offers - and re-arms the mode afterwards, so a single press of
+// prev doesn't quietly end it. Forward never reaches here (see the random
+// branch below), so the wrapper only ever has work to do on the way back.
 function stepTrack(dir){
+  const keepRandom = randomPlayback && dir === -1;
+  stepTrackInner(dir);
+  if (keepRandom && currentSongIndex >= 0) randomPlayback = true;
+}
+
+function stepTrackInner(dir){
   if (!currentAlbumSongs || currentSongIndex < 0) return;
 
   // The queue wins over the normal forward step, shuffle included — but
@@ -6427,6 +6535,11 @@ function stepTrack(dir){
   // took over, same as when that track finishes on its own, so this skip
   // advances within the original album instead of the queued one.
   if (dir === 1 && resumeContext) restoreResumeContext();
+
+  // Skipping forward inside a random run draws again, so "next" stays random.
+  // Backward is handled by the wrapper around this function - it walks the
+  // album of the track that is playing and then re-arms the run.
+  if (randomPlayback && dir === 1) { playRandomSong(); return; }
 
   // Skipping inside a collection tab walks the tab, the same order a track
   // finishing on its own takes.
