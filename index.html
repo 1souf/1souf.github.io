@@ -94,8 +94,10 @@
      one continuous surface, and the only line left is the one against the
      content column. */
   .sidebar-header{padding:20px 18px 8px;}
-  .header-top-row{display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:32px;}
-  .sidebar-header .social-link svg{width:20px; height:20px;}
+  /* One control left in here now that the YouTube link is a pill at the foot
+     of the panel, so the row has to be pushed right by hand - space-between
+     with a single child would park the toggle against the left edge. */
+  .header-top-row{display:flex; align-items:center; justify-content:flex-end; gap:14px; min-height:32px;}
 
   /* ---------- collapsed rail ----------
      The header's toggle shrinks the docked panel to an icon column: the
@@ -107,10 +109,11 @@
   html.sb-collapsed .sidebar{width:64px;}
   html.sb-collapsed .sidebar-header{padding:20px 0 8px;}
   html.sb-collapsed .header-top-row{justify-content:center;}
-  /* The toggle takes the YouTube link's place; at 64px they can't share a row. */
-  html.sb-collapsed .sidebar-header .social-link{display:none;}
   html.sb-collapsed .sidebar-close{margin:-4px 0;}
   html.sb-collapsed .nav-item{justify-content:center; padding:11px 0;}
+  /* Same treatment for the pill: the label is hidden by the .nav-label rule
+     below, so all that's left is the play glyph in a 44px red square. */
+  html.sb-collapsed .yt-pill{justify-content:center; padding:11px 0;}
   /* Visually gone, still the row's accessible name - a plain display:none
      would leave the buttons unnamed once the text is hidden. */
   html.sb-collapsed .nav-label{
@@ -193,6 +196,34 @@
   .sidebar-tools{flex:none; display:flex; flex-direction:column; gap:4px; padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));}
   .sidebar-tools .nav-item:disabled{opacity:.55; cursor:default;}
   .sidebar-tools .nav-item.spinning{color:var(--text);}
+
+  /* The YouTube pill: the one coloured control in the panel, and the only row
+     in it that leaves the site. Brand red rather than another grey row, with a
+     lighter top edge so it reads as something you press and a soft glow
+     underneath so it sits on the surface instead of being painted into it.
+     Same box as a .nav-item (10px inset, 11px padding, 8px radius) so it lines
+     up with the rows above and below it. */
+  .yt-pill{
+    display:flex; align-items:center; gap:12px;
+    /* No extra bottom margin: the group's own 4px gap is the whole space, so
+       the step down to Updates matches Updates -> Reload exactly. */
+    width:calc(100% - 20px); margin:0 10px; padding:11px 10px;
+    border-radius:8px; text-decoration:none;
+    background:linear-gradient(180deg, #ff2b52 0%, #ff0033 62%, #e6002e 100%);
+    /* The inset line is the pill's own top edge; the drop shadow is only there
+       to lift it a hair off the surface, so it stays short and faint. */
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 2px 6px -3px rgba(255,0,51,.4);
+    color:#fff; font-family:var(--mono); font-size:.9rem; font-weight:700;
+    letter-spacing:.01em; user-select:none;
+    transition:filter .15s ease, box-shadow .15s ease, transform .1s ease;
+  }
+  .yt-pill:hover{
+    filter:brightness(1.07);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.26), 0 3px 9px -3px rgba(255,0,51,.55);
+  }
+  .yt-pill:active{transform:translateY(1px);}
+  .yt-pill:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+  .yt-pill svg{width:20px; height:20px; flex:none; display:block;}
 
   /* The reload row keeps the character glyph the old button used rather than
      a stroke icon. Its ink is only ~0.65em tall, and the circle it draws is
@@ -1633,10 +1664,10 @@
        idea only: here every rule the toggle turns on is turned back off. */
     html.sb-collapsed .app > .sidebar{width:var(--sidebar-w);}
     html.sb-collapsed .sidebar-header{padding:20px 18px 8px;}
-    html.sb-collapsed .header-top-row{justify-content:space-between;}
-    html.sb-collapsed .sidebar-header .social-link{display:flex;}
+    html.sb-collapsed .header-top-row{justify-content:flex-end;}
     html.sb-collapsed .sidebar-close{margin:-4px -6px -4px 0;}
     html.sb-collapsed .nav-item{justify-content:flex-start; padding:11px 10px;}
+    html.sb-collapsed .yt-pill{justify-content:flex-start; padding:11px 10px;}
     html.sb-collapsed .nav-label{
       position:static; width:auto; height:auto; margin:0; padding:0;
       overflow:visible; clip-path:none; white-space:normal; border:0;
@@ -1854,7 +1885,6 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="header-top-row">
-        <a href="https://www.youtube.com/@1souf/?sub_confirmation=1" class="link-icon social-link" target="_blank" rel="noopener" title="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg></a>
         <button class="sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Close menu" title="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M21.97 15V9C21.97 4 19.97 2 14.97 2H8.96997C3.96997 2 1.96997 4 1.96997 9V15C1.96997 20 3.96997 22 8.96997 22H14.97C19.97 22 21.97 20 21.97 15Z"></path>
@@ -1904,6 +1934,13 @@
     </nav>
     <!-- Foot of the panel, in the same row style as the tabs above. -->
     <div class="sidebar-tools">
+      <!-- The channel link. It used to be a bare glyph in the header, where it
+           read as decoration; down here it is a real control in the brand's
+           own colour, and the only one in the panel that leaves the site. -->
+      <a class="yt-pill" href="https://www.youtube.com/@1souf/?sub_confirmation=1" target="_blank" rel="noopener" title="Subscribe on YouTube">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"></path></svg>
+        <span class="nav-label">YouTube</span>
+      </a>
       <!-- "What's new". The dot on the bell means there are songs dated after
            the last time this visitor opened the list. -->
       <button class="nav-item" id="changelogBtn" type="button" title="What's new — recently added songs and site changes" aria-haspopup="dialog" aria-expanded="false" aria-controls="changelogModal">
