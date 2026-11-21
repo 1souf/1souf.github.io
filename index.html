@@ -6486,6 +6486,49 @@ function recentlyAddedTracks(maxDays = 30){
     .sort((x, y) => new Date(y.song.releaseDate) - new Date(x.song.releaseDate));
 }
 
+/* The draw is not uniform over the pool.
+
+   Two artists hold 82% of the playable tracks on this sheet, so a flat pick
+   spends four draws in five on the same pair and the button stops sounding
+   random - it sounds like those two artists with guests. Each artist's pull is
+   therefore divided by how much of the sheet they already are:
+
+     weight = 1 / (1 + edits / RANDOM_EDIT_SOFTEN)
+
+   At 30, an artist with 30 edits draws at half the per-track rate of one with
+   none. Measured on the live sheet, that takes the big two from 82% of draws
+   together to 46%, while still leaving them about five times the airtime an
+   even split would give them - the point is variety, not pretending the
+   catalogue is flat. Lower the constant to push harder, raise it to go softer.
+
+   Weighted per track rather than per artist on purpose: an artist's total pull
+   is then tracks/(1 + edits/K), which is exactly the "small artists get heard"
+   curve wanted here, and it needs no separate normalising pass. */
+const RANDOM_EDIT_SOFTEN = 30;
+
+function randomDrawWeights(tracks){
+  const perArtist = new Map();
+  for (const t of tracks) {
+    if (!perArtist.has(t.artistName)) {
+      perArtist.set(t.artistName, 1 / (1 + artistEditCount(t.artistName) / RANDOM_EDIT_SOFTEN));
+    }
+  }
+  return perArtist;
+}
+
+// Roulette over the weights. The final return only catches the case where
+// floating-point drift leaves r just above the running total.
+function pickWeightedTrack(tracks, weights){
+  let total = 0;
+  for (const t of tracks) total += weights.get(t.artistName);
+  let r = Math.random() * total;
+  for (const t of tracks) {
+    r -= weights.get(t.artistName);
+    if (r <= 0) return t;
+  }
+  return tracks[tracks.length - 1];
+}
+
 function playRandomSong(){
   const pool = allPlayableTracks();
   if (!pool.length) { showToast("No playable tracks on the sheet yet."); return false; }
@@ -6494,9 +6537,8 @@ function playRandomSong(){
   // track played before this one.
   const choices = pool.filter(t =>
     !(t.album.songs === currentAlbumSongs && t.idx === currentSongIndex));
-  const pick = choices.length
-    ? choices[Math.floor(Math.random() * choices.length)]
-    : pool[Math.floor(Math.random() * pool.length)];
+  const candidates = choices.length ? choices : pool;
+  const pick = pickWeightedTrack(candidates, randomDrawWeights(candidates));
   // A run that wasn't already going starts a new trail. One that was keeps it
   // and abandons whatever lay ahead of the cursor, because this draw has just
   // taken a different branch.
