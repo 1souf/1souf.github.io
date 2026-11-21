@@ -1255,6 +1255,29 @@
   .info-status.state-online{color:var(--text);}
   .info-status.state-offline{color:var(--text);}
 
+  /* ---------- the playing track's description and credits ----------
+     The same box again, this time opened from the player bar so the sheet's
+     Notes and Credits columns are readable without having to find the album
+     the track lives on. Two labelled sections rather than one run of prose,
+     because they answer two different questions: what was written about the
+     track, and who made it. */
+  #songInfoModal .desc-modal-body{white-space:normal;}
+  .song-info-section + .song-info-section{
+    margin-top:16px; padding-top:14px; border-top:1px solid var(--border);
+  }
+  .song-info-heading{
+    margin:0 0 6px;
+    font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text);
+  }
+  /* Both cells are typed with line breaks in them on the sheet, so these
+     paragraphs keep the pre-line the body gave up (see the override above). */
+  .song-info-text{
+    margin:0; font-size:.82rem; line-height:1.7; color:var(--text-dim);
+    white-space:pre-line; overflow-wrap:anywhere;
+  }
+  .song-info-empty{margin:0; font-size:.82rem; line-height:1.7; color:var(--text-dim);}
+
   /* While the description is open, only the description itself may be
      selected. Without this the backdrop and the page behind it stayed
      selectable, so a highlight drag that left the modal box - easy, since it
@@ -1464,6 +1487,10 @@
   #queueBtn svg{width:17px; height:17px;}
   /* Same footprint as the queue button beside it (see the player-bar markup). */
   #filterBtn svg{width:17px; height:17px;}
+  /* The song-info glyph is the queue icon's three lines, so it takes the same
+     17px box - at the default 15px its thin strokes read a size smaller than
+     the button it is modelled on. */
+  #songInfoBtn svg{width:17px; height:17px;}
 
   /* ---------- playback menu (the sliders button) ---------- */
   .fx-wrap{position:relative; display:inline-flex; align-items:center;}
@@ -1842,7 +1869,8 @@
     .ctrl-btn{padding:12px;}
     .ctrl-btn.skip{padding:10px;}
     .ctrl-btn.skip svg{width:22px; height:22px;}
-    #shuffleBtn svg, #repeatBtn svg, #queueBtn svg, #filterBtn svg{width:17px; height:17px;}
+    #shuffleBtn svg, #repeatBtn svg, #queueBtn svg, #filterBtn svg,
+    #songInfoBtn svg{width:17px; height:17px;}
     #muteBtn svg, #closeBtn svg{width:18px; height:18px;}
   }
 
@@ -2063,6 +2091,16 @@
     <!-- Playback and Up Next are wrapped together so they can be tightened
          into a single cluster (see .ctrl-group). -->
     <div class="ctrl-group">
+      <!-- The two columns you would otherwise have to find the album page to
+           read. Left of the Playback button, inside the same cluster, so the
+           pair reads as "what this track is" before "how it sounds". -->
+      <button class="ctrl-btn" id="songInfoBtn" type="button" title="Description &amp; credits"
+              aria-haspopup="dialog" aria-expanded="false" aria-controls="songInfoModal">
+        <!-- The Up Next glyph with its note taken off: two lines all the way
+             across, the last one stopping halfway - the same stroke, weight
+             and spacing as the icon it sits beside in the bar. -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 5H3"></path><path d="M21 12H3"></path><path d="M11 19H3"></path></svg>
+      </button>
       <!-- Sits just left of the queue button and opens a small panel above
            itself. The wrapper gives the panel something to anchor to. -->
       <div class="fx-wrap">
@@ -2175,6 +2213,20 @@
   </div>
 </div>
 <div class="desc-modal-backdrop" id="infoModalBackdrop"></div>
+
+<!-- What the sheet says about the track that is playing, opened from the
+     player bar. Same shell as the description box; the body is built on open
+     because the song changes far more often than the box does. -->
+<div class="desc-modal" id="songInfoModal" aria-hidden="true" role="dialog" aria-labelledby="songInfoTitle">
+  <div class="desc-modal-header">
+    <span class="desc-modal-title" id="songInfoTitle">Song Info</span>
+    <button class="desc-modal-close" id="songInfoCloseBtn" type="button" title="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+  <div class="desc-modal-body" id="songInfoBody"></div>
+</div>
+<div class="desc-modal-backdrop" id="songInfoBackdrop"></div>
 
 <!-- "What's new", opened from the sidebar's Updates row. Same shell again; the
      body drops its padding so the list rows run edge to edge, and it carries
@@ -5842,6 +5894,8 @@ function playSongAt(idx, rowEl, songs, artistName, albumCoverUrl, album, fromQue
   const downloadBtn = el('playerDownload');
   if (song.playLink) { downloadBtn.href = toDownloadUrl(song.playLink); downloadBtn.style.display = 'inline-flex'; }
   else downloadBtn.style.display = 'none';
+  // Skipping with the box open would leave it describing the previous track.
+  if (songInfoModal.classList.contains('open')) renderSongInfo();
   // The card that owns this album (or artist) now wears the pause glyph. Done
   // here as well as on the play/pause events, because swapping one track for
   // another while it's playing fires neither.
@@ -6776,6 +6830,7 @@ el('closeBtn').addEventListener('click', () => {
   stopMarquees();
   if (currentRowEl) { resetRowVisual(currentRowEl); currentRowEl = null; }
   currentSongIndex = -1;
+  closeSongInfoModal();
   syncCardPlayBadges();
   document.title = DEFAULT_TITLE;
   // Hand the audio session back to the OS too, or the lock screen keeps
@@ -8116,6 +8171,75 @@ el('infoModalCloseBtn').addEventListener('click', closeInfoModal);
 infoModalBackdrop.addEventListener('click', closeInfoModal);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && infoModalEl.classList.contains('open')) closeInfoModal();
+});
+
+/* ---------------- song info: the playing track's description and credits ----------------
+   An album page prints both columns, but only for the album you are looking
+   at. A track started from Home, a card, the queue or a random run left them
+   unreachable, which is what this box is for: it reads the two fields straight
+   off the song object that is playing, so it works from anywhere on the site.
+
+   No title block: the player bar under the box already names the track, the
+   artist and (in its own way) the album, so repeating any of it here was three
+   lines of chrome in front of the thing you opened the box to read. */
+const songInfoModal = el('songInfoModal');
+const songInfoBackdrop = el('songInfoBackdrop');
+const songInfoBtnEl = el('songInfoBtn');
+
+function currentSongEntry(){
+  if (!currentAlbumSongs || currentSongIndex < 0) return null;
+  return currentAlbumSongs[currentSongIndex] || null;
+}
+
+function renderSongInfo(){
+  const song = currentSongEntry();
+  const body = el('songInfoBody');
+  if (!song) {
+    body.innerHTML = `<p class="song-info-empty">Nothing is playing right now.</p>`;
+    return;
+  }
+  const description = String(song.notes || "").trim();
+  const credits = String(song.credits || "").trim();
+  const section = (heading, text) => text
+    ? `<div class="song-info-section">
+         <h3 class="song-info-heading">${heading}</h3>
+         <p class="song-info-text">${esc(text)}</p>
+       </div>`
+    : "";
+  body.innerHTML = `
+    ${section("Description", description)}
+    ${section("Credits", credits)}
+    ${description || credits ? "" : `<p class="song-info-empty">Nothing written for this track yet.</p>`}`;
+}
+
+function openSongInfoModal(){
+  if (!currentSongEntry()) { showToast("Nothing is playing right now."); return; }
+  // Built on open rather than kept in step: the track changes far more often
+  // than the box is looked at.
+  renderSongInfo();
+  songInfoModal.classList.add('open');
+  songInfoBackdrop.classList.add('open');
+  songInfoModal.setAttribute('aria-hidden', 'false');
+  songInfoBtnEl.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('desc-modal-open');
+}
+function closeSongInfoModal(){
+  if (!songInfoModal.classList.contains('open')) return;
+  songInfoModal.classList.remove('open');
+  songInfoBackdrop.classList.remove('open');
+  songInfoModal.setAttribute('aria-hidden', 'true');
+  songInfoBtnEl.setAttribute('aria-expanded', 'false');
+  // Only hand selection back if no other dialog is still up.
+  if (!descModal.classList.contains('open') && !infoModalEl.classList.contains('open')
+      && !el('changelogModal').classList.contains('open')) {
+    document.body.classList.remove('desc-modal-open');
+  }
+}
+songInfoBtnEl.addEventListener('click', openSongInfoModal);
+el('songInfoCloseBtn').addEventListener('click', closeSongInfoModal);
+songInfoBackdrop.addEventListener('click', closeSongInfoModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && songInfoModal.classList.contains('open')) closeSongInfoModal();
 });
 
 // One delegated handler for the tab list, so each tab added later is just
