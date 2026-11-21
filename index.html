@@ -480,7 +480,7 @@
      exactly the track the covers sit in. */
   .cover-head-icon{display:flex; justify-content:center; width:36px;}
   .row-cover{
-    display:block; width:36px; height:36px; padding:0; border:0;
+    position:relative; display:block; width:36px; height:36px; padding:0; border:0;
     border-radius:5px; background:var(--bg-elevated); overflow:hidden;
     cursor:pointer; transition:filter .15s ease;
   }
@@ -490,6 +490,21 @@
     width:100%; height:100%; display:flex; align-items:center; justify-content:center;
     font-family:var(--mono); font-size:.4rem; letter-spacing:.02em; color:var(--text-dim);
   }
+  /* A playing row says so on the artwork: the cover dims under a scrim and
+     the equaliser sits in the middle of it. On an album page the # cell
+     carries this (see .num-cell .eq); a collection row has a cover there
+     instead, so the cover takes the job over. `playing-now`, not `playing`:
+     the latter marks the loaded track, which stays marked while paused. */
+  .cover-eq{
+    position:absolute; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,.55); pointer-events:none;
+  }
+  tr.playing-now .cover-eq{display:flex;}
+  /* Slightly bigger than the 12px inline one: this is the only thing on a
+     36px plate, and the bars have to read at a glance. */
+  .cover-eq .eq{height:16px; gap:3px;}
+  .cover-eq .eq span{width:3px;}
   /* Which album the song is from - the thing a row in this list can't say any
      other way, since the cover is the only hint and it's 36px wide. */
   .title-cell .t-features .t-from-album{color:var(--text-dim); opacity:.9;}
@@ -3695,7 +3710,7 @@ function renderCollection(tabId){
     return `
       <tr data-entry="${i}" class="${playable ? "" : "no-file"}" title="${playable ? "" : "No source file linked yet"}">
         <td class="cover-cell">
-          <button class="row-cover" type="button" data-entry="${i}" title="Open &quot;${esc(album.name)}&quot;" aria-label="Open ${esc(album.name)}">${coverHtml}</button>
+          <button class="row-cover" type="button" data-entry="${i}" title="Open &quot;${esc(album.name)}&quot;" aria-label="Open ${esc(album.name)}">${coverHtml}<span class="cover-eq" aria-hidden="true"><span class="eq"><span></span><span></span><span></span></span></span></button>
         </td>
         <td class="title-cell"><div class="t-name">${esc(song.name)}${newTagHtml}</div>${featuresHtml}</td>
         <td class="notes-cell">${esc(song.notes)}</td>
@@ -3799,6 +3814,9 @@ function renderCollection(tabId){
       if (!tr) return;
       currentRowEl = tr;
       tr.classList.add('playing');
+      // The row was painted before this render, so ask the audio element
+      // whether the equaliser belongs on it right now.
+      tr.classList.toggle('playing-now', !audioEl.paused);
     });
   }
 
@@ -5370,6 +5388,7 @@ window.addEventListener('resize', () => { if (el('player').style.display !== 'no
 function resetRowVisual(rowEl){
   if (!rowEl) return;
   rowEl.classList.remove('playing');
+  rowEl.classList.remove('playing-now');
   // A row on one of the collection tabs has a cover where the # was, so there
   // is no number to put back (and no data-idx to look one up with).
   const cell = rowEl.querySelector('.num-cell');
@@ -5380,7 +5399,13 @@ function resetRowVisual(rowEl){
 
 function setRowPlayingVisual(rowEl, playing){
   const cell = rowEl.querySelector('.num-cell');
-  if (!cell) return;   // collection rows: the cover stays put, only the tint changes
+  if (!cell) {
+    // Collection row: there's no # cell to swap, so the cover carries the
+    // state instead - scrim plus equaliser while the track is actually
+    // running, plain artwork the moment it's paused.
+    rowEl.classList.toggle('playing-now', !!playing);
+    return;
+  }
   if (playing) {
     // Equaliser normally; the pause glyph takes over on row hover via CSS.
     cell.innerHTML = `<button type="button" class="row-play" aria-label="Pause"><span class="eq"><span></span><span></span><span></span></span><svg class="row-pause" viewBox="0 0 10.1 11.25" aria-hidden="true"><rect x="0" y="0" width="3.4" height="11.25" rx="0.9"/><rect x="6.7" y="0" width="3.4" height="11.25" rx="0.9"/></svg></button>`;
