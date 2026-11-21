@@ -506,8 +506,14 @@
   .cover-eq .eq{height:16px; gap:3px;}
   .cover-eq .eq span{width:3px;}
   /* Which album the song is from - the thing a row in this list can't say any
-     other way, since the cover is the only hint and it's 36px wide. */
+     other way, since the cover is the only hint and it's 36px wide. It opens
+     that album on click, exactly like the cover does, so it wears the same
+     hover the credit names do. */
   .title-cell .t-features .t-from-album{color:var(--text-dim); opacity:.9;}
+  /* Only the name is the link - the em dash before it is punctuation and
+     stays plain, so it neither underlines nor opens anything. */
+  .title-cell .t-features .t-from-album-name{cursor:pointer; transition:color .15s ease;}
+  .title-cell .t-features .t-from-album-name:hover{color:var(--text); text-decoration:underline;}
 
   /* ---------- one artist's page ----------
      Same paper-and-stamp furniture as an album page: a portrait where the
@@ -770,7 +776,11 @@
   .title-cell .t-name{color:var(--text); font-weight:500;}
   .title-cell .t-new-tag{
     display:inline-block; vertical-align:middle; margin-left:8px; position:relative; top:-1px;
-    padding:2px 6px; border-radius:3px; background:var(--stamp-fixed); color:var(--sidebar);
+    padding:2px 6px; border-radius:3px; background:var(--stamp-fixed);
+    /* Fixed ink, not var(--sidebar): the plate is --stamp-fixed and never
+       moves, so the lettering must not either. --sidebar is in THEME_VARS,
+       which tinted the word to match the album the track sits on. */
+    color:#0c0c0c;
     font-size:.58rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
   }
   .title-cell .t-features{color:var(--text-dim); font-size:.76rem; margin-top:2px;}
@@ -1304,9 +1314,12 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .changelog-features{font-weight:500; color:var(--text-dim);}
+  /* Fixed plate and fixed ink, like the tracklist's own NEW tag: --stamp is
+     in THEME_VARS, so this badge used to take the colour of whatever album
+     the player happened to be on. */
   .changelog-new-tag{
     display:inline-block; margin-left:7px; padding:1px 6px; border-radius:3px;
-    background:var(--stamp); color:#111111; font-size:.58rem; font-weight:800;
+    background:var(--stamp-fixed); color:#0c0c0c; font-size:.58rem; font-weight:800;
     letter-spacing:.04em; text-transform:uppercase; vertical-align:middle;
   }
   .changelog-item-meta{
@@ -3685,7 +3698,10 @@ function renderCollection(tabId){
     // reads as one attribution - "Artist — Album" - instead of three facts
     // strung together with bullets. The cover is 36px, far too small to say
     // which album a row came from on its own.
-    const fromAlbum = `<span class="t-from-album" title="From &quot;${esc(album.name)}&quot;">— ${esc(album.name)}</span>`;
+    // The dash stays outside the link: it is punctuation between the credits
+    // and the album, so it must not underline or take a click of its own. The
+    // nbsp glues it to the first word of the name so a wrap can't orphan it.
+    const fromAlbum = `<span class="t-from-album">—&nbsp;<span class="t-from-album-name" title="Open &quot;${esc(album.name)}&quot;">${esc(album.name)}</span></span>`;
     const creditHead = [ytMark, artistLine].filter(Boolean).join(" • ");
     const featuresHtml = `<div class="t-features">${creditHead ? creditHead + " " : ""}${fromAlbum}</div>`;
 
@@ -3757,15 +3773,25 @@ function renderCollection(tabId){
     return holder ? entries[parseInt(holder.dataset.entry, 10)] : null;
   };
 
+  // Two things on a row open the album it came from: its cover, and the album
+  // name at the end of the credit line. Same lookup either way.
+  const openEntryAlbum = (entry) => {
+    const match = findAlbumByNames(entry.artistName, entry.album.name, entry.album.section);
+    if (!match) { showToast("That album isn't on the sheet anymore."); return; }
+    selectAlbum(match.artistName, match.album);
+  };
+
   tbody.addEventListener('click', (e) => {
-    // The cover is the album link, and the only control in this cell.
     const coverBtn = e.target.closest('.row-cover');
     if (coverBtn) {
       const entry = entryOf(coverBtn);
-      if (!entry) return;
-      const match = findAlbumByNames(entry.artistName, entry.album.name, entry.album.section);
-      if (!match) { showToast("That album isn't on the sheet anymore."); return; }
-      selectAlbum(match.artistName, match.album);
+      if (entry) openEntryAlbum(entry);
+      return;
+    }
+    const albumLink = e.target.closest('.t-from-album-name');
+    if (albumLink) {
+      const entry = entryOf(albumLink);
+      if (entry) openEntryAlbum(entry);
       return;
     }
     const queueBtn = e.target.closest('.queue-next-item');
@@ -3777,7 +3803,7 @@ function renderCollection(tabId){
     // Touch has no double-click, so a single tap on the row plays - the same
     // rule the album table uses, minus the cells that are their own controls.
     if (!matchMedia('(hover:none)').matches) return;
-    if (e.target.closest('.link-menu-wrap, .t-credit, .row-cover, a')) return;
+    if (e.target.closest('.link-menu-wrap, .t-credit, .row-cover, .t-from-album, a')) return;
     const row = e.target.closest('tr[data-entry]');
     const entry = row && entryOf(row);
     if (entry) startEntry(entry, row, true);
@@ -3786,7 +3812,7 @@ function renderCollection(tabId){
   tbody.querySelectorAll('tr').forEach(tr => {
     tr.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); });
     tr.addEventListener('dblclick', (e) => {
-      if (e.target.closest('.link-menu-wrap, .row-cover, .t-credit, a')) return;
+      if (e.target.closest('.link-menu-wrap, .row-cover, .t-credit, .t-from-album, a')) return;
       const entry = entries[parseInt(tr.dataset.entry, 10)];
       if (entry) startEntry(entry, tr, false);
     });
