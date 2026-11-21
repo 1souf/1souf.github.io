@@ -2209,6 +2209,10 @@ const ICONS = {
   star: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
   link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
   description: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>`,
+  // Lucide's disc-3, supplied by the user: a record with its grooves. Its own
+  // 20px width/height are dropped for the menu's 15px sizing, same as the
+  // rest of this set.
+  disc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M6 12c0-1.7.7-3.2 1.8-4.2"></path><circle cx="12" cy="12" r="2"></circle><path d="M18 12c0 1.7-.7 3.2-1.8 4.2"></path></svg>`,
   // Material "history" glyph, from the user's changelog.svg. Its own
   // #8bc34a fill is dropped for currentColor so it picks up the menu's
   // icon colour (and its hover tint) like every other icon here.
@@ -3709,6 +3713,10 @@ function renderCollection(tabId){
     const linkMenuItems = [
       song.ytLink ? `<a class="link-menu-item" href="${esc(song.ytLink)}" target="_blank" rel="noopener">${ICONS.youtube}<span>Watch on YouTube</span></a>` : "",
       song.discordLink ? `<a class="link-menu-item" href="${esc(song.discordLink)}" target="_blank" rel="noopener">${ICONS.discord}<span>View Discord Message</span></a>` : "",
+      // The one thing this row can't do anywhere else: the album is only
+      // named in its credit line. Album pages don't get this item - you're
+      // already there.
+      `<button type="button" class="link-menu-item album-jump-item" data-entry="${i}">${ICONS.disc}<span>Go to Album</span></button>`,
       song.playLink ? `<a class="link-menu-item" href="${esc(toDownloadUrl(song.playLink))}" target="_blank" rel="noopener">${ICONS.download}<span>Download</span></a>` : "",
       song.playLink ? `<button type="button" class="link-menu-item queue-next-item" data-entry="${i}">${ICONS.queueNext}<span>Add to Queue</span></button>` : "",
     ].filter(Boolean).join("");
@@ -3791,6 +3799,12 @@ function renderCollection(tabId){
     const albumLink = e.target.closest('.t-from-album-name');
     if (albumLink) {
       const entry = entryOf(albumLink);
+      if (entry) openEntryAlbum(entry);
+      return;
+    }
+    const albumJump = e.target.closest('.album-jump-item');
+    if (albumJump) {
+      const entry = entryOf(albumJump);
       if (entry) openEntryAlbum(entry);
       return;
     }
@@ -7839,8 +7853,11 @@ document.addEventListener('keydown', (e) => {
 // / Copy Link) at the pointer instead. Everywhere else - including inside an
 // already-open menu, where the browser's menu is actually useful (copy link
 // address, open in new tab) - the default menu is left alone.
+//
+// Album rows are keyed by data-idx, the three collection tabs by data-entry;
+// both carry the same .link-menu, so both answer here.
 document.addEventListener('contextmenu', (e) => {
-  const row = e.target.closest('tr[data-idx]');
+  const row = e.target.closest('tr[data-idx], tr[data-entry]');
   if (!row) {
     closeAllRowMenus();
     return;
