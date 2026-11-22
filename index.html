@@ -4778,15 +4778,29 @@ function sizeHomeRows(){
   // window and never on what the previous solve happened to leave behind.
   homeEl.style.setProperty('--home-row-gap', HOME_GAP_BASE + 'px');
 
-  // The page's own bottom edge, less the player bar when it's up: the bar
-  // sits over the scroll pane, so its top edge is what actually hides the
-  // rest of the cover.
   const homeTop = homeEl.getBoundingClientRect().top;
-  const playerH = document.body.classList.contains('has-player') ? (el('player').offsetHeight || 0) : 0;
+  // The bar's height comes off the cut whether or not the bar is on screen.
+  //
+  // Reading it off the live bar instead was a bug with two faces. Pressing
+  // play on a Home card flips .has-player, cut lost the bar's 84px, and every
+  // cover on the page re-solved ~20px smaller - the "the site just zoomed
+  // out" jump - until the bar was closed and the sizes snapped back. And on a
+  // window sitting near the fill floor the smaller cut pushed the ideal under
+  // HOME_CARD_MIN, which abandons the fill and snaps the covers *up* to the
+  // width-based size instead: same gesture, opposite result, depending on the
+  // window. Reserving unconditionally makes the solve a function of the
+  // window alone.
+  //
+  // --player-h is the number to reserve because it is what .home's own
+  // padding-bottom already sets aside for the bar. The two have to agree, or
+  // the last shelf ends up either under the bar or short of it.
+  const reserve = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--player-h')
+  ) || 0;
   // The tiles sit above the shelves, so they are already inside artTop and
-  // there is nothing to reserve at the bottom: cut is simply where the page
-  // stops.
-  const cut = mainEl.getBoundingClientRect().bottom - playerH - homeTop;
+  // there is nothing to reserve for them at the bottom: cut is simply where
+  // the page stops, once the bar has taken its share.
+  const cut = mainEl.getBoundingClientRect().bottom - reserve - homeTop;
 
   // Every shelf above the last one grows by exactly as much as the covers do
   // (an empty one has no cover to grow), so the last cover's own growth is the
@@ -7757,10 +7771,12 @@ document.querySelector('.main').addEventListener('scroll', scheduleQueueBoundsUp
 // until something has been played the bar is display:none, and reserving
 // its height left a blank screenful at the bottom of every album.
 function syncPlayerVisibility(){
+  // Class only. The Home solve reserves the bar's height either way (see
+  // sizeHomeRows), so a bar arriving or leaving must not re-size the shelves:
+  // that re-solve is exactly what made the page jump when a Home card started
+  // playing. Nothing else keys off .has-player except the bottom padding,
+  // which the solve does not read.
   document.body.classList.toggle('has-player', el('player').style.display !== 'none');
-  // The bar is what the Home shelves get cut against, so the cover size is
-  // solved again once it's gone or arrived. A no-op while an album is open.
-  sizeHomeRows();
 }
 syncPlayerVisibility();
 new MutationObserver(() => {
