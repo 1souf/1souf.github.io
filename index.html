@@ -511,6 +511,11 @@
     margin-top:2px; font-size:.72rem; color:var(--text-dim);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  /* The artist name inside a caption is a link. The underline is the only
+     thing that says so - the rest of the line is static text that still opens
+     the card - so it has to appear on hover and nothing else. */
+  .home-card-artist{cursor:pointer;}
+  .home-card-artist:hover{color:var(--text); text-decoration:underline; text-underline-offset:2px;}
   /* A round picture reads as a portrait, so its caption sits under the middle
      of it rather than hanging off the left edge like an album's does. The
      Artists tab squares its portraits off, so there the caption goes back to
@@ -4237,6 +4242,22 @@ function playBadge(title){
   return `<span class="home-card-play" data-state="play"${tip} aria-hidden="true">${cardBadgeSvg('play')}</span>`;
 }
 
+// The artist name in a card's caption, as a link to their page.
+//
+// It reuses the page-wide [data-artist] handler that the player bar's credit
+// line and the album pages' ARTIST: line already go through, so the click
+// lands in the same place without a second navigation path to keep in step.
+// It carries no role/tabindex, unlike those two, because it sits inside the
+// card's own <button> - a focusable element inside a button is neither valid
+// markup nor a useful extra tab stop (the card has to stay one control).
+// Pointer and touch get the shortcut; the keyboard reaches the same page from
+// the ARTIST: link on any album.
+function artistLinkHtml(name){
+  const label = String(name || "").trim();
+  if (!label) return "";
+  return `<span class="home-card-artist" data-artist="${esc(label)}" title="Open ${esc(label)}">${esc(label)}</span>`;
+}
+
 function homeAlbumCardHtml(rowKey, idx, artistName, album){
   const coverUrl = (album.cover || "").trim();
   // Same cover test and inline fallback as the album page's "more from"
@@ -4250,7 +4271,7 @@ function homeAlbumCardHtml(rowKey, idx, artistName, album){
     <button class="home-card" type="button" data-row="${rowKey}" data-idx="${idx}" title="${esc(album.name)}">
       <div class="home-card-art">${coverHtml}${playBadge("Play this album")}</div>
       <div class="home-card-name">${esc(album.name)}</div>
-      <div class="home-card-meta">${esc(artistName)} • ${n} track${n === 1 ? "" : "s"}</div>
+      <div class="home-card-meta">${artistLinkHtml(artistName)} • ${n} track${n === 1 ? "" : "s"}</div>
     </button>`;
 }
 
@@ -4274,11 +4295,12 @@ function homeSongCardHtml(rowKey, idx, track){
     ? `<img src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async" onerror="this.outerHTML='<div class=&quot;home-card-fallback&quot;>NO COVER</div>'">`
     : `<div class="home-card-fallback">NO COVER</div>`;
   const name = plainSongName(track.song.name);
+  const by = songArtistName(track.song, track.artistName);
   return `
     <button class="home-card" type="button" data-row="${rowKey}" data-idx="${idx}" title="${esc(name)}">
       <div class="home-card-art">${coverHtml}${playBadge("Play this track")}</div>
       <div class="home-card-name">${esc(name)}</div>
-      <div class="home-card-meta">${esc(songArtistName(track.song, track.artistName))} • ${esc(addedAgo(track.song.releaseDate))}</div>
+      <div class="home-card-meta">${artistLinkHtml(by)} • ${esc(addedAgo(track.song.releaseDate))}</div>
     </button>`;
 }
 
@@ -4431,6 +4453,10 @@ function renderHome(){
     // picking that row in the sidebar, down to the hash it leaves behind.
     const tile = e.target.closest('.home-tile');
     if (tile) { showTab(tile.dataset.tab); return; }
+    // An artist name in a caption is its own link. The page-wide [data-artist]
+    // handler lives on document, so it runs after this one - without this the
+    // card underneath would open its album on the same click.
+    if (e.target.closest('[data-artist]')) return;
     const card = e.target.closest('.home-card');
     if (!card) return;
     const list = homeRows[card.dataset.row];
