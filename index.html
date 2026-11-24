@@ -6491,7 +6491,21 @@ function rowElForSongs(songs, idx){
    Rebuilt on every draw rather than cached — the Reload row rebuilds DATA
    wholesale, and a cached array would keep pointing at album objects that are
    no longer in it. */
-function allTracks(playableOnly){
+// A file date in milliseconds, or -Infinity when the cell isn't a date at
+// all ("N/A", blank, "TBD") - so an undated row can never win a "which of
+// these two is newer" comparison.
+function trackDateMs(song){
+  const t = new Date(song.releaseDate).getTime();
+  return isNaN(t) ? -Infinity : t;
+}
+
+// `preferNewest` asks for the row with the latest file date instead of the
+// first one seen. Only the New shelf passes it: the sheet can carry two rows
+// under the same name - a re-edit filed under a title the album already used,
+// or the same album name split across two blocks by a divider - and keeping
+// the first would hide the newer file behind the older one, which is exactly
+// the song the shelf exists to surface.
+function allTracks(playableOnly, preferNewest){
   const byOrigin = new Map();
   ARTISTS.forEach(a => {
     (DATA[a.name] || []).forEach(album => {
@@ -6508,6 +6522,8 @@ function allTracks(playableOnly){
         // tabs use: the copy's file is not the one that was linked first.
         if (!prev || (prev.song.crossListed && !song.crossListed)) {
           byOrigin.set(key, { song, idx, album, artistName: a.name });
+        } else if (preferNewest && !song.crossListed && trackDateMs(song) > trackDateMs(prev.song)) {
+          byOrigin.set(key, { song, idx, album, artistName: a.name });
         }
       });
     });
@@ -6521,7 +6537,7 @@ function allPlayableTracks(){ return allTracks(true); }
 // the parsed date rather than the string: the file dates are typed by hand and
 // are not all the same shape.
 function recentlyAddedTracks(maxDays = 30){
-  return allTracks(false)
+  return allTracks(false, true)
     .filter(t => isRecentDate(t.song.releaseDate, maxDays))
     .sort((x, y) => new Date(y.song.releaseDate) - new Date(x.song.releaseDate));
 }
