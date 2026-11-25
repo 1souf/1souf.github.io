@@ -6099,6 +6099,11 @@ function savePlaybackState(timeOverride){
       // The raw name, so it can be matched back to a row later - the sheet is
       // free to reorder an album between visits.
       name: song.name || '',
+      // The file and the file date pin down which row of a name it was: an
+      // album can hold two rows with the same name, and the name alone would
+      // hand the bar back to the wrong one.
+      link: song.playLink || '',
+      date: song.releaseDate || '',
       time: Number.isFinite(time) && time > 0 ? time : 0
     }));
     lastPlaybackSavedAt = Date.now();
@@ -6143,19 +6148,62 @@ function applyPendingRestoreTime(){
   paintSeekUI();
 }
 
+/* Which row was playing - not just which song. An album can hold two rows
+   with the same name (a re-edit filed under a title the album already uses),
+   and a tab can hold two blocks with the same album name, so neither the name
+   nor the block on its own says which of them the bar was sitting on. The
+   file is the one thing each row has to itself, so that is matched first;
+   name + file date, then the bare name, are only fallbacks for a save written
+   before the link was stored, or for a row whose file has since been
+   re-uploaded. */
+function findSavedTrack(saved){
+  const artist = findArtistByName(saved.artist);
+  if (!artist) return null;
+  const albumKey = String(saved.album || '').trim().toLowerCase();
+  if (!albumKey) return null;
+  const blocks = (DATA[artist.name] || [])
+    .filter(a => !a.isDivider && a.name.trim().toLowerCase() === albumKey);
+  if (!blocks.length) return null;
+
+  const link = String(saved.link || '').trim();
+  if (link) {
+    for (const album of blocks) {
+      const idx = (album.songs || []).findIndex(s => String(s.playLink || '').trim() === link);
+      if (idx !== -1) return { artistName: artist.name, album, idx };
+    }
+  }
+
+  const name = String(saved.name || '');
+  const date = String(saved.date || '').trim();
+  if (name && date) {
+    for (const album of blocks) {
+      const idx = (album.songs || []).findIndex(s =>
+        String(s.name || '') === name && String(s.releaseDate || '').trim() === date);
+      if (idx !== -1) return { artistName: artist.name, album, idx };
+    }
+  }
+
+  // Same name, no usable file or date: the block the section names, and inside
+  // it the name, then the saved index.
+  const sectionKey = String(saved.section || '').trim().toLowerCase();
+  const album = (sectionKey && blocks.find(a => (a.section || '').trim().toLowerCase() === sectionKey))
+    || blocks[0];
+  const songs = album.songs || [];
+  let idx = name ? songs.findIndex(s => String(s.name || '') === name) : -1;
+  if (idx === -1) idx = Number(saved.idx);
+  return { artistName: artist.name, album, idx };
+}
+
 function restorePlaybackState(){
   // Something is already loaded (a very slow boot, or the visitor got there
   // first) - theirs wins.
   if (currentSongIndex >= 0) return false;
   const saved = readLastPlayback();
   if (!saved) return false;
-  const found = findAlbumByNames(saved.artist, saved.album, saved.section);
+  const found = findSavedTrack(saved);
   if (!found) { clearLastPlayback(); return false; }
   const songs = found.album.songs || [];
-  // Name first: an album that gained or lost a track since last visit would
-  // make the saved index point at a different song.
-  let idx = songs.findIndex(s => String(s.name || '') === String(saved.name || ''));
-  if (idx === -1) idx = Number(saved.idx);
+  const idx = found.idx;
   const song = songs[idx];
   if (!song || !song.playLink) { clearLastPlayback(); return false; }
   if (isDemoMode && song.playLink === '#') return false;
