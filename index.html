@@ -486,21 +486,39 @@
   }
   /* The player bar's own play glyph, parked on the cover. It is a control of
      its own: clicking it starts playback without opening the card, and on the
-     card that's playing right now it turns into a pause button. */
+     card that's playing right now it turns into a pause button.
+
+     It rises into place rather than just appearing: it waits a few pixels low
+     and transparent, and hovering slides it up as it fades in. Leaving runs the
+     same move backwards, a touch faster - the browser uses the transition
+     declared on the rule the element is moving *to*, so the resting rule's
+     timings are the exit and the hover rule's are the entrance. `pointer-events`
+     travels with the fade, so the invisible badge can never take a click that
+     was meant for the card under it. */
   .home-card-play{
     position:absolute; right:7px; bottom:7px;
     width:38px; height:38px; color:#fff;
     filter:drop-shadow(0 1px 4px rgba(0,0,0,.7));
-    opacity:0; pointer-events:auto; cursor:pointer;
-    transition:opacity .15s ease, transform .15s ease;
+    opacity:0; transform:translateY(9px);
+    pointer-events:none; cursor:pointer;
+    transition:opacity .12s ease-in, transform .12s ease-in;
   }
   .home-card-play svg{width:100%; height:100%; display:block;}
   .home-card:hover .home-card-play,
-  .home-card:focus-visible .home-card-play{opacity:1; transform:scale(1.06);}
+  .home-card:focus-visible .home-card-play{
+    opacity:1; transform:translateY(0); pointer-events:auto;
+    transition:opacity .16s cubic-bezier(.22,.61,.36,1), transform .16s cubic-bezier(.22,.61,.36,1);
+  }
   /* A touch screen has no hover to reveal it with, so there the badge just
      stays put - otherwise the covers would have no affordance at all. */
   @media (hover:none){
-    .home-card-play{opacity:.9;}
+    .home-card-play{opacity:.9; transform:none; pointer-events:auto;}
+  }
+  /* Same badge, no travel: it still fades, it just doesn't slide. */
+  @media (prefers-reduced-motion: reduce){
+    .home-card-play,
+    .home-card:hover .home-card-play,
+    .home-card:focus-visible .home-card-play{transform:none; transition:opacity .12s linear;}
   }
   .home-card-name{
     margin-top:10px; font-size:.86rem; font-weight:600; line-height:1.3; color:var(--text);
